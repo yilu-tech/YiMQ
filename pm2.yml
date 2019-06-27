@@ -1,0 +1,5 @@
+apps:
+  - script   : ./dist/main.js
+    name     : 'mq'
+    instances: 4
+    exec_mode: cluster
