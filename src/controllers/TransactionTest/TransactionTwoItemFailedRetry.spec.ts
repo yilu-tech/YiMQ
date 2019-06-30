@@ -8,7 +8,6 @@ import { TransactionJobStatus } from '../../services/job/constants/TransactionJo
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
 import { TranscationJob } from '../../services/job/TranscationJob';
-import { TransactionJobAction } from '../../services/job/constants/TransactionJobAction';
 import { Coordinator } from '../../services/coordinator/Coordinator';
 import { JobAdminController } from '../../admin/JobAdminController';
 const mock = new MockAdapter(axios);
@@ -21,12 +20,12 @@ const timeout = ms => new Promise(res => setTimeout(res, ms))
  * 3. 失败后，后续的子任务-3是否会终止执行， 任务重新尝试后，是否会继续执行
  * 3. 任务在处理的过程中，增加子任务-4确保不会加入
  */
-describe('TransactionControllerCommit', () => {
+describe('TransactionTwoItemFailedRetry', () => {
   let app: TestingModule;
   let transactionController :TransactionController
   let jobAdminController: JobAdminController;
   let coordinatorManager: CoordinatorManager
-  let coordinatorName = 'TransactionControllerCommit';
+  let coordinatorName = 'TransactionTwoItemFailedRetry';
 
   beforeAll(async () => {
     app = await Test.createTestingModule({
@@ -44,7 +43,9 @@ describe('TransactionControllerCommit', () => {
     jobAdminController = await app.get<JobAdminController>(JobAdminController);
   });
   afterAll(async()=>{
-    await coordinatorManager.close(coordinatorName);
+    // let coordinator:Coordinator =  await coordinatorManager.get(coordinatorName);
+    // await coordinator.getQueue().empty(); //移除未处理的任务
+    // await coordinatorManager.close(coordinatorName);
   })
 
 
@@ -93,7 +94,7 @@ describe('TransactionControllerCommit', () => {
         }
       }
       let result = await transactionController.jobs(jobBody); //创建子任务-1
-      expect(result.items[0].id).toBe(1);//检查子任务-1 ID是否正确
+      expect(result.id).toBe(1);//检查子任务-1 ID是否正确
     });
 
 
@@ -123,7 +124,7 @@ describe('TransactionControllerCommit', () => {
       }
       
       let result = await transactionController.jobs(jobBody);//创建子任务-2
-      expect(result.items[1].id).toBe(2);//检查子任务-2的ID是否正确
+      expect(result.id).toBe(2);//检查子任务-2的ID是否正确
     });
 
     it('add a job-3.', async () => {
@@ -146,7 +147,7 @@ describe('TransactionControllerCommit', () => {
         }
       }
       let result = await transactionController.jobs(jobBody); //创建子任务-4
-      expect(result.items[2].id).toBe(3);//检查子任务-3 ID是否正确
+      expect(result.id).toBe(3);//检查子任务-3 ID是否正确
     });
 
 
@@ -172,7 +173,7 @@ describe('TransactionControllerCommit', () => {
         "id":beginRet.id
       };
       let commitRet= await transactionController.commit(commitBody);//提交事物
-      expect(commitRet.action).toBe(TransactionJobAction.COMMIT);//检查事物是否提交成功
+      expect(commitRet.status).toBe(TransactionJobStatus.COMMITED_WAITING);//检查事物是否提交成功
 
       let url = 'http://member.service/item-job-4';
       let jobBody = {
@@ -188,7 +189,7 @@ describe('TransactionControllerCommit', () => {
       try{
         await transactionController.jobs(jobBody); //创建子任务-3
       }catch(error){
-        expect(error.message.message).toBe('This transaction is already in the COMMIT active.')
+        expect(error.message.message).toBe(`This transaction is already in the ${TransactionJobStatus.COMMITED_WAITING} active.`)
       }
       
     });
@@ -200,10 +201,9 @@ describe('TransactionControllerCommit', () => {
       coordinator.getQueue().on('completed', async (job)=> {
     
         if (job.id == beginRet.id) {
-          expect(job['returnvalue'].status).toBe(TransactionJobStatus.COMMITED);
 
           let updatedJob = await coordinator.getJob(job.id);//重新查询任务，检查子任务状态是否正确
-          expect(updatedJob.context.returnvalue.status).toBe(TransactionJobStatus.COMMITED);
+          expect(updatedJob.status).toBe(TransactionJobStatus.COMMITED);
           expect(updatedJob.items[0].attemptsMade).toBe(1); //子任务-1 已经成功，尝试次数1
           expect(updatedJob.items[1].attemptsMade).toBe(2); //子任务-2 第二次尝试，成功
           expect(updatedJob.items[2].attemptsMade).toBe(1); //子任务-3 第一次尝试，成功

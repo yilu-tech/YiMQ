@@ -1,5 +1,5 @@
 export enum TransactionJobsSenderStatus{
-    WAITING = "WAITING",
+    BEGIN = "BEGIN",
     ROLLBACKED = "ROLLBACKED",
     COMMITED = "COMMITED"
 }

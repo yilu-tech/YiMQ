@@ -4,8 +4,7 @@ import { TransactionJobItem } from "../TransactionJobItem/TransactionJobItem";
 import { TransactionJobItemStatus } from "../constants/TransactionJobItemStatus";
 import Axios from "axios";
 import { TransactionJobsSenderStatus } from "../constants/TransactionJobSenderStatus";
-import { BusinessException } from "../../../Exceptions/BusinessException";
-import { TransactionJobAction } from "../constants/TransactionJobAction";
+import { TransactionJobStatus } from "../constants/TransactionJobStatus";
 
 
 export class TransactionJobProcesser extends JobProcesser{
@@ -15,38 +14,46 @@ export class TransactionJobProcesser extends JobProcesser{
 
     public async commit(){
         for(let item of  this.job.items){
-            if(item.status == TransactionJobItemStatus.WAITING || item.status == TransactionJobItemStatus.FAILED){//处于等待状态
+            //提交 jobItem状态为 PREPARED 和 FAILED的任务
+            if(item.status == TransactionJobItemStatus.PREPARED || item.status == TransactionJobItemStatus.CONFIRMED_FAILED){//处于等待状态
                 await item.commit();
             }
         }
+        await this.job.setStatus(TransactionJobStatus.COMMITED);
     }
 
     public async rollback(){
         for(let item of  this.job.items){
-            if(item.status == TransactionJobItemStatus.WAITING || item.status == TransactionJobItemStatus.FAILED){//处于等待状态
+            if(item.status == TransactionJobItemStatus.PREPARED){//处于等待状态
                 await item.rollback();
             }
         }
+        await this.job.setStatus(TransactionJobStatus.ROLLBACKED);
     }
 
     public async timeout(){
         try{
+            await this.job.setStatus(TransactionJobStatus.TIMEOUT);
+            //向发起者询问状态
             let result = await Axios.get(this.job.sender.statusCheckUrl,{params:{id:this.job.id}});
 
             this.job.statusCheckData = result.data;
             switch(this.job.statusCheckData.status){
-                case TransactionJobsSenderStatus.WAITING: {
-                    this.job.setAction(TransactionJobAction.ROLLBACK);
+                case TransactionJobsSenderStatus.BEGIN: {
+                    await this.job.setStatus(TransactionJobStatus.ROLLABCK_WAITING);
                     await this.rollback();
                     break;
                 }
                 case TransactionJobsSenderStatus.COMMITED: {
-                    this.job.setAction(TransactionJobAction.COMMIT);
+                    if(!this.job.itemsIsPrepared()){
+                        throw new Error('Items of this transaction are not prepared.');
+                    }
+                    await this.job.setStatus(TransactionJobStatus.COMMITED_WAITING);
                     await this.commit();
                     break;
                 }
                 case TransactionJobsSenderStatus.ROLLBACKED: {
-                    this.job.setAction(TransactionJobAction.ROLLBACK);
+                    await this.job.setStatus(TransactionJobStatus.ROLLABCK_WAITING);
                     await this.rollback();
                     break;
                 }

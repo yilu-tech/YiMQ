@@ -8,7 +8,6 @@ import { TransactionJobStatus } from '../../services/job/constants/TransactionJo
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
 import { TranscationJob } from '../../services/job/TranscationJob';
-import { TransactionJobAction } from '../../services/job/constants/TransactionJobAction';
 import { Coordinator } from '../../services/coordinator/Coordinator';
 import { JobAdminController } from '../../admin/JobAdminController';
 import { TransactionJobsSenderStatus } from '../../services/job/constants/TransactionJobSenderStatus';
@@ -23,7 +22,7 @@ const timeout = ms => new Promise(res => setTimeout(res, ms))
  * 3. 失败后，后续的子任务-3是否会终止执行， 任务重新尝试后，是否会继续执行
  * 3. 任务在处理的过程中，增加子任务-4确保不会加入
  */
-describe('TransactionControllerRollback', () => {
+describe('TransactionControllerTimeout', () => {
   let app: TestingModule;
   let transactionController :TransactionController
   let jobAdminController: JobAdminController;
@@ -49,13 +48,15 @@ describe('TransactionControllerRollback', () => {
     coordinator.processBootstrap();
   });
   afterAll(async()=>{
-    await coordinatorManager.close(coordinatorName);
+    // await coordinatorManager.close(coordinatorName);
   })
 
 
 
 
-
+  /**
+   * 任务提交后，超时超时后
+   */
   describe('.timeout-check-status-failed-WAITING', () => {
     
     let beginRet;
@@ -74,31 +75,33 @@ describe('TransactionControllerRollback', () => {
       expect(beginRet.name).toBe(beginBody.name); //检查事物是否开启成功
     });
 
+    //事物超时后去任务的发起方确认任务状态失败
     it('timeout failed get job status.', async (done) => {
         
       mock.onGet(senderTransactionStatusUrl).timeout();
       coordinator.getQueue().on('failed', async (job)=> {
         if (job.id == beginRet.id) {
           let updatedJob:TranscationJob = await coordinator.getJob(job.id);//重新查询任务，检查子任务状态是否正确
-          expect(updatedJob.action).toBeUndefined()
+          expect(updatedJob.status).toBe(TransactionJobStatus.TIMEOUT)
           expect(updatedJob.context['failedReason']).toBe('timeout of 0ms exceeded');
           done();
         }
       });
     });
-
+    //确认发起方状态为 等待状态，自动回滚
     it('timeout rollback get job status.', async (done) => {
       
       let updatedJob:TranscationJob = await coordinator.getJob(beginRet.id);
-      updatedJob.retry();
+      
       mock.onGet(senderTransactionStatusUrl).reply(200,{
-        status: TransactionJobsSenderStatus.WAITING
+        status: TransactionJobsSenderStatus.BEGIN
       });
+      await updatedJob.retry();
       coordinator.getQueue().on('completed', async (job)=> {
         if (job.id == beginRet.id) {
           let updatedJob:TranscationJob = await coordinator.getJob(job.id);//重新查询任务，检查子任务状态是否正确
-          expect(updatedJob.action).toBe(TransactionJobAction.ROLLBACK)
-          expect(updatedJob.statusCheckData.status).toBe(TransactionJobsSenderStatus.WAITING);
+          expect(updatedJob.status).toBe(TransactionJobStatus.ROLLBACKED)
+          expect(updatedJob.statusCheckData.status).toBe(TransactionJobsSenderStatus.BEGIN);
           done();
         }
       });
@@ -106,7 +109,9 @@ describe('TransactionControllerRollback', () => {
     
   });
 
-
+  /**
+   * 超时后远程获取状态，再提交事物
+   */
   describe('.timeout-check-status-failed-COMMITED', () => {
     
     let beginRet;
@@ -124,7 +129,7 @@ describe('TransactionControllerRollback', () => {
       beginRet = await transactionController.begin(beginBody);//开启一个事物
       expect(beginRet.name).toBe(beginBody.name); //检查事物是否开启成功
     });
-
+    //添加一个任务
     it('add a job-1.', async () => {
       let url = 'http://member.service/item-job-1';
       mock.onPost(url).reply(200,{
@@ -145,19 +150,19 @@ describe('TransactionControllerRollback', () => {
         }
       }
       let result = await transactionController.jobs(jobBody); //创建子任务-1
-      expect(result.items[0].id).toBe(1);//检查子任务-1 ID是否正确
+      expect(result.id).toBe(1);//检查子任务-1 ID是否正确
     });
-
+    //事物超时后，检查任务状态
     it('timeout failed get job status.', async (done) => {
         
       mock.onGet(senderTransactionStatusUrl).timeout();
       coordinator.getQueue().on('failed', async (job)=> {
         if (job.id == beginRet.id) {
           let updatedJob:TranscationJob = await coordinator.getJob(job.id);//重新查询任务，检查子任务状态是否正确
-          expect(updatedJob.action).toBeUndefined()
+          expect(updatedJob.status).toBe(TransactionJobStatus.TIMEOUT)
           expect(updatedJob.context['failedReason']).toBe('timeout of 0ms exceeded');
-          expect(updatedJob.items[0].attemptsMade).toBe(0); //子任务-1 已经成功，尝试次数1
-          expect(updatedJob.items[0].status).toBe(TransactionJobItemStatus.WAITING);
+          expect(updatedJob.items[0].attemptsMade).toBe(0); //确认子任务尚未执行
+          expect(updatedJob.items[0].status).toBe(TransactionJobItemStatus.PREPARED);//确认子任务状态
           done();
         }
       });
@@ -167,16 +172,17 @@ describe('TransactionControllerRollback', () => {
       
       let updatedJob:TranscationJob = await coordinator.getJob(beginRet.id);
       updatedJob.retry();
+      //设置任务发起方任务已经提交
       mock.onGet(senderTransactionStatusUrl).reply(200,{
         status: TransactionJobsSenderStatus.COMMITED
       });
       coordinator.getQueue().on('completed', async (job)=> {
         if (job.id == beginRet.id) {
           let updatedJob:TranscationJob = await coordinator.getJob(job.id);//重新查询任务，检查子任务状态是否正确
-          expect(updatedJob.action).toBe(TransactionJobAction.COMMIT)
+          expect(updatedJob.status).toBe(TransactionJobStatus.COMMITED)
           expect(updatedJob.statusCheckData.status).toBe(TransactionJobsSenderStatus.COMMITED);
           expect(updatedJob.items[0].attemptsMade).toBe(1); //子任务-1 已经成功，尝试次数1
-          expect(updatedJob.items[0].status).toBe(TransactionJobItemStatus.COMPLETED);
+          expect(updatedJob.items[0].status).toBe(TransactionJobItemStatus.CONFIRMED);//确认子任务已经完成
           done();
         }
       });
@@ -184,7 +190,9 @@ describe('TransactionControllerRollback', () => {
     
   });
 
-
+  /**
+   * 事物超时后，向发起方确认事物处于回滚状态，确认子任务是否自动取消
+   */
   describe('.timeout-check-status-failed-ROLLBACKED', () => {
     
     let beginRet;
@@ -223,7 +231,7 @@ describe('TransactionControllerRollback', () => {
         }
       }
       let result = await transactionController.jobs(jobBody); //创建子任务-1
-      expect(result.items[0].id).toBe(1);//检查子任务-1 ID是否正确
+      expect(result.id).toBe(1);//检查子任务-1 ID是否正确
     });
 
     it('timeout failed get job status.', async (done) => {
@@ -232,16 +240,16 @@ describe('TransactionControllerRollback', () => {
       coordinator.getQueue().on('failed', async (job)=> {
         if (job.id == beginRet.id) {
           let updatedJob:TranscationJob = await coordinator.getJob(job.id);//重新查询任务，检查子任务状态是否正确
-          expect(updatedJob.action).toBeUndefined()
+          expect(updatedJob.status).toBe(TransactionJobStatus.TIMEOUT)
           expect(updatedJob.context['failedReason']).toBe('timeout of 0ms exceeded');
-          expect(updatedJob.items[0].attemptsMade).toBe(0); //子任务-1 已经成功，尝试次数1
-          expect(updatedJob.items[0].status).toBe(TransactionJobItemStatus.WAITING);
+          expect(updatedJob.items[0].attemptsMade).toBe(0); 
+          expect(updatedJob.items[0].status).toBe(TransactionJobItemStatus.PREPARED);
           done();
         }
       });
     });
 
-    it('timeout rollback get job status.', async (done) => {
+    it('timeout get job remote status to rollback.', async (done) => {
       
       let updatedJob:TranscationJob = await coordinator.getJob(beginRet.id);
       updatedJob.retry();
@@ -251,10 +259,10 @@ describe('TransactionControllerRollback', () => {
       coordinator.getQueue().on('completed', async (job)=> {
         if (job.id == beginRet.id) {
           let updatedJob:TranscationJob = await coordinator.getJob(job.id);//重新查询任务，检查子任务状态是否正确
-          expect(updatedJob.action).toBe(TransactionJobAction.ROLLBACK)
+          expect(updatedJob.status).toBe(TransactionJobStatus.ROLLBACKED)
           expect(updatedJob.statusCheckData.status).toBe(TransactionJobsSenderStatus.ROLLBACKED);
-          expect(updatedJob.items[0].attemptsMade).toBe(1); //子任务-1 已经成功，尝试次数1
-          expect(updatedJob.items[0].status).toBe(TransactionJobItemStatus.CANCELED); //子任务-1 已经成功，尝试次数1
+          expect(updatedJob.items[0].attemptsMade).toBe(1); //
+          expect(updatedJob.items[0].status).toBe(TransactionJobItemStatus.CANCELED); //
           done();
         }
       });

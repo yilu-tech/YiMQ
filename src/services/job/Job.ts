@@ -23,11 +23,8 @@ export abstract class Job {
     }
 
     public async retry():Promise<void>{
-        try{
-            await this.context.retry();
-        }catch(error){
-            throw new BusinessException(error.message);
-        }
+        await this.context.retry();
+    
     }
 
 

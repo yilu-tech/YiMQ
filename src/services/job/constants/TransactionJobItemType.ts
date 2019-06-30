@@ -1,6 +1,6 @@
 
 
-export module TransactionJobType{
+export module TransactionJobItemType{
     export const WAIT = "WAIT";
     export const TCC = "TCC";
 }

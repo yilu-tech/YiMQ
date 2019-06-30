@@ -4,19 +4,18 @@ import { CoordinatorManager } from '../../services';
 import { RedisManager } from '../../handlers/redis';
 import { CoordinatorDao } from '../../services/coordinator/CoordinatorDao';
 import { Config } from '../../config';
-import { TransactionJobItemStatus } from '../../services/job/constants/TransactionJobItemStatus';
 import { TransactionJobStatus } from '../../services/job/constants/TransactionJobStatus';
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
 import { Coordinator } from '../../services/coordinator/Coordinator';
-import { TransactionJobAction } from '../../services/job/constants/TransactionJobAction';
 import { TranscationJob } from '../../services/job/TranscationJob';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
-describe('TransactionController', () => {
+describe('TransactionRollbackAfterCommit', () => {
   let app: TestingModule;
   let transactionController :TransactionController
   let coordinatorManager: CoordinatorManager
+  let coordinatorName = 'TransactionRollbackAfterCommit';
 
   beforeAll(async () => {
     app = await Test.createTestingModule({
@@ -25,86 +24,18 @@ describe('TransactionController', () => {
     }).compile();
 
     coordinatorManager = app.get<CoordinatorManager>(CoordinatorManager);
+    coordinatorManager.add(coordinatorName,'transaction','default');
     await coordinatorManager.initCoordinators();
     transactionController = await app.get<TransactionController>(TransactionController);
   });
 
   afterAll(async()=>{
-    let coordinator:Coordinator =  await coordinatorManager.get('transaction');
-    await coordinator.getQueue().empty(); //移除未处理的任务
+    // let coordinator:Coordinator =  await coordinatorManager.get(coordinatorName);
+    // await coordinator.getQueue().empty(); //移除未处理的任务
+    // await coordinatorManager.close(coordinatorName);
   })
 
 
-  /**
-   * 开启一个事物，提交后
-   * 1. 提交是否成功
-   * 2. 是否不能再添加子任务
-   * 3. 是否不能再回滚
-   */
-  describe('.begin-commit', () => {
-    let beginRet;
-    it('begin a trasaction.', async () => {
-      let beginBody = {
-        "coordinator": "transaction",
-        "name": "send_message",
-        "sender": {
-          "name":"mix",
-          "header":{}
-        }
-      }
-      beginRet = await transactionController.begin(beginBody);
-      expect(beginRet.name).toBe(beginBody.name);
-    });
-
-    it('commit a trasaction.', async () => {
-      let commitBody = {
-        "coordinator": "transaction",
-        "id":beginRet.id
-      }
-      let commitRet= await transactionController.commit(commitBody);
-      expect(commitRet.action).toBe(TransactionJobAction.COMMIT);
-    });
-
-    it('add a job to trasaction.', async () => {
-      let url = 'http://member.service/pay';
-      mock.onPost(url).reply(200,{
-        stock_change_log_id : 2656
-      });
-      let jobBody = {
-        "coordinator": "transaction",
-        "id":beginRet.id,
-        "item":{
-          "type":"wait",
-          "url":url,
-          "data":[
-            {
-              goods_id:'234213124123',
-              total:'21'
-            }
-          ]
-        }
-      }
-      try{
-        let result = await transactionController.jobs(jobBody);
-      }catch(error){
-        expect(error.message.message).toBe('This transaction is already in the COMMIT waiting.');
-      }
-      
-    });
-
-    it('rollback a trasaction.', async () => {
-      let rollbackBody = {
-        "coordinator": "transaction",
-        "id":beginRet.id
-      }
-      try{
-        await transactionController.rollback(rollbackBody);
-      }catch(error){
-        expect(error.message.message).toBe(`This transaction is already in the ${TransactionJobAction.COMMIT} waiting.`);
-      }
-    });
-    
-  });
   /**
    * 开启一个事物，回滚后
    * 1. 是否成功进入回滚动作
@@ -115,7 +46,7 @@ describe('TransactionController', () => {
     let beginRet;
     it('begin a trasaction.', async () => {
       let beginBody = {
-        "coordinator": "transaction",
+        "coordinator": coordinatorName,
         "name": "send_message",
         "sender": {
           "name":"mix",
@@ -129,11 +60,11 @@ describe('TransactionController', () => {
     it('rollback a trasaction.', async () => {
 
       let rollbackBody = {
-        "coordinator": "transaction",
+        "coordinator": coordinatorName,
         "id":beginRet.id
       }
       let ret = await transactionController.rollback(rollbackBody);
-      expect(ret.action).toBe(TransactionJobAction.ROLLBACK);
+      expect(ret.status).toBe(TransactionJobStatus.ROLLABCK_WAITING);
     });
 
     it('add a job to trasaction.', async () => {
@@ -142,7 +73,7 @@ describe('TransactionController', () => {
         stock_change_log_id : 2656
       });
       let jobBody = {
-        "coordinator": "transaction",
+        "coordinator": coordinatorName,
         "id":beginRet.id,
         "item":{
           "type":"wait",
@@ -158,20 +89,20 @@ describe('TransactionController', () => {
       try{
         let result = await transactionController.jobs(jobBody);
       }catch(error){
-        expect(error.message.message).toBe('This transaction is already in the ROLLBACK waiting.');
+        expect(error.message.message).toBe(`This transaction is already in the ${TransactionJobStatus.ROLLABCK_WAITING} waiting.`);
       }
       
     });
 
     it('commit a trasaction.', async () => {
       let commitBody = {
-        "coordinator": "transaction",
+        "coordinator": coordinatorName,
         "id":beginRet.id
       }
       try{
         let commitRet= await transactionController.commit(commitBody);
       }catch(error){
-        expect(error.message.message).toBe(`This transaction is already in the ${TransactionJobAction.ROLLBACK} waiting.`);
+        expect(error.message.message).toBe(`This transaction is already in the ${TransactionJobStatus.ROLLABCK_WAITING} waiting.`);
       }
     });
   });

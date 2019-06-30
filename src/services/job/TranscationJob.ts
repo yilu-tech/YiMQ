@@ -1,25 +1,24 @@
 import { Job } from "./Job";
 import { TransactionJobItem } from "./TransactionJobItem/TransactionJobItem";
-import * as bull from 'bull';
 import { BusinessException } from "../../Exceptions/BusinessException";
 import { TransactionJobProcesser } from "./processer/TransactionJobProcesser";
 import { TccTransactionJobItem } from "./TransactionJobItem/TccTransactionJobItem";
 import { WaitTransactionJobItem } from "./TransactionJobItem/WaitTransactionJobItem";
 import { TransactionJobStatus } from "./constants/TransactionJobStatus";
-import { TransactionJobAction } from "./constants/TransactionJobAction";
-import Axios from "axios";
-import { TransactionJobsSenderStatus } from "./constants/TransactionJobSenderStatus";
-const timeout = ms => new Promise(res => setTimeout(res, ms))
+import { TransactionJobItemType } from "./constants/TransactionJobItemType";
+import { TransactionItemDto } from "src/dto/TransactionDto";
+import { TransactionJobItemStatus } from "./constants/TransactionJobItemStatus";
+// const timeout = ms => new Promise(res => setTimeout(res, ms))
 export class TranscationJob extends Job{
     public total:number;
     public items: Array<TransactionJobItem> = [];
-    public action: String;
+    public status: TransactionJobStatus;
     public statusCheckData:any;
 
     constructor(context){
         super(context);
         this.total = this.context.data.total ? this.context.data.total : 0;
-        this.action = this.context.data.action;
+        this.status = this.context.data.status;
         this.statusCheckData = this.context.data.statusCheckData;
         //将context.data中的items为TransactionJobItem，方便操作
         this.items = this.context.data.items.map((item)=>{
@@ -32,33 +31,42 @@ export class TranscationJob extends Job{
      * Job 子任务构造器
      * @param item 
      */
-    public itemFactory(item){
-        let job:TransactionJobItem;
-        switch (item.type){
-            case  'wait':{
-                job =  Object.assign(new WaitTransactionJobItem(this),item);
+    public itemFactory(item:TransactionItemDto){
+        let jobItem:TransactionJobItem;
+
+        switch (item.type.toUpperCase()){
+            case  TransactionJobItemType.WAIT:{
+                jobItem =  Object.assign(new WaitTransactionJobItem(this),item);
+                jobItem.type = TransactionJobItemType.WAIT;
                 break;
             }
-            case 'tcc':{
-                job =  Object.assign(new TccTransactionJobItem(this),item);
+            case TransactionJobItemType.TCC:{
+                jobItem =  Object.assign(new TccTransactionJobItem(this),item);
+                jobItem.type = TransactionJobItemType.TCC;
                 break;
             }
             default:{
                 throw new BusinessException(`wrong transaction type: ${item.type}.`);
             }
         }
-        return job;
+        jobItem.data = item.data;
+        jobItem.url = item.url;
+
+        return jobItem;
     }
     /**
      * 添加子任务
      */
-    public async addItem(item:Object):Promise<TranscationJob>{
+    public async addItem(item:TransactionItemDto):Promise<TransactionJobItem>{
         await this.isDelayedStatus();//判断状态，错误直接抛出异常
-        let job = this.itemFactory(item);
-        job.init(++this.total);//给事物子任务增加id.
-        this.items.push(job);
+        let jobItem = this.itemFactory(item);
+
+        jobItem.init(++this.total);//给事物子任务增加id.
+        this.items.push(jobItem);
         await this.update();
-        return this;
+
+        await jobItem.inited();
+        return jobItem;
     }
     public async addItemTccJob(){
 
@@ -75,13 +83,16 @@ export class TranscationJob extends Job{
      */
     public async commit():Promise<TranscationJob>{
         await this.isDelayedStatus();
-        await this.setAction(TransactionJobAction.COMMIT);
-        await this.context.promote();
+        if(!this.itemsIsPrepared()){
+            throw new BusinessException(`Items of this transaction are not prepared.`);
+        }
+        await this.setStatus(TransactionJobStatus.COMMITED_WAITING);
+        await this.context.promote();//取消延迟，进入队列执行
         return this;
     }
 
-    public async setAction(action:TransactionJobAction):Promise<void>{
-        this.action = action;
+    public async setStatus(status:TransactionJobStatus):Promise<void>{
+        this.status = status;
         await this.update();
     }
     /**
@@ -89,7 +100,7 @@ export class TranscationJob extends Job{
      */
     public async rollback():Promise<TranscationJob>{
         await this.isDelayedStatus();
-        await this.setAction(TransactionJobAction.ROLLBACK);
+        await this.setStatus(TransactionJobStatus.ROLLABCK_WAITING);
         await this.context.promote();
         return this;
     }
@@ -100,33 +111,38 @@ export class TranscationJob extends Job{
     public async isDelayedStatus(){
         let contextStatus = await this.context.getState();
         if(contextStatus != 'delayed'){ //如果任何处于非等待状态，不能进行任何操作
-            throw new BusinessException(`This transaction is already in the ${this.action} ${contextStatus}.`)
+            throw new BusinessException(`This transaction is already in the ${this.status} ${contextStatus}.`)
+        }
+        return true;
+    }
+
+    public itemsIsPrepared(){
+        for(let item of  this.items){
+            if(item.status != TransactionJobItemStatus.PREPARED){
+                return false;
+            }
         }
         return true;
     }
 
     public async process(){
-        console.debug(`TransactionJob: <${this.name}> job-${this.id} will be process ${this.action || 'TIMEOUT'} action.`);
+        console.debug(`TransactionJob: <${this.name}> job-${this.id} will be process ${this.status || 'TIMEOUT'} action.`);
         let result = {"status":null};
         let processer = new TransactionJobProcesser(this);
-        switch(this.action){
-            case TransactionJobAction.COMMIT : {
+        switch(this.status){
+            case TransactionJobStatus.COMMITED_WAITING : {
                 await processer.commit();
-                result.status = TransactionJobStatus.COMMITED;
                 break;
             }
-            case TransactionJobAction.ROLLBACK : {
+            case TransactionJobStatus.ROLLABCK_WAITING : {
                 await processer.rollback();
-                result.status = TransactionJobStatus.ROLLBACKED;
                 break;
             }
 
             default:{
                 await processer.timeout();
-                result.status = TransactionJobStatus.TIMEOUT;
             }
         }
-        return result;
     }
 
     public toJson(){

@@ -8,7 +8,7 @@ export class QueueCoordinator extends Coordinator{
         })
     }
 
-    public async get(id){
+    public async getJob(id){
         return await this.queue.getJob(id).then((job)=>{
             return job ? new QueueJob(job) : null;
         })

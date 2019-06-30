@@ -1,10 +1,12 @@
 import { Coordinator } from "./Coordinator";
 
 import { TranscationJob } from "../job/TranscationJob";
+import { TransactionJobStatus } from "../job/constants/TransactionJobStatus";
 export class TransactionCoordinator extends Coordinator{
 
     public async create(data):Promise<TranscationJob>{
         data.items = [];
+        data.status = TransactionJobStatus.PREPARING;//初始化任务状态
         var options = {
             delay: data.delay? data.delay : 10000 
         }

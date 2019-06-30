@@ -56,16 +56,16 @@ export class CoordinatorManager{
      * 从数据库恢复调度器，并进行监听
      */
     public async initCoordinators(){
-
+        //初始化默认队列调度器
         if(!await this.coordinatorDao.exists('queue')){
             await this.coordinatorDao.add({redis:'default',type:'queue',name:'queue'})
         }
-
+        //初始化默认事物调度器
         if(!await this.coordinatorDao.exists('transaction')){
             await this.coordinatorDao.add({redis:'default',type:'transaction',name:'transaction'})
         }
         var coordinatorsOptions = await this.coordinatorDao.all();
-
+        //启动全部调度器
         for(var key in coordinatorsOptions){
             await this.bootstrapCoordinator(coordinatorsOptions[key]);
         }

@@ -7,3 +7,10 @@ export class GetJobDto{
     id:string;
 }
 
+export class CreateJobDto{
+    @IsDefined()
+    coordinator:string;
+    @IsDefined()
+    id:string;
+}
+
