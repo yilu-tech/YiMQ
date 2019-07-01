@@ -8,6 +8,6 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule,new FastifyAdapter());
   // app.useGlobalFilters(new HttpExceptionFilter);
   app.useGlobalPipes(new ValidationPipe());
-  await app.listen(3000);
+  await app.listen(7379,'0.0.0.0');
 }
 bootstrap();
