@@ -138,17 +138,15 @@ describe('TransactionControllerTimeout', () => {
       });
       let jobBody = {
         "coordinator": coordinatorName,
-        "id":beginRet.id,
-        "item":{
-          "type":TransactionJobItemType.DELAY,
-          "url":url,
-          "data":[
-            {
-              goods_id:'1',
-              total:'1'
-            }
-          ]
-        }
+        "transaction_id":beginRet.id,
+        "type":TransactionJobItemType.DELAY,
+        "url":url,
+        "data":[
+          {
+            goods_id:'1',
+            total:'1'
+          }
+        ]
       }
       let result = await transactionController.jobs(jobBody); //创建子任务-1
       expect(result.id).toBe(1);//检查子任务-1 ID是否正确
@@ -219,17 +217,15 @@ describe('TransactionControllerTimeout', () => {
       });
       let jobBody = {
         "coordinator": coordinatorName,
-        "id":beginRet.id,
-        "item":{
-          "type":TransactionJobItemType.DELAY,
-          "url":url,
-          "data":[
-            {
-              goods_id:'1',
-              total:'1'
-            }
-          ]
-        }
+        "transaction_id":beginRet.id,
+        "type":TransactionJobItemType.DELAY,
+        "url":url,
+        "data":[
+          {
+            goods_id:'1',
+            total:'1'
+          }
+        ]
       }
       let result = await transactionController.jobs(jobBody); //创建子任务-1
       expect(result.id).toBe(1);//检查子任务-1 ID是否正确

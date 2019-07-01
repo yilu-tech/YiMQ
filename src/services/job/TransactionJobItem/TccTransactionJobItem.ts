@@ -21,7 +21,7 @@ export class TccTransactionJobItem extends TransactionJobItem{
         try{
             //正常的成功，正常的失败都返回200
             this.action = TransactionJobItemAction.TRY;
-            let result =  await axios.post(this.url,this.tojsonWithJob());
+            let result =  await axios.post(this.url,this.toJson());
             this.tryResult = result.data;
             this.status = TransactionJobItemStatus.PREPARED;
             await this.update();
@@ -43,7 +43,7 @@ export class TccTransactionJobItem extends TransactionJobItem{
                     this.status = TransactionJobItemStatus.PREPARE_UNKNOWN
                 }
                 await this.update();//先更新，再throw,确保已经写入到redis
-                throw new BadRequestException(this.tojsonWithJob());
+                throw new BadRequestException(this.toJson());
             }
 
             await this.update();
@@ -59,7 +59,7 @@ export class TccTransactionJobItem extends TransactionJobItem{
         try{
             //正常的成功，正常的失败都返回200
             this.action = TransactionJobItemAction.CANCEL;
-            let result =  await axios.post(this.url,this.tojsonWithJob());
+            let result =  await axios.post(this.url,this.toJson());
             this.cancelResult = result.data;
             this.status = TransactionJobItemStatus.CANCELED;
             await this.update();
@@ -78,7 +78,7 @@ export class TccTransactionJobItem extends TransactionJobItem{
                 
    
                 await this.update();//先更新，再throw,确保已经写入到redis
-                throw new BadRequestException(this.tojsonWithJob());
+                throw new BadRequestException(this.toJson());
             }
 
             await this.update();

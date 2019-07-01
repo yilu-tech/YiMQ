@@ -35,32 +35,14 @@ export class TransactionController {
     if(!coordinator){
       throw new BusinessException('Coordinator does not exist.');
     }
-    let transcationJob:TranscationJob =  await coordinator.getJob(body.id);
+    let transcationJob:TranscationJob =  await coordinator.getJob(body.transaction_id);
     if(!transcationJob){
       throw new BusinessException('Transcation Job does not exist.');
     }
-    let jobItem = await transcationJob.addItem(body.item)
-    return jobItem.tojsonWithJob();
+    let jobItem = await transcationJob.addItem(body)
+    return jobItem.toJson();
   }
 
-  /**
-   * 
-   * 创建tcc任务
-   */
-  @Post('jobs/try')
-  async job(@Body() body:AddTransactionItemDto): Promise<any>{
-
-    let coordinator:TransactionCoordinator = this.coordinatorManager.get(body.coordinator)
-    if(!coordinator){
-      throw new BusinessException('Coordinator does not exist.');
-    }
-    let transcationJob:TranscationJob =  await coordinator.getJob(body.id);
-    if(!transcationJob){
-      throw new BusinessException('Transcation Job does not exist.');
-    }
-    await transcationJob.addItem(body.item)
-    return transcationJob.toJson();
-  }
 
 
   /**

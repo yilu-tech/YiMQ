@@ -22,7 +22,7 @@ export class TranscationJob extends Job{
         this.statusCheckData = this.context.data.statusCheckData;
         //将context.data中的items为TransactionJobItem，方便操作
         this.items = this.context.data.items.map((item)=>{
-           return this.itemFactory(item);
+           return this.itemFactory(item,true);
         });
 
   
@@ -31,17 +31,16 @@ export class TranscationJob extends Job{
      * Job 子任务构造器
      * @param item 
      */
-    public itemFactory(item:TransactionItemDto){
+    public itemFactory(item:TransactionItemDto,restore=false){
         let jobItem:TransactionJobItem;
-
         switch (item.type.toUpperCase()){
             case  TransactionJobItemType.DELAY:{
-                jobItem =  Object.assign(new DelayTransactionJobItem(this),item);
+                jobItem =  new DelayTransactionJobItem(this);
                 jobItem.type = TransactionJobItemType.DELAY;
                 break;
             }
             case TransactionJobItemType.TCC:{
-                jobItem =  Object.assign(new TccTransactionJobItem(this),item);
+                jobItem =  new TccTransactionJobItem(this);
                 jobItem.type = TransactionJobItemType.TCC;
                 break;
             }
@@ -49,9 +48,14 @@ export class TranscationJob extends Job{
                 throw new BusinessException(`wrong transaction type: ${item.type}.`);
             }
         }
-        jobItem.data = item.data;
-        jobItem.url = item.url;
 
+        if(restore){ //恢复的时候因为数据是干净的，直接合并对象
+            Object.assign(jobItem,item);
+        }else{
+            jobItem.data = item.data;
+            jobItem.url = item.url;
+        }
+     
         return jobItem;
     }
     /**

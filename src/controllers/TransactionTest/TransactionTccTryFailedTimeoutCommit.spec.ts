@@ -86,17 +86,15 @@ describe('TransactionTccTryFailedTimeoutCommit', () => {
 
       let jobBody = {
         "coordinator": coordinatorName,
-        "id":beginRet.id,
-        "item":{
-          "type":TransactionJobItemType.TCC,
-          "url":url,
-          "data":[
-            {
-              goods_id:'1',
-              total:'1'
-            }
-          ]
-        }
+        "transaction_id":beginRet.id,
+        "type":TransactionJobItemType.TCC,
+        "url":url,
+        "data":[
+          {
+            goods_id:'1',
+            total:'1'
+          }
+        ]
       }
       try{
         let result = await transactionController.jobs(jobBody); //创建子任务-1

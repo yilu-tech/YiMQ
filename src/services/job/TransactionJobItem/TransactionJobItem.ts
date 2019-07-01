@@ -18,7 +18,7 @@ export abstract class TransactionJobItem{
     
     public data:object;
     constructor(public job:TranscationJob){
-
+        
     }
 
     public init(id){
@@ -64,14 +64,10 @@ export abstract class TransactionJobItem{
     public toJson(){
         let json:object = Object.assign({},this);
         delete json['job'];
-        return json;
-    }
-
-    public tojsonWithJob(){
-        let json = this.toJson();
-        let job = this.job.toJson();
-        delete job['items'];
-        json['job'] = job;
+        json['transaction_id'] = this.job.id;
+        json['transaction_name'] = this.job.name;
+        json['transaction_status'] = this.job.status;
+        json['transaction_items_total'] = this.job.total;
         return json;
     }
 }

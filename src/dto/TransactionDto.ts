@@ -20,16 +20,17 @@ export class TransactionItemDto{
     data:object;
 }
 
-
 export class AddTransactionItemDto{
     @IsDefined()
     coordinator:string;
     @IsDefined()
-    id:string;
+    transaction_id:string;
 
-    @ValidateNested()
-    @Type(()=>TransactionItemDto)
-    item:TransactionItemDto;
+    @IsDefined()
+    type:string;
+    @IsDefined()
+    url:string;
+    data:any;
 }
 
 

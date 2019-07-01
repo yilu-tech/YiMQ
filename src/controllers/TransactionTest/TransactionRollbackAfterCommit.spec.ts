@@ -75,17 +75,16 @@ describe('TransactionRollbackAfterCommit', () => {
       });
       let jobBody = {
         "coordinator": coordinatorName,
-        "id":beginRet.id,
-        "item":{
-          "type":TransactionJobItemType.DELAY,
-          "url":url,
-          "data":[
-            {
-              goods_id:'234213124123',
-              total:'21'
-            }
-          ]
-        }
+        "transaction_id":beginRet.id,
+
+        "type":TransactionJobItemType.DELAY,
+        "url":url,
+        "data":[
+          {
+            goods_id:'234213124123',
+            total:'21'
+          }
+        ]
       }
       try{
         let result = await transactionController.jobs(jobBody);
