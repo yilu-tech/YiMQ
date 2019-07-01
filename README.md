@@ -38,7 +38,7 @@
       "coordinator": "transaction",
       "id":"8",
       "item":{
-        "type":"wait",
+        "type":"delay",
         "url":"http://api.d.yilu.co",
         "data":{}
       }
@@ -55,7 +55,7 @@
       },
       "items": [
         {
-          "type": "wait",
+          "type": "delay",
           "url": "http://api.d.yilu.co",
           "data": {},
           "id": 1,

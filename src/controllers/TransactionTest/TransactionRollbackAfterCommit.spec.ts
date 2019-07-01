@@ -9,6 +9,7 @@ import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
 import { Coordinator } from '../../services/coordinator/Coordinator';
 import { TranscationJob } from '../../services/job/TranscationJob';
+import { TransactionJobItemType } from '../../services/job/constants/TransactionJobItemType';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('TransactionRollbackAfterCommit', () => {
@@ -76,7 +77,7 @@ describe('TransactionRollbackAfterCommit', () => {
         "coordinator": coordinatorName,
         "id":beginRet.id,
         "item":{
-          "type":"wait",
+          "type":TransactionJobItemType.DELAY,
           "url":url,
           "data":[
             {

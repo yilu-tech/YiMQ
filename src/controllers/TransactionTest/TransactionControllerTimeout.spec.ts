@@ -12,6 +12,7 @@ import { Coordinator } from '../../services/coordinator/Coordinator';
 import { JobAdminController } from '../../admin/JobAdminController';
 import { TransactionJobsSenderStatus } from '../../services/job/constants/TransactionJobSenderStatus';
 import { TransactionJobItemStatus } from '../../services/job/constants/TransactionJobItemStatus';
+import { TransactionJobItemType } from '../../services/job/constants/TransactionJobItemType';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 /**
@@ -139,7 +140,7 @@ describe('TransactionControllerTimeout', () => {
         "coordinator": coordinatorName,
         "id":beginRet.id,
         "item":{
-          "type":"wait",
+          "type":TransactionJobItemType.DELAY,
           "url":url,
           "data":[
             {
@@ -220,7 +221,7 @@ describe('TransactionControllerTimeout', () => {
         "coordinator": coordinatorName,
         "id":beginRet.id,
         "item":{
-          "type":"wait",
+          "type":TransactionJobItemType.DELAY,
           "url":url,
           "data":[
             {

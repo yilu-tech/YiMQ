@@ -3,7 +3,7 @@ import { TransactionJobItem } from "./TransactionJobItem/TransactionJobItem";
 import { BusinessException } from "../../Exceptions/BusinessException";
 import { TransactionJobProcesser } from "./processer/TransactionJobProcesser";
 import { TccTransactionJobItem } from "./TransactionJobItem/TccTransactionJobItem";
-import { WaitTransactionJobItem } from "./TransactionJobItem/WaitTransactionJobItem";
+import { DelayTransactionJobItem } from "./TransactionJobItem/DelayTransactionJobItem";
 import { TransactionJobStatus } from "./constants/TransactionJobStatus";
 import { TransactionJobItemType } from "./constants/TransactionJobItemType";
 import { TransactionItemDto } from "src/dto/TransactionDto";
@@ -35,9 +35,9 @@ export class TranscationJob extends Job{
         let jobItem:TransactionJobItem;
 
         switch (item.type.toUpperCase()){
-            case  TransactionJobItemType.WAIT:{
-                jobItem =  Object.assign(new WaitTransactionJobItem(this),item);
-                jobItem.type = TransactionJobItemType.WAIT;
+            case  TransactionJobItemType.DELAY:{
+                jobItem =  Object.assign(new DelayTransactionJobItem(this),item);
+                jobItem.type = TransactionJobItemType.DELAY;
                 break;
             }
             case TransactionJobItemType.TCC:{

@@ -1,7 +1,7 @@
 import { TransactionJobItem } from "./TransactionJobItem";
 import { TransactionJobItemStatus } from "../constants/TransactionJobItemStatus";
 
-export class WaitTransactionJobItem extends TransactionJobItem{
+export class DelayTransactionJobItem extends TransactionJobItem{
 
     public async inited(){
         this.status = TransactionJobItemStatus.PREPARED;
