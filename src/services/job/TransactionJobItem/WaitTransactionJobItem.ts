@@ -8,7 +8,7 @@ export class WaitTransactionJobItem extends TransactionJobItem{
         await this.update();
     }
     public async rollback(){
-        ++this.attemptsMade;
+        ++this.cancelAttemptsMade;
         this.status = TransactionJobItemStatus.CANCELED;
         await this.update();
     }

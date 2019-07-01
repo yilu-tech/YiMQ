@@ -161,7 +161,7 @@ describe('TransactionControllerTimeout', () => {
           let updatedJob:TranscationJob = await coordinator.getJob(job.id);//重新查询任务，检查子任务状态是否正确
           expect(updatedJob.status).toBe(TransactionJobStatus.TIMEOUT)
           expect(updatedJob.context['failedReason']).toBe('timeout of 0ms exceeded');
-          expect(updatedJob.items[0].attemptsMade).toBe(0); //确认子任务尚未执行
+          expect(updatedJob.items[0].confirmAttemptsMade).toBe(0); //确认子任务尚未执行
           expect(updatedJob.items[0].status).toBe(TransactionJobItemStatus.PREPARED);//确认子任务状态
           done();
         }
@@ -181,7 +181,7 @@ describe('TransactionControllerTimeout', () => {
           let updatedJob:TranscationJob = await coordinator.getJob(job.id);//重新查询任务，检查子任务状态是否正确
           expect(updatedJob.status).toBe(TransactionJobStatus.COMMITED)
           expect(updatedJob.statusCheckData.status).toBe(TransactionJobsSenderStatus.COMMITED);
-          expect(updatedJob.items[0].attemptsMade).toBe(1); //子任务-1 已经成功，尝试次数1
+          expect(updatedJob.items[0].confirmAttemptsMade).toBe(1); //子任务-1 已经成功，尝试次数1
           expect(updatedJob.items[0].status).toBe(TransactionJobItemStatus.CONFIRMED);//确认子任务已经完成
           done();
         }
@@ -242,7 +242,7 @@ describe('TransactionControllerTimeout', () => {
           let updatedJob:TranscationJob = await coordinator.getJob(job.id);//重新查询任务，检查子任务状态是否正确
           expect(updatedJob.status).toBe(TransactionJobStatus.TIMEOUT)
           expect(updatedJob.context['failedReason']).toBe('timeout of 0ms exceeded');
-          expect(updatedJob.items[0].attemptsMade).toBe(0); 
+          expect(updatedJob.items[0].confirmAttemptsMade).toBe(0); 
           expect(updatedJob.items[0].status).toBe(TransactionJobItemStatus.PREPARED);
           done();
         }
@@ -261,7 +261,8 @@ describe('TransactionControllerTimeout', () => {
           let updatedJob:TranscationJob = await coordinator.getJob(job.id);//重新查询任务，检查子任务状态是否正确
           expect(updatedJob.status).toBe(TransactionJobStatus.ROLLBACKED)
           expect(updatedJob.statusCheckData.status).toBe(TransactionJobsSenderStatus.ROLLBACKED);
-          expect(updatedJob.items[0].attemptsMade).toBe(1); //
+          expect(updatedJob.items[0].confirmAttemptsMade).toBe(0); //
+          expect(updatedJob.items[0].cancelAttemptsMade).toBe(1); //
           expect(updatedJob.items[0].status).toBe(TransactionJobItemStatus.CANCELED); //
           done();
         }

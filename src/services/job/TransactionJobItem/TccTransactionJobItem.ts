@@ -9,6 +9,10 @@ export class TccTransactionJobItem extends TransactionJobItem{
     public tryFailedReason: any;
     public tryResponse:any;
 
+    public cancelResult: string|object;
+    public cancelFailedReason: any;
+    public cancelResponse:any;
+
     public async inited(){
         await this.try();
     }
@@ -22,13 +26,15 @@ export class TccTransactionJobItem extends TransactionJobItem{
             this.status = TransactionJobItemStatus.PREPARED;
             await this.update();
         }catch(error){
-            this.tryResponse = {};
+            
             this.tryFailedReason = error.message;
 
             this.status = TransactionJobItemStatus.PREPARE_FAILED;
 
             if(error.response){
                 let response:AxiosResponse = error.response;
+
+                this.tryResponse = {};
                 this.tryResponse.status = response.status;
                 this.tryResponse.data = response.data;
                 this.tryResponse.requestHeader = response.config.headers
@@ -47,11 +53,38 @@ export class TccTransactionJobItem extends TransactionJobItem{
         
     }
 
-    // public async commit(){
-    //     console.log(`commit this item`);
-    // }
 
     public async rollback(){
+        ++this.cancelAttemptsMade;
+        try{
+            //正常的成功，正常的失败都返回200
+            this.action = TransactionJobItemAction.CANCEL;
+            let result =  await axios.post(this.url,this.tojsonWithJob());
+            this.cancelResult = result.data;
+            this.status = TransactionJobItemStatus.CANCELED;
+            await this.update();
+        }catch(error){
+            
+            this.cancelFailedReason = error.message;
+
+            this.status = TransactionJobItemStatus.CANCEL_FAILED;
+
+            if(error.response){
+                this.cancelResponse = {};
+                let response:AxiosResponse = error.response;
+                this.cancelResponse.status = response.status;
+                this.cancelResponse.data = response.data;
+                this.cancelResponse.requestHeader = response.config.headers
+                
+   
+                await this.update();//先更新，再throw,确保已经写入到redis
+                throw new BadRequestException(this.tojsonWithJob());
+            }
+
+            await this.update();
+            throw new BadRequestException(error.message);
+        }
+
        
     }
     

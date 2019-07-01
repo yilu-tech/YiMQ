@@ -9,9 +9,13 @@ export abstract class TransactionJobItem{
     public url:string;
     public action:TransactionJobItemAction
     public status:TransactionJobItemStatus;
-    public attemptsMade:number;
+    
+    public confirmAttemptsMade:number;
+    public confirmResult: string|object;
+
+    public cancelAttemptsMade:number;
     public failedReason: any;
-    public commitResult: string|object;
+    
     public data:object;
     constructor(public job:TranscationJob){
 
@@ -20,7 +24,8 @@ export abstract class TransactionJobItem{
     public init(id){
         this.id = id;
         this.status = TransactionJobItemStatus.PREPARING;
-        this.attemptsMade = 0;
+        this.confirmAttemptsMade = 0;
+        this.cancelAttemptsMade = 0;
     }
 
     public async update(){
@@ -30,15 +35,15 @@ export abstract class TransactionJobItem{
     public abstract async inited();
 
     public async commit(){
-        ++this.attemptsMade;
+        ++this.confirmAttemptsMade;
         this.action = TransactionJobItemAction.CONFIRM;
         try{
             let result =  await axios.post(this.url,this.data);
-            this.commitResult = result.data;
+            this.confirmResult = result.data;
             this.status = TransactionJobItemStatus.CONFIRMED;
         }catch(error){
             this.failedReason = {};
-            this.status = TransactionJobItemStatus.CONFIRMED_FAILED;
+            this.status = TransactionJobItemStatus.CONFIRM_FAILED;
             this.failedReason.message = error.message;
             
             if('response' in error){

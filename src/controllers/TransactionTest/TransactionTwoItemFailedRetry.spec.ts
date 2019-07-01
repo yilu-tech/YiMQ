@@ -101,7 +101,7 @@ describe('TransactionTwoItemFailedRetry', () => {
     it('add job-2.', async () => {
       mock.onPost(item_job_2).reply(()=>{
         return new Promise(async (resolve,reject)=>{
-          await timeout(100); //延迟，测试任务在处理中的时候，添加子任务-4是否不成功
+          await timeout(100); //延迟，测试任务在处理中的时候，添加子任务-2是否不成功
           resolve([400,{
             message : '余额不足'
           }])
@@ -146,7 +146,7 @@ describe('TransactionTwoItemFailedRetry', () => {
           ]
         }
       }
-      let result = await transactionController.jobs(jobBody); //创建子任务-4
+      let result = await transactionController.jobs(jobBody); //创建子任务-3
       expect(result.id).toBe(3);//检查子任务-3 ID是否正确
     });
 
@@ -161,9 +161,9 @@ describe('TransactionTwoItemFailedRetry', () => {
         if (job.id == beginRet.id) {
           let updatedJob:TranscationJob = await coordinator.getJob(job.id);//重新查询任务，检查子任务状态是否正确
           expect(await updatedJob.context.getState()).toBe('failed');
-          expect(updatedJob.items[0].attemptsMade).toBe(1); //子任务-1 尝试一次 成功
-          expect(updatedJob.items[1].attemptsMade).toBe(1); //子任务-2 尝试一次，失败
-          expect(updatedJob.items[2].attemptsMade).toBe(0); //子任务-3 未尝试
+          expect(updatedJob.items[0].confirmAttemptsMade).toBe(1); //子任务-1 尝试一次 成功
+          expect(updatedJob.items[1].confirmAttemptsMade).toBe(1); //子任务-2 尝试一次，失败
+          expect(updatedJob.items[2].confirmAttemptsMade).toBe(0); //子任务-3 未尝试
           done();
         }
       });
@@ -204,9 +204,9 @@ describe('TransactionTwoItemFailedRetry', () => {
 
           let updatedJob = await coordinator.getJob(job.id);//重新查询任务，检查子任务状态是否正确
           expect(updatedJob.status).toBe(TransactionJobStatus.COMMITED);
-          expect(updatedJob.items[0].attemptsMade).toBe(1); //子任务-1 已经成功，尝试次数1
-          expect(updatedJob.items[1].attemptsMade).toBe(2); //子任务-2 第二次尝试，成功
-          expect(updatedJob.items[2].attemptsMade).toBe(1); //子任务-3 第一次尝试，成功
+          expect(updatedJob.items[0].confirmAttemptsMade).toBe(1); //子任务-1 已经成功，尝试次数1
+          expect(updatedJob.items[1].confirmAttemptsMade).toBe(2); //子任务-2 第二次尝试，成功
+          expect(updatedJob.items[2].confirmAttemptsMade).toBe(1); //子任务-3 第一次尝试，成功
           done();
         }
       });

@@ -14,8 +14,8 @@ export class TransactionJobProcesser extends JobProcesser{
 
     public async commit(){
         for(let item of  this.job.items){
-            //提交 jobItem状态为 PREPARED 和 FAILED的任务
-            if(item.status == TransactionJobItemStatus.PREPARED || item.status == TransactionJobItemStatus.CONFIRMED_FAILED){//处于等待状态
+            //提交 jobItem状态为 PREPARED 和 CONFIRMED_FAILED的子任务
+            if(item.status == TransactionJobItemStatus.PREPARED || item.status == TransactionJobItemStatus.CONFIRM_FAILED){//处于等待状态
                 await item.commit();
             }
         }
@@ -24,7 +24,7 @@ export class TransactionJobProcesser extends JobProcesser{
 
     public async rollback(){
         for(let item of  this.job.items){
-            if(item.status == TransactionJobItemStatus.PREPARED){//处于等待状态
+            if(item.status == TransactionJobItemStatus.PREPARED || item.status == TransactionJobItemStatus.CANCEL_FAILED){//处于等待状态
                 await item.rollback();
             }
         }
