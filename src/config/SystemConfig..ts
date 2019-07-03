@@ -1,7 +1,7 @@
-import { ClientOpts } from "redis";
+import { RedisOptions } from "ioredis";
 
 export class SystemConfig{
-    readonly redis:ClientOpts;
+    readonly redis:RedisOptions;
     constructor(doc){
         this.redis = doc['redis'];
     }

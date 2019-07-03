@@ -6,7 +6,7 @@ import { CoordinatorOptions } from './coordinator/CoordinatorOptions';
 import { QueueCoordinator } from './coordinator/QueueCoordinator';
 import { TransactionCoordinator } from './coordinator/TransactionCoordinator';
 import { CoordinatorDao } from './coordinator/CoordinatorDao';
-import { RedisManager } from '../handlers/redis';
+import { RedisManager } from '../handlers/redis/RedisManager';
 
 @Injectable()
 export class CoordinatorManager{

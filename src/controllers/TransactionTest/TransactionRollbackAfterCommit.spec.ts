@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionController } from '../TransactionController';
 import { CoordinatorManager } from '../../services';
-import { RedisManager } from '../../handlers/redis';
+import { RedisManager } from '../../handlers/redis/RedisManager';
 import { CoordinatorDao } from '../../services/coordinator/CoordinatorDao';
 import { Config } from '../../config';
 import { TransactionJobStatus } from '../../services/job/constants/TransactionJobStatus';

@@ -6,7 +6,7 @@ export abstract class Coordinator{
     
     protected queue:bull.Queue;
     constructor(private manager:CoordinatorManager,options:CoordinatorOptions){
-        this.queue = new bull(options.name,this.manager.config.system.redis);
+        this.queue = new bull(options.name,{redis:this.manager.config.system.redis});
     }
     public getQueue():bull.Queue{
         return this.queue;

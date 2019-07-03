@@ -1,23 +1,25 @@
 import { Injectable } from "@nestjs/common";
 
 import { Config } from "../../config";
-import { RedisClient } from "./RedisClient";
+import Ioredis from 'ioredis'
+import { RedisInstance } from "./RedisInstance";
+
 
 
 @Injectable()
 export class RedisManager {
-    private clients:Object = {};
+    private instances:Object = {};
 
     constructor(private config:Config){
     }
 
-    public client(name:string = 'default'):RedisClient
+    public instance(name:string = 'default'):RedisInstance
      {
-        if(this.clients[name]){
-            return this.clients[name];
+        if(this.instances[name]){
+            return this.instances[name];
         }
-        this.clients[name] = RedisClient.create(this.getClientConfig(name));
-        return this.clients[name];
+        this.instances[name] = new RedisInstance(new Ioredis(this.getClientConfig(name)));
+        return this.instances[name];
     }
 
     private getClientConfig(name){
@@ -27,9 +29,9 @@ export class RedisManager {
     }
 
     public async close(name:string = 'default'){
-        if(this.clients[name]){
-            await this.clients[name].quit()
-            delete this.clients[name];
+        if(this.instances[name]){
+            await this.instances[name].quit()
+            delete this.instances[name];
         }
     }
 
