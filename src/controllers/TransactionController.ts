@@ -18,7 +18,7 @@ export class TransactionController {
   /**
    * 开启事物
    */
-  @Post()
+  @Post('')
   async begin(@Body() createTransactionDto:CreateTransactionDto): Promise<any> {
 
     let coordinator = await this.coordinatorManager.get(createTransactionDto.coordinator);
@@ -29,7 +29,7 @@ export class TransactionController {
   /**
    * 创建事物任务
    */
-  @Post('jobs')
+  @Post('items')
   async jobs(@Body() body:AddTransactionItemDto): Promise<any> {
     let coordinator:TransactionCoordinator = this.coordinatorManager.get(body.coordinator)
     if(!coordinator){

@@ -4,11 +4,13 @@ import { AppService } from './app.service';
 import { TransactionController } from './controllers/TransactionController';
 import { JobController } from './controllers/JobController';
 import { Config } from './config';
-import { RedisManager } from './handlers/redis';
+import { RedisManager } from './handlers/redis/RedisManager';
 import { CoordinatorManager } from './services';
 import { CoordinatorController } from './admin/CoordinatorAdminController';
 import { CoordinatorDao } from './services/coordinator/CoordinatorDao';
 import { adminControllers } from './admin';
+import { RedisDao } from './handlers/redis/ReidsDao';
+import { ModelFactory } from './handlers/ModelFactory';
 
 
 // import { QueueService } from './modules/queue/queue.service';
@@ -29,6 +31,8 @@ import { adminControllers } from './admin';
     Config,
     RedisManager,
     CoordinatorDao,
+    RedisDao,
+    ModelFactory,
     {
       provide: 'CoordinatorManager',
       useFactory: async(config:Config,redisManager:RedisManager,coordinatorDao:CoordinatorDao)=>{
