@@ -1,9 +1,9 @@
 import { TransactionJobItem } from "./TransactionJobItem";
 import axios, { AxiosResponse } from 'axios';
 
-import { TransactionJobItemAction } from "../constants/TransactionJobItemAction";
+import { TransactionJobItemAction } from "../Constants/TransactionJobItemAction";
 import { BadRequestException } from "@nestjs/common";
-import { TransactionJobItemStatus } from "../constants/TransactionJobItemStatus";
+import { TransactionJobItemStatus } from "../Constants/TransactionJobItemStatus";
 export class TccTransactionJobItem extends TransactionJobItem{
     public tryResult: string|object;
     public tryFailedReason: any;

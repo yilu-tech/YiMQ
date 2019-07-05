@@ -1,6 +1,6 @@
 import { Get, Controller, Post, Put, Delete, Patch, Body, Param, Inject, Query } from '@nestjs/common';
-import { ActorModel } from '../services/Actor/ActorModel';
-import { ModelFactory } from '../handlers/ModelFactory';
+import { ActorModel } from '../Models/ActorModel';
+import { ModelFactory } from '../Handlers/ModelFactory';
 
 
 @Controller('admin/actors')

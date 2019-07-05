@@ -1,7 +1,7 @@
 import { RedisManager } from "./RedisManager";
 import { RedisClient } from "./RedisClient";
 import { Injectable } from "@nestjs/common";
-import { Model } from "../Model";
+import { Model } from "../../Models/Model";
 
 @Injectable()
 export class RedisDao{

@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { RedisManager } from "../../handlers/redis/RedisManager";
+import { RedisManager } from "../../Handlers/redis/RedisManager";
 
 
 

@@ -1,7 +1,7 @@
 import axios, { AxiosResponse } from 'axios';
-import { TransactionJobItemStatus } from '../constants/TransactionJobItemStatus';
+import { TransactionJobItemStatus } from '../Constants/TransactionJobItemStatus';
 import { TranscationJob } from '../TranscationJob';
-import { TransactionJobItemAction } from '../constants/TransactionJobItemAction';
+import { TransactionJobItemAction } from '../Constants/TransactionJobItemAction';
 
 export abstract class TransactionJobItem{
     public id:number;

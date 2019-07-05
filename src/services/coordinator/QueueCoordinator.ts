@@ -1,5 +1,5 @@
 import { Coordinator } from "./Coordinator";
-import { QueueJob } from "../job/QueueJob";
+import { QueueJob } from "../Job/QueueJob";
 
 export class QueueCoordinator extends Coordinator{
     public async create(data):Promise<QueueJob>{

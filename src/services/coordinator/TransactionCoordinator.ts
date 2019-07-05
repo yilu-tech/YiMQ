@@ -1,7 +1,7 @@
 import { Coordinator } from "./Coordinator";
 
-import { TranscationJob } from "../job/TranscationJob";
-import { TransactionJobStatus } from "../job/constants/TransactionJobStatus";
+import { TranscationJob } from "../Job/TranscationJob";
+import { TransactionJobStatus } from "../Job/Constants/TransactionJobStatus";
 export class TransactionCoordinator extends Coordinator{
 
     public async create(data):Promise<TranscationJob>{

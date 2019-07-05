@@ -1,13 +1,14 @@
 import { Job } from "./Job";
 import { TransactionJobItem } from "./TransactionJobItem/TransactionJobItem";
 import { BusinessException } from "../../Exceptions/BusinessException";
-import { TransactionJobProcesser } from "./processer/TransactionJobProcesser";
+import { TransactionJobProcesser } from "./Processer/TransactionJobProcesser";
 import { TccTransactionJobItem } from "./TransactionJobItem/TccTransactionJobItem";
 import { DelayTransactionJobItem } from "./TransactionJobItem/DelayTransactionJobItem";
-import { TransactionJobStatus } from "./constants/TransactionJobStatus";
-import { TransactionJobItemType } from "./constants/TransactionJobItemType";
-import { TransactionItemDto } from "src/dto/TransactionDto";
-import { TransactionJobItemStatus } from "./constants/TransactionJobItemStatus";
+import { TransactionJobStatus } from "./Constants/TransactionJobStatus";
+import { TransactionJobItemType } from "./Constants/TransactionJobItemType";
+
+import { TransactionJobItemStatus } from "./Constants/TransactionJobItemStatus";
+import { TransactionItemDto } from "../../Dto/TransactionDto";
 // const timeout = ms => new Promise(res => setTimeout(res, ms))
 export class TranscationJob extends Job{
     public total:number;

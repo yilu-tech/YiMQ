@@ -1,6 +1,6 @@
 import { IsDefined,ValidateNested,IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
-import { TransactionJobItem } from '../services/job/TransactionJobItem/TransactionJobItem';
+import { TransactionJobItem } from '../Services/Job/TransactionJobItem/TransactionJobItem';
 
 export class CreateTransactionDto{
     @IsDefined()

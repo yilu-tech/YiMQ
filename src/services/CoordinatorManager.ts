@@ -1,12 +1,12 @@
 
-import { Config } from '../config';
+import { Config } from '../Config';
 import { Injectable } from '@nestjs/common';
-import { Coordinator } from './coordinator/Coordinator';
-import { CoordinatorOptions } from './coordinator/CoordinatorOptions';
-import { QueueCoordinator } from './coordinator/QueueCoordinator';
-import { TransactionCoordinator } from './coordinator/TransactionCoordinator';
-import { CoordinatorDao } from './coordinator/CoordinatorDao';
-import { RedisManager } from '../handlers/redis/RedisManager';
+import { Coordinator } from './Coordinator/Coordinator';
+import { CoordinatorOptions } from './Coordinator/CoordinatorOptions';
+import { QueueCoordinator } from './Coordinator/QueueCoordinator';
+import { TransactionCoordinator } from './Coordinator/TransactionCoordinator';
+import { CoordinatorDao } from './Coordinator/CoordinatorDao';
+import { RedisManager } from '../Handlers/redis/RedisManager';
 
 @Injectable()
 export class CoordinatorManager{

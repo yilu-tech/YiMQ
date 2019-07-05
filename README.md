@@ -15,15 +15,17 @@
       }
     }
 
+    {
+      "coordinator": "transaction",
+      "service_key: "",
+      "transaction_tag": "send_message",
+    }
+
   返回:
 
     {
       "id": "8",
       "name": "send_message",
-      "sender": {
-        "name": "mix",
-        "header": {}
-      },
       "items": [],
       "total": 0
     }

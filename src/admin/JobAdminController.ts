@@ -1,9 +1,9 @@
 import { Controller, Get, Query } from "@nestjs/common";
-import { CoordinatorManager } from "../services";
-import { Coordinator } from "../services/coordinator/Coordinator";
+import { CoordinatorManager } from "../Services/CoordinatorManager";
+import { Coordinator } from "../Services/Coordinator/Coordinator";
 import { BusinessException } from "../Exceptions/BusinessException";
-import { Job } from "../services/job/Job";
-import { GetJobDto } from "..//dto/JobDto";
+import { Job } from "../Services/Job/Job";
+import { GetJobDto } from "../Dto/JobDto";
 
 @Controller('admin/jobs')
 export class JobAdminController{

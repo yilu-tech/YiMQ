@@ -1,16 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionController } from '../TransactionController';
-import { CoordinatorManager } from '../../services';
+import { CoordinatorManager } from '../../Services/CoordinatorManager';
 import { RedisManager } from '../../handlers/redis/RedisManager';
-import { CoordinatorDao } from '../../services/coordinator/CoordinatorDao';
+import { CoordinatorDao } from '../../Services/Coordinator/CoordinatorDao';
 import { Config } from '../../config';
-import { TransactionJobStatus } from '../../services/job/constants/TransactionJobStatus';
+import { TransactionJobStatus } from '../../Services/job/constants/TransactionJobStatus';
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
-import { TranscationJob } from '../../services/job/TranscationJob';
-import { Coordinator } from '../../services/coordinator/Coordinator';
+import { TranscationJob } from '../../Services/job/TranscationJob';
+import { Coordinator } from '../../Services/Coordinator/Coordinator';
 import { JobAdminController } from '../../admin/JobAdminController';
-import { TransactionJobItemType } from '../../services/job/constants/TransactionJobItemType';
+import { TransactionJobItemType } from '../../Services/job/constants/TransactionJobItemType';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 /**
@@ -44,9 +44,9 @@ describe('TransactionTwoItemFailedRetry', () => {
     jobAdminController = await app.get<JobAdminController>(JobAdminController);
   });
   afterAll(async()=>{
-    // let coordinator:Coordinator =  await coordinatorManager.get(coordinatorName);
-    // await coordinator.getQueue().empty(); //移除未处理的任务
-    // await coordinatorManager.close(coordinatorName);
+    let coordinator:Coordinator =  await coordinatorManager.get(coordinatorName);
+    await coordinator.getQueue().empty(); //移除未处理的任务
+    await coordinatorManager.close(coordinatorName);
   })
 
 

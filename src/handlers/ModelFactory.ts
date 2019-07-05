@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { RedisDao } from "./redis/ReidsDao";
 
-import {Model} from './Model';
+import {Model} from '../Models/Model';
 
 @Injectable()
 export class ModelFactory {

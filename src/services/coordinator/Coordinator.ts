@@ -1,7 +1,7 @@
 import * as bull from 'bull';
 import { CoordinatorManager } from '../CoordinatorManager';
 import { CoordinatorOptions } from './CoordinatorOptions';
-import { Job } from '../job/Job';
+import { Job } from '../Job/Job';
 export abstract class Coordinator{
     
     protected queue:bull.Queue;

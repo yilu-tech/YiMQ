@@ -1,10 +1,10 @@
 import { JobProcesser } from "./JobProcesser";
 import { TranscationJob } from "../TranscationJob";
 import { TransactionJobItem } from "../TransactionJobItem/TransactionJobItem";
-import { TransactionJobItemStatus } from "../constants/TransactionJobItemStatus";
+import { TransactionJobItemStatus } from "../Constants/TransactionJobItemStatus";
 import Axios from "axios";
-import { TransactionJobsSenderStatus } from "../constants/TransactionJobSenderStatus";
-import { TransactionJobStatus } from "../constants/TransactionJobStatus";
+import { TransactionJobsSenderStatus } from "../Constants/TransactionJobSenderStatus";
+import { TransactionJobStatus } from "../Constants/TransactionJobStatus";
 
 
 export class TransactionJobProcesser extends JobProcesser{

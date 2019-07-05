@@ -1,5 +1,5 @@
 import { TransactionJobItem } from "./TransactionJobItem";
-import { TransactionJobItemStatus } from "../constants/TransactionJobItemStatus";
+import { TransactionJobItemStatus } from "../Constants/TransactionJobItemStatus";
 
 export class DelayTransactionJobItem extends TransactionJobItem{
 

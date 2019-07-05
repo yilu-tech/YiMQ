@@ -1,16 +1,16 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { TransactionController } from './controllers/TransactionController';
-import { JobController } from './controllers/JobController';
-import { Config } from './config';
-import { RedisManager } from './handlers/redis/RedisManager';
-import { CoordinatorManager } from './services';
-import { CoordinatorController } from './admin/CoordinatorAdminController';
-import { CoordinatorDao } from './services/coordinator/CoordinatorDao';
-import { adminControllers } from './admin';
-import { RedisDao } from './handlers/redis/ReidsDao';
-import { ModelFactory } from './handlers/ModelFactory';
+import { TransactionController } from './Controllers/TransactionController';
+import { JobController } from './Controllers/JobController';
+import { Config } from './Config';
+import { RedisManager } from './Handlers/redis/RedisManager';
+import { CoordinatorManager } from './Services/CoordinatorManager';
+import { CoordinatorController } from './Admin/CoordinatorAdminController';
+import { CoordinatorDao } from './Services/Coordinator/CoordinatorDao';
+import { adminControllers } from './Admin';
+import { RedisDao } from './Handlers/redis/ReidsDao';
+import { ModelFactory } from './Handlers/ModelFactory';
 
 
 // import { QueueService } from './modules/queue/queue.service';

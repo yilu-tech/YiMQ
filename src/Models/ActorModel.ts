@@ -1,5 +1,5 @@
 
-import { Model } from "../../handlers/Model";
+import { Model } from "./Model";
 
 
 export class ActorModel extends Model{
