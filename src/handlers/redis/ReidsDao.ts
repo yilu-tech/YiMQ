@@ -12,7 +12,7 @@ export class RedisDao{
 
     }
 
-    public async create<TModel>(model:Model):Promise<Model>{
+    public async create<TModel>(model:Model):Promise<TModel>{
 
         await this.checkIndexs(model);
         let multi = this.client.multi();

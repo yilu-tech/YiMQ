@@ -11,6 +11,8 @@ import { CoordinatorDao } from './Core/Coordinator/CoordinatorDao';
 import { adminControllers } from './Admin';
 import { RedisDao } from './Handlers/redis/ReidsDao';
 import { ModelFactory } from './Handlers/ModelFactory';
+import { ActorService } from './Services/ActorService';
+import { services } from './Services';
 
 
 // import { QueueService } from './modules/queue/queue.service';
@@ -28,6 +30,7 @@ import { ModelFactory } from './Handlers/ModelFactory';
   ],
   providers: [
     AppService,
+    ...services,
     Config,
     RedisManager,
     CoordinatorDao,

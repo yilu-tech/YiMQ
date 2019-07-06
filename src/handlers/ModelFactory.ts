@@ -9,7 +9,7 @@ export class ModelFactory {
     constructor(public redisDao:RedisDao){
 
     }
-    async create<TModel>(model:Model):Promise<Model>{
+    async create<TModel>(model:any):Promise<TModel>{
         return await this.redisDao.create(model);
     }
     async find<TModel>(ModelClass:any,primaryValue:string):Promise<Model>{
@@ -42,8 +42,8 @@ export class ModelFactory {
         return await this.redisDao.update(model,model.copyAssign(ModelClass,data));
     }
     
-    public assign(ModelClass:any,data:object):Model{
-        let model:Model = new ModelClass();
+    public assign<TModel>(ModelClass:any,data:object):TModel{
+        let model = new ModelClass();
         model.setModelFactory(this);
         for(let key of model.getFileds()){
             model[key] = data[key];

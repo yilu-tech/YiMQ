@@ -44,7 +44,7 @@ export abstract class Model {
     public async save():Promise<boolean> {
         return await this._modelFactory.redisDao.update(this,this.getPrimaryValue());
     }
-    public assign(updateData):Model{
+    public assign<TModel>(updateData):TModel{
         return Object.assign(this,updateData);
     }
 
