@@ -1,9 +1,9 @@
 import { Get, Controller, Post, Body } from '@nestjs/common';
-import { CoordinatorManager } from '../Services/CoordinatorManager';
+import { CoordinatorManager } from '../Core/CoordinatorManager';
 
 
 import { CreateJobDto } from '../Dto/JobDto';
-import { QueueCoordinator } from '../Services/Coordinator/QueueCoordinator';
+import { QueueCoordinator } from '../Core/Coordinator/QueueCoordinator';
 @Controller('jobs')
 export class JobController {
   constructor(private coordinatorManager:CoordinatorManager) {

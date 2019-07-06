@@ -1,17 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TransactionController } from '../TransactionController';
-import { CoordinatorManager } from '../../Services/CoordinatorManager';
+import { CoordinatorManager } from '../../Core/CoordinatorManager';
 import { RedisManager } from '../../handlers/redis/RedisManager';
-import { CoordinatorDao } from '../../Services/Coordinator/CoordinatorDao';
+import { CoordinatorDao } from '../../Core/Coordinator/CoordinatorDao';
 import { Config } from '../../config';
-import { TransactionJobStatus } from '../../Services/job/constants/TransactionJobStatus';
+import { TransactionJobStatus } from '../../Core/job/constants/TransactionJobStatus';
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
-import { TranscationJob } from '../../Services/job/TranscationJob';
-import { Coordinator } from '../../Services/Coordinator/Coordinator';
+import { TranscationJob } from '../../Core/job/TranscationJob';
+import { Coordinator } from '../../Core/Coordinator/Coordinator';
 import { JobAdminController } from '../../admin/JobAdminController';
-import { TransactionJobItemStatus } from '../../Services/job/constants/TransactionJobItemStatus';
-import { TransactionJobItemType } from '../../Services/job/constants/TransactionJobItemType';
+import { TransactionJobItemStatus } from '../../Core/job/constants/TransactionJobItemStatus';
+import { TransactionJobItemType } from '../../Core/job/constants/TransactionJobItemType';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 /**

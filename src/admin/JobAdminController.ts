@@ -1,8 +1,8 @@
 import { Controller, Get, Query } from "@nestjs/common";
-import { CoordinatorManager } from "../Services/CoordinatorManager";
-import { Coordinator } from "../Services/Coordinator/Coordinator";
+import { CoordinatorManager } from "../Core/CoordinatorManager";
+import { Coordinator } from "../Core/Coordinator/Coordinator";
 import { BusinessException } from "../Exceptions/BusinessException";
-import { Job } from "../Services/Job/Job";
+import { Job } from "../Core/Job/Job";
 import { GetJobDto } from "../Dto/JobDto";
 
 @Controller('admin/jobs')
