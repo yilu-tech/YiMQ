@@ -5,7 +5,8 @@ import { RedisManager } from '../../handlers/redis/RedisManager';
 import { Config } from '../../config';
 import { ModelFactory } from '../../handlers/ModelFactory';
 import { RedisDao } from '../../handlers/redis/ReidsDao';
-import { services } from '../../Services'
+import { ActorService } from '../../Services/ActorService';
+
 
 describe('ActorController', () => {
   let app: TestingModule;
@@ -15,7 +16,7 @@ describe('ActorController', () => {
   beforeAll(async () => {
     app = await Test.createTestingModule({
       controllers: [ActorController],
-      providers: [Config,RedisManager,RedisDao,ModelFactory,...services],
+      providers: [Config,RedisManager,RedisDao,ModelFactory,ActorService],
     }).compile();
 
     actorController = await app.get<ActorController>(ActorController);

@@ -13,8 +13,8 @@ import { RedisDao } from './Handlers/redis/ReidsDao';
 import { ModelFactory } from './Handlers/ModelFactory';
 import { ActorService } from './Services/ActorService';
 import { services } from './Services';
-
-
+import { handlerInjects } from './Handlers';
+import { coreInjects } from './Core';
 // import { QueueService } from './modules/queue/queue.service';
 
 
@@ -30,22 +30,10 @@ import { services } from './Services';
   ],
   providers: [
     AppService,
-    ...services,
     Config,
-    RedisManager,
-    CoordinatorDao,
-    RedisDao,
-    ModelFactory,
-    {
-      provide: 'CoordinatorManager',
-      useFactory: async(config:Config,redisManager:RedisManager,coordinatorDao:CoordinatorDao)=>{
-        const coordinatorManager = new CoordinatorManager(config,redisManager,coordinatorDao);
-        await coordinatorManager.initCoordinators();
-        await coordinatorManager.bootstrapCoordinatorsProcesser();
-        return coordinatorManager;
-      },
-      inject:[Config,RedisManager,CoordinatorDao]
-    },
+    ...handlerInjects,
+    ...coreInjects,
+    ...services,
   ],
 })
 export class AppModule {}

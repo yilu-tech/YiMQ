@@ -4,14 +4,14 @@ import { CreateTransactionDto, AddTransactionItemDto } from '../Dto/TransactionD
 import { TranscationJob } from '../Core/Job/TranscationJob';
 import { TransactionCoordinator } from '../Core/Coordinator/TransactionCoordinator';
 import { BusinessException } from '../Exceptions/BusinessException';
-
+import {TransactionService} from '../Services/TransactionService';
 
 
 
 
 @Controller('transactions')
 export class TransactionController {
-  constructor(@Inject('CoordinatorManager') private coordinatorManager:CoordinatorManager) {
+  constructor(@Inject('CoordinatorManager') private coordinatorManager:CoordinatorManager,private transactionService:TransactionService) {
 
   }
 
@@ -20,10 +20,9 @@ export class TransactionController {
    */
   @Post('')
   async begin(@Body() createTransactionDto:CreateTransactionDto): Promise<any> {
-
-    let coordinator = await this.coordinatorManager.get(createTransactionDto.coordinator);
-    let transcationJob:TranscationJob =  await coordinator.create(createTransactionDto);
-    return transcationJob.toJson();
+    let transactionJob = await this.transactionService.create(createTransactionDto.coordinator,createTransactionDto);
+    return transactionJob.toJson();
+    
   }
 
   /**
@@ -31,16 +30,8 @@ export class TransactionController {
    */
   @Post('items')
   async jobs(@Body() body:AddTransactionItemDto): Promise<any> {
-    let coordinator:TransactionCoordinator = this.coordinatorManager.get(body.coordinator)
-    if(!coordinator){
-      throw new BusinessException('Coordinator does not exist.');
-    }
-    let transcationJob:TranscationJob =  await coordinator.getJob(body.transaction_id);
-    if(!transcationJob){
-      throw new BusinessException('Transcation Job does not exist.');
-    }
-    let jobItem = await transcationJob.addItem(body)
-    return jobItem.toJson();
+    let item = await this.transactionService.addItem(body);
+    return item.toJson();
   }
 
 
@@ -50,16 +41,8 @@ export class TransactionController {
    */
   @Patch('commit')
   async commit(@Body() body): Promise<any> {
-    let coordinator:TransactionCoordinator = await this.coordinatorManager.get(body.coordinator)
-    if(!coordinator){
-      throw new BusinessException('Coordinator does not exist.');
-    }
-    let transcationJob:TranscationJob =  await coordinator.getJob(body.id);
-    if(!transcationJob){
-      throw new BusinessException('Transcation Job does not exist.');
-    }
-    await transcationJob.commit();
-    return transcationJob.toJson();
+    let job =  await this.transactionService.commit(body);
+    return job.toJson();
   }
 
   /**
@@ -67,16 +50,8 @@ export class TransactionController {
    */
   @Patch('rollback')
   async rollback(@Body() body): Promise<any> {
-    let coordinator:TransactionCoordinator = await this.coordinatorManager.get(body.coordinator)
-    if(!coordinator){
-      throw new BusinessException('Coordinator does not exist.');
-    }
-    let transcationJob:TranscationJob =  await coordinator.getJob(body.id);
-    if(!transcationJob){
-      throw new BusinessException('Transcation Job does not exist.');
-    }
-    await transcationJob.rollback();
-    return transcationJob.toJson();
+    let job =  await this.transactionService.rollback(body);
+    return job.toJson();
   }
 
 }

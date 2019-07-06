@@ -10,6 +10,7 @@ import MockAdapter from 'axios-mock-adapter';
 import { Coordinator } from '../../Core/Coordinator/Coordinator';
 import { TranscationJob } from '../../Core/job/TranscationJob';
 import { TransactionJobItemType } from '../../Core/job/constants/TransactionJobItemType';
+import {TransactionService} from '../../Services/TransactionService';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('TransactionRollbackAfterCommit', () => {
@@ -21,7 +22,7 @@ describe('TransactionRollbackAfterCommit', () => {
   beforeAll(async () => {
     app = await Test.createTestingModule({
       controllers: [TransactionController],
-      providers: [Config,RedisManager,CoordinatorDao,CoordinatorManager],
+      providers: [Config,RedisManager,CoordinatorDao,CoordinatorManager,TransactionService],
     }).compile();
 
     coordinatorManager = app.get<CoordinatorManager>(CoordinatorManager);
