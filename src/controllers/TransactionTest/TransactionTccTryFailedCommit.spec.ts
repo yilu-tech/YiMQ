@@ -99,7 +99,7 @@ describe('TransactionTccTryFailedCommit', () => {
       try{
         let result = await transactionController.jobs(jobBody); //创建子任务-1
       }catch(error){
-        let jobItemResult = error.response.message;
+        let jobItemResult = error.response;
         expect(jobItemResult.id).toBe(1);//检查子任务-1 ID是否正确
         expect(jobItemResult.status).toBe(TransactionJobItemStatus.PREPARE_FAILED); //检查子任务try状态
       }
