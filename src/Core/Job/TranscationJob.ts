@@ -1,6 +1,6 @@
 import { Job } from "./Job";
 import { TransactionJobItem } from "./TransactionJobItem/TransactionJobItem";
-import { BusinessException } from "../../Exceptions/BusinessException";
+import { TransactionException } from "../../Exceptions/TransactionException";
 import { TransactionJobProcesser } from "./Processer/TransactionJobProcesser";
 import { TccTransactionJobItem } from "./TransactionJobItem/TccTransactionJobItem";
 import { DelayTransactionJobItem } from "./TransactionJobItem/DelayTransactionJobItem";
@@ -46,7 +46,7 @@ export class TranscationJob extends Job{
                 break;
             }
             default:{
-                throw new BusinessException(`wrong transaction type: ${item.type}.`);
+                throw new TransactionException(`wrong transaction type: ${item.type}.`);
             }
         }
 
@@ -89,7 +89,7 @@ export class TranscationJob extends Job{
     public async commit():Promise<TranscationJob>{
         await this.isDelayedStatus();
         if(!this.itemsIsPrepared()){
-            throw new BusinessException(`Items of this transaction are not prepared.`);
+            throw new TransactionException(`Items of this transaction are not prepared.`);
         }
         await this.setStatus(TransactionJobStatus.COMMITED_WAITING);
         await this.context.promote();//取消延迟，进入队列执行
@@ -116,7 +116,7 @@ export class TranscationJob extends Job{
     public async isDelayedStatus(){
         let contextStatus = await this.context.getState();
         if(contextStatus != 'delayed'){ //如果任何处于非等待状态，不能进行任何操作
-            throw new BusinessException(`This transaction is already in the ${this.status} ${contextStatus}.`)
+            throw new TransactionException(`This transaction is already in the ${this.status} ${contextStatus}.`)
         }
         return true;
     }

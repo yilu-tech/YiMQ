@@ -118,7 +118,7 @@ describe('TransactionTccTryFailedCommit', () => {
         let commitRet= await transactionController.commit(commitBody);//提交事物
         expect(commitRet.action).toBe(TransactionJobStatus.COMMITED_WAITING);//检查事物是否提交成功
       } catch (error) {
-        expect(error.message.message).toBe(`Items of this transaction are not prepared.`);//检查事物是否提交成功
+        expect(error.message).toBe(`Items of this transaction are not prepared.`);//检查事物是否提交成功
       }
 
 

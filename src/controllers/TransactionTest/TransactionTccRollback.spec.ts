@@ -133,7 +133,7 @@ describe('TransactionTccRollback', () => {
       try{
         let ret= await transactionController.rollback(body);//提交事物
       }catch(error){
-        expect(error.message.message).toBe(`This transaction is already in the ${TransactionJobStatus.ROLLABCK_WAITING} failed.`);
+        expect(error.message).toBe(`This transaction is already in the ${TransactionJobStatus.ROLLABCK_WAITING} failed.`);
       }
       
       

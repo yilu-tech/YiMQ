@@ -183,7 +183,7 @@ describe('TransactionTwoItemFailedRetry', () => {
       try{
         await transactionController.jobs(jobBody); //创建子任务-3
       }catch(error){
-        expect(error.message.message).toBe(`This transaction is already in the ${TransactionJobStatus.COMMITED_WAITING} active.`)
+        expect(error.message).toBe(`This transaction is already in the ${TransactionJobStatus.COMMITED_WAITING} active.`)
       }
       
     });

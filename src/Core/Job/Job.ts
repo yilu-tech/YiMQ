@@ -1,6 +1,5 @@
 import * as bull from 'bull';
 import { JobSender } from './JobSender';
-import { BusinessException } from '../../Exceptions/BusinessException';
 
 
 export abstract class Job {

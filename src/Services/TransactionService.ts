@@ -2,7 +2,7 @@ import { Injectable, Inject } from "@nestjs/common";
 import { CoordinatorManager } from "../Core/CoordinatorManager";
 import { TranscationJob } from "../Core/Job/TranscationJob";
 import { TransactionCoordinator } from "src/Core/Coordinator/TransactionCoordinator";
-import { BusinessException } from "../Exceptions/BusinessException";
+import { TransactionException } from "../Exceptions/TransactionException";
 import { TransactionJobItem } from "../Core/Job/TransactionJobItem/TransactionJobItem";
 
 @Injectable()
@@ -20,11 +20,11 @@ export class TransactionService{
     async addItem(item): Promise<TransactionJobItem> {
         let coordinator:TransactionCoordinator = this.coordinatorManager.get(item.coordinator)
         if(!coordinator){
-          throw new BusinessException('Coordinator does not exist.');
+          throw new TransactionException('Coordinator does not exist.');
         }
         let transcationJob:TranscationJob =  await coordinator.getJob(item.transaction_id);
         if(!transcationJob){
-          throw new BusinessException('Transcation Job does not exist.');
+          throw new TransactionException('Transcation Job does not exist.');
         }
         return await transcationJob.addItem(item)
 
@@ -37,11 +37,11 @@ export class TransactionService{
   async commit(job): Promise<TranscationJob> {
     let coordinator:TransactionCoordinator = await this.coordinatorManager.get(job.coordinator)
     if(!coordinator){
-      throw new BusinessException('Coordinator does not exist.');
+      throw new TransactionException('Coordinator does not exist.');
     }
     let transcationJob:TranscationJob =  await coordinator.getJob(job.id);
     if(!transcationJob){
-      throw new BusinessException('Transcation Job does not exist.');
+      throw new TransactionException('Transcation Job does not exist.');
     }
     return await transcationJob.commit();
   }
@@ -52,11 +52,11 @@ export class TransactionService{
   async rollback(job): Promise<TranscationJob> {
     let coordinator:TransactionCoordinator = await this.coordinatorManager.get(job.coordinator)
     if(!coordinator){
-      throw new BusinessException('Coordinator does not exist.');
+      throw new TransactionException('Coordinator does not exist.');
     }
     let transcationJob:TranscationJob =  await coordinator.getJob(job.id);
     if(!transcationJob){
-      throw new BusinessException('Transcation Job does not exist.');
+      throw new TransactionException('Transcation Job does not exist.');
     }
     return await transcationJob.rollback();
   }

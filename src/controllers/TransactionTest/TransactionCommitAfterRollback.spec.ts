@@ -92,7 +92,7 @@ describe('TransactionCommitAfterRollback', () => {
       try{
         let result = await transactionController.jobs(jobBody);
       }catch(error){
-        expect(error.message.message).toBe(`This transaction is already in the ${TransactionJobStatus.COMMITED_WAITING} waiting.`);
+        expect(error.message).toBe(`This transaction is already in the ${TransactionJobStatus.COMMITED_WAITING} waiting.`);
       }
       
     });
@@ -120,7 +120,7 @@ describe('TransactionCommitAfterRollback', () => {
       try{
         await transactionController.rollback(rollbackBody);
       }catch(error){
-        expect(error.message.message).toBe(`This transaction is already in the ${TransactionJobStatus.COMMITED} completed.`);
+        expect(error.message).toBe(`This transaction is already in the ${TransactionJobStatus.COMMITED} completed.`);
       }
     });
     
