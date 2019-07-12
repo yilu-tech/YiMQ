@@ -66,7 +66,7 @@ describe('TransactionTccRollback', () => {
     let beginBody = {
       "coordinator": coordinatorName,
       "name": "send_message",
-      "delay": 1000,
+      "delay": 4000,
       "sender": {
         "name":"mix",
         "statusCheckUrl": senderTransactionStatusUrl,
