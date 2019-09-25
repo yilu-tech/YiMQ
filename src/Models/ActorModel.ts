@@ -1,25 +1,24 @@
+import nohm from "nohm";
 
-import { Model } from "./Model";
-
-
-export class ActorModel extends Model{
-    protected _modelName = 'actors';
-    protected _primaryKey = 'name';
-    protected _indexs = [
-        'key'
-    ];
-    protected _fields = [
-        'id',
-        'name',
-        'key',
-        'api',
-        'status'
-    ]
-
-    public name:string;
-    public key:string;
-    public api:string;
-    public status:string;
-}
+export const ActorModel = nohm.model('User', {
+    properties: {
+      name: {
+        type: 'string',
+        unique: true,
+        validations: ['notEmpty'],
+      },
+      key: {
+        type: 'string',
+        validations: ['notEmpty'],
+      },
+      api: {
+        type: 'string',
+        validations: ['notEmpty'],
+      },
+      status: {
+        type: 'integer'
+      }
+    }
+  });
 
 

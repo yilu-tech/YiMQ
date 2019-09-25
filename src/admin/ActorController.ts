@@ -1,12 +1,11 @@
 import { Get, Controller, Post, Put, Delete, Patch, Body, Param, Inject, Query } from '@nestjs/common';
 import { ActorModel } from '../Models/ActorModel';
-import { ModelFactory } from '../Handlers/ModelFactory';
 import { ActorService } from '../Services/ActorService';
 
 
 @Controller('admin/actors')
 export class ActorController {
-  constructor(private modelFactory:ModelFactory,private actorService:ActorService) {
+  constructor(private actorService:ActorService) {
 
   }
 
@@ -15,14 +14,9 @@ export class ActorController {
     return await this.actorService.create(body)
   }
 
-  @Get(':name')
+  @Get(':id')
   async get(@Param() params): Promise<any> {
-    let actor = await this.actorService.get(params.name);
-    if(actor){
-      return actor.toJson();
-    }else{
-      return null;
-    } 
+    return await this.actorService.get(params.id);
   }
 
   @Get('')
@@ -30,15 +24,15 @@ export class ActorController {
     return this.actorService.all();
   }
 
-  @Delete(':name')
+  @Delete(':id')
   async delete(@Param() params):Promise<any>{
-    return this.actorService.delete(params.name);
+    return this.actorService.delete(params.id);
   }
 
-  @Put(':name')
+  @Put(':id')
   async update(@Param() params,@Body() body):Promise<any>{
 
-    return this.actorService.update(params.name,body);
+    return this.actorService.update(params.id,body);
   }
 }
 

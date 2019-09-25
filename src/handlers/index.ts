@@ -1,11 +1,8 @@
 import { RedisManager } from "./redis/RedisManager";
-
-import { RedisDao } from "./redis/ReidsDao";
-import { ModelFactory } from "./ModelFactory";
+import { Nohm } from "./Nohm";
 
 
 export const handlerInjects = [
     RedisManager,
-    RedisDao,
-    ModelFactory,
+    Nohm
 ];
