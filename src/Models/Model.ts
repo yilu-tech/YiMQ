@@ -9,13 +9,15 @@ export abstract class Model {
     protected abstract _indexs: Array<string> = [];
     protected abstract _fields = [];
     protected _modelFactory: ModelFactory;
+    public id:number;
 
     create(){
     }
 
     public toJson(){
         let json:any = {};
-        for(let key of this.getFileds()){
+        let _fields = this.getFileds();
+        for(let key of _fields){
             json[key] = this[key];
         }
         return json;

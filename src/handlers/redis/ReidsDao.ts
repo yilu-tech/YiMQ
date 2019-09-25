@@ -15,7 +15,13 @@ export class RedisDao{
     public async create<TModel>(model:Model):Promise<TModel>{
 
         await this.checkIndexs(model);
+        let currentIncrement = parseInt(await this.client.get(this.getIncrementKey(model))) || 0;
+        model.id = ++currentIncrement;
+
         let multi = this.client.multi();
+
+        multi.incr(this.getIncrementKey(model));//记录模型当前自增id
+        // multi.hmset(this.getIndexKey(model,'id'),model.id,this.getPrimaryKey(model,model.getPrimaryValue()));//记录item的自增id
         this._insert(multi,model);
 
         await multi.exec();
@@ -33,7 +39,6 @@ export class RedisDao{
     }
 
     public async update(originModel:Model,model:Model):Promise<boolean>{
-
 
         if(!model){
             throw new Error(`${this.getPrimaryKey(model,model.getPrimaryValue())} not exist.`);
@@ -93,7 +98,9 @@ export class RedisDao{
     protected getIndexKey(model:Model,index){
         return `${this.key_prefix}:${model.getModelName()}:_${index}`;
     }
-
+    protected getIncrementKey(model:Model){
+        return `${this.key_prefix}:${model.getModelName()}:_increment`;
+    }
     protected getPrimaryKey(model,value){
         return  `${this.key_prefix}:${model.getModelName()}:items:${value}`;
     }

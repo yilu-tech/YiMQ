@@ -9,6 +9,7 @@ export class ActorModel extends Model{
         'key'
     ];
     protected _fields = [
+        'id',
         'name',
         'key',
         'api',
