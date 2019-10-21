@@ -1,38 +1,57 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { TransactionController } from './Controllers/TransactionController';
 import { JobController } from './Controllers/JobController';
 import { Config } from './Config';
 import { RedisManager } from './Handlers/redis/RedisManager';
-import { CoordinatorManager } from './Core/CoordinatorManager';
-import { CoordinatorController } from './Admin/CoordinatorAdminController';
-import { CoordinatorDao } from './Core/Coordinator/CoordinatorDao';
-import { adminControllers } from './Admin';
-import { RedisDao } from './Handlers/redis/ReidsDao';
-import { ModelFactory } from './Handlers/ModelFactory';
-import { ActorService } from './Services/ActorService';
 import { services } from './Services';
-import { handlerInjects } from './Handlers';
-import { coreInjects } from './Core';
-// import { QueueService } from './modules/queue/queue.service';
+
+import { MasterModels } from './Models/MasterModels';
+import { MasterNohm } from './Bootstrap/MasterNohm';
+import { ConfigToMasterRedis } from './Bootstrap/ConfigToMasterRedis';
+import { ActorManager } from './Core/ActorManager';
+import { MessagesController } from './Controllers/MessageController';
+import { MessageManager } from './Core/MessageManager';
+
+
+
+
+
+
+
+export const modelsInjects=[
+  MasterModels
+]
+
+export const ActorManagerBootstrap = {
+  provide: 'ActorManagerBootstrap',
+  useFactory: async(actorManager:ActorManager)=>{
+    await actorManager.initActors();
+  },
+  inject:[ActorManager]
+}
 
 
 
 @Module({
   imports: [],
   controllers: [
-    AppController,
-    TransactionController,
-    JobController,
-    CoordinatorController,
-    ...adminControllers
+    MessagesController
+    // AppController,
+    // TransactionController,
+    // JobController,
+    // CoordinatorController,
+    // ...adminControllers
   ],
   providers: [
-    AppService,
+    // AppService,
     Config,
-    ...handlerInjects,
-    ...coreInjects,
+    RedisManager,
+    MasterNohm,
+    ConfigToMasterRedis,
+    ...modelsInjects,
+    ActorManager,
+    ActorManagerBootstrap,
+    MessageManager,
     ...services,
   ],
 })

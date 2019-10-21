@@ -1,12 +1,11 @@
 import * as bull from 'bull';
-import { CoordinatorManager } from '../CoordinatorManager';
-import { CoordinatorOptions } from './CoordinatorOptions';
-import { Job } from '../Job/Job';
-export abstract class Coordinator{
+import { RedisOptions } from 'ioredis';
+
+export class Coordinator{
     
     protected queue:bull.Queue;
-    constructor(private manager:CoordinatorManager,options:CoordinatorOptions){
-        this.queue = new bull(options.name,{redis:this.manager.config.system.redis});
+    constructor(name:string,options:RedisOptions){
+        this.queue = new bull(name,{redis:options});
     }
     public getQueue():bull.Queue{
         return this.queue;
@@ -15,7 +14,9 @@ export abstract class Coordinator{
         return this.queue.close();
     }
 
-    public abstract processBootstrap();
+    public processBootstrap(){
+
+    };
     public async pause(){
         return this.queue.pause();
     }
@@ -26,8 +27,12 @@ export abstract class Coordinator{
      * 添加任务
      * @param data 
      */
-    public abstract async create(data:object);
+    public async add(name,data:object){
+        return this.queue.add(name,data);
+    };
 
 
-    public abstract async getJob(id:bull.JobId):Promise<any>;
+    public async getJob(id:bull.JobId):Promise<any>{
+
+    };
 }

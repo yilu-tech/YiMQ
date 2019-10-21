@@ -1,7 +1,7 @@
 import {ActorService} from './ActorService';
-import { TransactionService } from './TransactionService';
+import { MessageService } from './MessageService';
 
 export const services = [
     ActorService,
-    TransactionService
+    MessageService
 ];

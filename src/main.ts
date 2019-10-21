@@ -7,9 +7,13 @@ import {
 import { ValidationPipe } from '@nestjs/common';
 
 
+
 async function bootstrap() {
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule,new FastifyAdapter());
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule,new FastifyAdapter(),{
+  });
+  // app.useLogger(app.get(AppLogger));
   app.useGlobalPipes(new ValidationPipe());
+  // app.useGlobalFilters(new HttpExceptionFilter());
   await app.listen(7379,'0.0.0.0');
 }
 bootstrap();

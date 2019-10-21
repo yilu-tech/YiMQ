@@ -1,16 +1,13 @@
 import * as bull from 'bull';
-import { JobSender } from './JobSender';
-
-
-export abstract class Job {
-    public id:number| string;
-    public name:string;
-    public sender:JobSender;
-    
+import { JobAction } from '../../Constants/JobConstants';
+export class Job{
+    public id:number | string;
+    public message_id:number | string;
+    public action:JobAction
     constructor(public readonly context:bull.Job){
         this.id = this.context.id;
-        this.name = this.context.data.name;
-        this.sender = Object.assign(new JobSender(),this.context.data.sender);
+        this.message_id = this.context.data.message_id;
+        this.action = this.context.data.action;
     }
     /**
      * 整理数据
@@ -21,12 +18,9 @@ export abstract class Job {
         return json;
     }
 
-    public async retry():Promise<void>{
-        await this.context.retry();
-    
-    }
+    // public async retry():Promise<void>{
+    //     await this.context.retry();
 
-
-
+    // }
 
 }

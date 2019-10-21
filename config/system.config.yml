@@ -1,0 +1,12 @@
+version: 1
+default: master
+redis:
+  master:
+    host: localhost
+    port: 6379
+    db: 0
+
+  db2:
+    host: localhost
+    port: 6379
+    db: 1

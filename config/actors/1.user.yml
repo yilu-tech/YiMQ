@@ -1,0 +1,14 @@
+key: asdfasdfasdf
+protocol: http
+api: 'user/yimq'
+redis: master
+
+
+broadcastTopics:
+  - user_create
+  - user_update
+
+broadcastTopicRegisters:
+
+
+

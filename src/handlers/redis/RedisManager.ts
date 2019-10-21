@@ -13,19 +13,26 @@ export class RedisManager {
     constructor(private config:Config){
     }
 
-    public client(name:string = 'default'):RedisClient
+    public async client(name?:string):Promise<RedisClient>
      {
+        name = name? name : this.config.system.default;
         if(this.clients[name]){
             return this.clients[name];
         }
-        this.clients[name] = new Ioredis(this.getClientConfig(name));
-        return this.clients[name];
+        let client = new Ioredis(this.getClientOptions(name));
+
+        return new Promise((res,rej)=>{
+            client.on('ready',()=>{
+                this.clients[name]  = client;
+                res(client);
+            })
+            //todo:: client.on error rej error
+        })
     }
 
-    private getClientConfig(name){
-        if(name === 'default'){
-            return this.config.system.redis;
-        }
+    public getClientOptions(name?){
+        name = name? name : this.config.system.default;
+        return this.config.system.redis[this.config.system.default];
     }
 
     public async close(name:string = 'default'){

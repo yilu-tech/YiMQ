@@ -1,0 +1,15 @@
+key: asdfasdfasdf
+protocol: http
+api: 'user/yimq'
+redis:
+  - main
+  
+  
+topics:
+  - user_create
+  - user_update
+
+consumeTopics:
+
+
+

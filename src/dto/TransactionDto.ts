@@ -1,13 +1,10 @@
 import { IsDefined,ValidateNested,IsNumber } from 'class-validator';
 
-export class CreateTransactionDto{
+export class CreateTransactionMessageDto{
     @IsDefined()
-    coordinator:string;
+    actor:string;
     @IsDefined()
-    name:string;
-    
-    // @IsNumber()
-    // delay:Number;
+    topic:string;
 }
 
 export class TransactionItemDto{

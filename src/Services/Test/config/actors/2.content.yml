@@ -1,0 +1,11 @@
+key: asdfasdfasdf
+protocol: http
+api: 'user/yimq'
+
+topics:
+consumeTopics:
+  change_post_author:
+    topic: user.user_update
+
+
+
