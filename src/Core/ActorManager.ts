@@ -5,6 +5,7 @@ import { ActorService } from '../Services/ActorService';
 import { Actor } from './Actor';
 import { Config } from '../Config';
 import { RedisManager } from '../Handlers/redis/RedisManager';
+import { of } from 'rxjs';
 
 
 @Injectable()
@@ -19,7 +20,7 @@ export class ActorManager{
      * @param config 
      * @param redisManager 
      */
-    constructor(@Inject('configToMasterRedis') configToMasterRedis,private actorService:ActorService,private config:Config,private redisManager:RedisManager){
+    constructor(private actorService:ActorService,private config:Config,private redisManager:RedisManager){
 
     }
 
@@ -37,11 +38,13 @@ export class ActorManager{
         Logger.log('Inited actors.','Bootstrap')
     }
 
-    public get(name:string){
+    public get(name:string):Actor{
         return this.actorsName.get(name);
     }
 
     public async bootstrapActorsCoordinatorProcesser(){
-
+        for(let [id,actor] of this.actors){
+            actor.coordinator.processBootstrap();
+        }
     }
 }

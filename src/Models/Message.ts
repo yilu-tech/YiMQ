@@ -4,6 +4,7 @@ import { MessageStatus } from "../Constants/MessageConstants";
 
 interface MessageProperties {
     topic: string;
+    type:string;
     items: object;
     status: MessageStatus;
     created_at: number;
@@ -15,6 +16,11 @@ export class MessageModelClass extends NohmModel<MessageProperties> {
     public static idGenerator = 'increment';
     protected static definitions: TTypedDefinitions<MessageProperties> = {
         topic: {
+            type: 'string',
+            index:true,
+            validations: ['notEmpty']
+        },
+        type: {
             type: 'string',
             index:true,
             validations: ['notEmpty']

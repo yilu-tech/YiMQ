@@ -26,6 +26,7 @@ export const ActorManagerBootstrap = {
   provide: 'ActorManagerBootstrap',
   useFactory: async(actorManager:ActorManager)=>{
     await actorManager.initActors();
+    await actorManager.bootstrapActorsCoordinatorProcesser();
   },
   inject:[ActorManager]
 }
@@ -51,7 +52,6 @@ export const ActorManagerBootstrap = {
     ...modelsInjects,
     ActorManager,
     ActorManagerBootstrap,
-    MessageManager,
     ...services,
   ],
 })

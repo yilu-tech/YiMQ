@@ -2,18 +2,19 @@ import { MessageType } from "../Constants/MessageConstants";
 import { Injectable } from "@nestjs/common";
 import { ActorManager } from "../Core/ActorManager";
 import { BusinessException } from "../Exceptions/BusinessException";
+import * as bull from 'bull';
 @Injectable()
 export class MessageService {
     constructor(private actorManger:ActorManager){
 
     }
-    async create<P>(producerName:string,type:MessageType, topic:string):Promise<P> {
+    async create<P>(producerName:string,type:MessageType, topic:string,options?:bull.JobOptions):Promise<P> {
         let message:any;
         let producer = this.actorManger.get(producerName);
         if(!producer){
             throw new BusinessException('Producer not exists.')
         }
-        message =  await producer.messageManager.add(type,topic);
+        message =  await producer.messageManager.add(type,topic,options);
         return message;
     }
 }

@@ -15,7 +15,7 @@ export class Actor{
     public id:number;
     public name:string;
     public key:string;
-    public uri:string;
+    public api:string;
     public redis:string;
     public protocol:string;
 
@@ -50,10 +50,10 @@ export class Actor{
         let redisOptions = this.redisManager.getClientOptions(this.redis);
         switch (this.protocol) {
             case 'http':
-                this.coordinator = new HttpCoordinator(this.name,redisOptions);
+                this.coordinator = new HttpCoordinator(this,redisOptions);
                 break;
             case 'grpc':
-                this.coordinator = new GrpcCoordinator(this.name,redisOptions);
+                this.coordinator = new GrpcCoordinator(this,redisOptions);
                 break;
         }
     }

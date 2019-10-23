@@ -1,11 +1,12 @@
 import * as bull from 'bull';
 import { RedisOptions } from 'ioredis';
+import { Actor } from '../Actor';
 
-export class Coordinator{
+export abstract class Coordinator{
     
     protected queue:bull.Queue;
-    constructor(name:string,options:RedisOptions){
-        this.queue = new bull(name,{redis:options});
+    constructor(protected actor:Actor,options:RedisOptions){
+        this.queue = new bull(this.actor.name,{redis:options});
     }
     public getQueue():bull.Queue{
         return this.queue;
@@ -14,9 +15,7 @@ export class Coordinator{
         return this.queue.close();
     }
 
-    public processBootstrap(){
-
-    };
+    public abstract processBootstrap();
     public async pause(){
         return this.queue.pause();
     }
@@ -27,8 +26,8 @@ export class Coordinator{
      * 添加任务
      * @param data 
      */
-    public async add(name,data:object){
-        return this.queue.add(name,data);
+    public async add(name,data:object,jobOptions:bull.JobOptions){
+        return this.queue.add(name,data,jobOptions);
     };
 
 

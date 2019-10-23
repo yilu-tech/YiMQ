@@ -29,7 +29,7 @@ describe('ActorConfigLoadToMasterRedis.spec', () => {
         config = app.get<Config>(Config);
         redisManager = app.get<RedisManager>(RedisManager);
 
-        await redisManager.client().flushdb();
+        (await redisManager.client()).flushdb();
     });
 
     describe('root', () => {
