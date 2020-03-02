@@ -1,24 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { Config } from '../../../Config';
-import { MasterNohm } from '../../../Bootstrap/MasterNohm';
-import { ActorService } from '../../ActorService';
-import { RedisManager } from '../../../Handlers/redis/RedisManager';
-import { MasterModels } from '../../..//Models/MasterModels';
+import { Config } from '../../Config';
+import { MasterNohm } from '../../Bootstrap/MasterNohm';
+import { ActorService } from '../../Services/ActorService';
+import { RedisManager } from '../../Handlers/redis/RedisManager';
 import { join } from 'path';
-import { ConfigToMasterRedis } from '../../../Bootstrap/ConfigToMasterRedis';
-import { modelsInjects, ActorManagerBootstrap } from '../../../app.module';
-import { ActorManager } from '../../../Core/ActorManager';
-import { MessageManager } from '../../../Core/MessageManager';
-import { services } from '../../../Services';
-import { MessageService } from '../../../Services/MessageService';
-import { MessageType, MessageStatus } from '../../../Constants/MessageConstants';
-import { Message } from '../../../Core/Messages/Message';
-import { Logger } from '@nestjs/common';
-import { Job } from '../../../Core/Job/Job';
-import { JobAction } from '../../../Constants/JobConstants';
+import { modelsInjects} from '../../app.module';
+import { ActorManager } from '../../Core/ActorManager';
+import { services } from '../../Services';
+import { MessageService } from '../../Services/MessageService';
+import { MessageType, MessageStatus } from '../../Constants/MessageConstants';
+import { Message } from '../../Core/Messages/Message';
+import { JobAction } from '../../Constants/JobConstants';
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
-import { async } from 'rxjs/internal/scheduler/async';
 import { RedisClient } from 'src/Handlers/redis/RedisClient';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
@@ -30,7 +24,7 @@ describe('MessageService', () => {
     let actorManager:ActorManager;
     let redisClient:RedisClient;
 
-    beforeAll(async () => {
+    beforeEach(async () => {
         process.env.CONFIG_DIR_PATH = join(__dirname,'../','config');
         
         const app: TestingModule = await Test.createTestingModule({
@@ -54,26 +48,26 @@ describe('MessageService', () => {
         messageService = app.get<MessageService>(MessageService);
         actorManager = app.get<ActorManager>(ActorManager);
         
-        await actorManager.initActors();  
+        await actorManager.initActors();
     });
 
-    afterAll(async()=>{
-        await actorManager.closeActors();
+    afterEach(async()=>{
         await redisClient.quit()
+        await actorManager.closeActors();
     })
     
 
     /**
      * 错误后，通过检查状态，校正任务完成
      */
-    describe('create transaction message to failed-done', async () => {
+    describe('create transaction message', async () => {
         let producerName = 'user';
         let messageType = MessageType.TRANSACTION;
         let topic = 'goods_create';
         let message:Message;
 
         
-        it('create message', async (done) => {
+        it('.failed to done', async (done) => {
            
             message = await messageService.create(producerName,messageType,topic,{
                 delay:500,
@@ -117,16 +111,8 @@ describe('MessageService', () => {
             await actorManager.bootstrapActorsCoordinatorProcesser();
         });
 
-    });
 
-    describe('create transaction message to cancel', async () => {
-        let producerName = 'user';
-        let messageType = MessageType.TRANSACTION;
-        let topic = 'goods_create';
-        let message:Message;
-
-        
-        it('create message', async (done) => {
+        it('.cancel', async (done) => {
            
             message = await messageService.create(producerName,messageType,topic,{
                 delay:500,
@@ -148,6 +134,11 @@ describe('MessageService', () => {
                     done()
                 }
             })
+            await actorManager.bootstrapActorsCoordinatorProcesser();
         });
+
+
+
+
     });
 });
