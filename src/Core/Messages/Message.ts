@@ -49,7 +49,9 @@ export abstract class Message{
         return this;
     }
 
+    abstract async done()
 
+    abstract async cancel()
 
      /**
      * 整理数据

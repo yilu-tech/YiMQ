@@ -62,8 +62,9 @@ export class Actor{
 
     }
 
-    public close(){
-
+    public async close(){
+        await this.coordinator.close();
+        await this.redisClient.quit();
     }
 
     public suspend(){

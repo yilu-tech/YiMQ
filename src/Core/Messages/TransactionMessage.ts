@@ -9,11 +9,16 @@ export class TransactionMessage extends Message{
 
 
 
-    commit(){
+    async done(){
+        //1. 设置MessageStatus = done
+        //2. 创建items的job
+        //3. 删除MessageJob
 
     }
 
-    rollback(){
-
+    async cancel(){
+        //1. 设置MessageStatus = cancel
+        //2. 创建items的job
+        //3. 删除MessageJob
     }
 }

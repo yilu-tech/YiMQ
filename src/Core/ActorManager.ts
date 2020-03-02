@@ -37,6 +37,11 @@ export class ActorManager{
         //todo::通过masterRedis对比，取出配置文件不存在的actor也进行初始化，用于后续手动操作
         Logger.log('Inited actors.','Bootstrap')
     }
+    public async closeActors(){
+        for(let [id,actor] of this.actors){
+            await actor.close();
+        }
+    }
 
     public get(name:string):Actor{
         return this.actorsName.get(name);

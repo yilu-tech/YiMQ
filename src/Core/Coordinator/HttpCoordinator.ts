@@ -7,6 +7,8 @@ import { JobType } from '../../Constants/JobConstants';
 import { compareAsc, format } from 'date-fns'
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
+import { MessageStatus } from '../../Constants/MessageConstants';
+import { TransactionJob } from '../Job/TransactionJob';
 const mock = new MockAdapter(axios);
 export class HttpCoordinator extends Coordinator{
     
@@ -25,7 +27,7 @@ export class HttpCoordinator extends Coordinator{
      * 远程请求，只有成功和失败
      * @param job 
      */
-    private async process(job:Job){
+    private async process(job){
         switch (job.type) {
             case JobType.TRANSACTION:
                 await this.transactionJobProcess(job);
@@ -45,11 +47,24 @@ export class HttpCoordinator extends Coordinator{
 
     }
 
-    async transactionJobProcess(job:Job){
+    async transactionJobProcess(job:TransactionJob){
         let result = await axios.post(job.message.producer.api,{
             action: job.action,
             message_id: job.message_id
         });
+
+        switch (result.data.status) {
+            case MessageStatus.CANCELED:
+                await job.message.cancel();
+                break;
+            case MessageStatus.DONE:
+                await job.message.done();
+                break;
+            case MessageStatus.PENDING:
+                throw new Error('MessageStatus is PENDING');
+            default:
+                throw new Error('MessageStatus is not exists.');
+        }
     }
 
     async transactionItemJobProcess(job){
