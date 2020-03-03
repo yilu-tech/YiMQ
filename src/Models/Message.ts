@@ -7,6 +7,8 @@ interface MessageProperties {
     type:string;
     items: object;
     status: MessageStatus;
+    job_id: number;
+    updated_at: number;
     created_at: number;
 
 }
@@ -31,6 +33,14 @@ export class MessageModelClass extends NohmModel<MessageProperties> {
         status: {
             type: 'string',
             index: true,
+            validations: ['notEmpty']
+        },
+        job_id: {
+            type: 'string',
+            index: true,
+        },
+        updated_at: {
+            type: 'timestamp',
             validations: ['notEmpty']
         },
         created_at: {

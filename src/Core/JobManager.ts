@@ -29,10 +29,21 @@ export class JobManager{
         let jobContext = await this.actor.coordinator.add(message.topic,data,options);
         return this.factory(message,type,jobContext);
     }
+    public async get(id){
+        let jobContext = await this.actor.coordinator.getJob(id);
+        return this.restore(jobContext);
+    }
     public async restore(jobContext:bull.Job){
         let message = await this.actor.messageManager.get(jobContext.data.message_id);
         return this.factory(message,jobContext.data.type,jobContext);
     }
+
+    public async restoreByMessage(message:Message){
+        let jobContext = await this.actor.coordinator.getJob(message.job_id);
+        return this.factory(message,jobContext.data.type,jobContext);
+    }
+
+    
     public factory(message,type,jobContext:bull.Job){
         let job:Job;
         switch (type) {

@@ -1,4 +1,4 @@
-import { MessageType } from '../Constants/MessageConstants';
+import { MessageType, MessageStatus } from '../Constants/MessageConstants';
 import { Message } from './Messages/Message';
 import { GeneralMessage } from './Messages/GeneralMessage';
 import { TransactionMessage } from './Messages/TransactionMessage';
@@ -11,33 +11,42 @@ export class MessageManager {
     }
 
     async add<P>(type:MessageType, topic:string,options?:bull.JobOptions):Promise<P> {
-        let message:any;
-        switch (type) {
-            case MessageType.GENERAL:
-                message = new GeneralMessage(MessageType.GENERAL);
-                break;
-            case MessageType.TRANSACTION:
-                message = new TransactionMessage(MessageType.TRANSACTION);
-                break;
-            default:
-                throw new BusinessException('MessageType is not exists.')
-        }
-        await (<Message>message).create(this.producer,topic,options);
+        let messageModel = new this.producer.messageModel();
+        
+        messageModel.property('topic',topic);
+        messageModel.property('type',type);
+        messageModel.property('status',MessageStatus.PENDING);
+        messageModel.property('created_at',new Date().getTime());
+        await messageModel.save();
+        
+        let message:any = this.messageFactory(type,this.producer,messageModel)
+        await (<Message>message).create(options);
+       
         return message;
     }
     async get(id):Promise<Message>{
         let messageModel = await this.producer.messageModel.load(id);
-        let message:any;
-        switch (messageModel.property('type')) {
+        let message = this.messageFactory(messageModel.property('type'),this.producer,messageModel); 
+        await (<Message>message).restore();
+        return message;
+    }
+
+    async confirm(id):Promise<Message>{
+        let message = await this.get(id);
+        return message.confirm()
+    }
+    private messageFactory(type,producer,messageModel):Message{
+        let message;
+        switch (type) {
             case MessageType.GENERAL:
-                message = new GeneralMessage(MessageType.GENERAL);
+                message = new GeneralMessage(producer,messageModel);
                 break;
             case MessageType.TRANSACTION:
-                message = new TransactionMessage(MessageType.TRANSACTION);
+                message = new TransactionMessage(producer,messageModel);
                 break;
             default:
                 throw new BusinessException('MessageType is not exists.')
         }
-       return await (<Message>message).restore(this.producer,messageModel.allProperties());
+        return message;
     }
 }

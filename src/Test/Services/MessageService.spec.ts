@@ -14,6 +14,7 @@ import { JobAction } from '../../Constants/JobConstants';
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
 import { RedisClient } from 'src/Handlers/redis/RedisClient';
+import {JobStatus} from '../../Constants/JobConstants'
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('MessageService', () => {
@@ -52,7 +53,7 @@ describe('MessageService', () => {
     });
 
     afterEach(async()=>{
-        await redisClient.quit()
+        await redisClient.quit();//todo::应该开发一个MQ.quit();
         await actorManager.closeActors();
     })
     
@@ -66,11 +67,37 @@ describe('MessageService', () => {
         let topic = 'goods_create';
         let message:Message;
 
-        
-        it('.failed to done', async (done) => {
+
+        it('.create after confirm', async (done) => {
+            let producerName = 'user';
+            let messageType = MessageType.TRANSACTION;
+            let topic = 'user_create';
+            let message:Message;
            
             message = await messageService.create(producerName,messageType,topic,{
-                delay:500,
+                delay:300,
+                attempts:5,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            let producer = actorManager.get(producerName); 
+            producer.coordinator.getQueue().on('removed',async (job)=>{
+                if(message.job.id == job.id){
+                    expect(await job.getState()).toBe(JobStatus.STUCK)
+                    done()
+                }
+            })
+            await actorManager.bootstrapActorsCoordinatorProcesser();
+            message = await messageService.confirm(producerName,message.id);
+        });
+
+        
+        it('.timeout remote check failed to done', async (done) => {
+           
+            message = await messageService.create(producerName,messageType,topic,{
+                delay:100,
                 attempts:5,
                 backoff:{
                     type:'exponential',
@@ -86,25 +113,28 @@ describe('MessageService', () => {
 
             producer.coordinator.getQueue().on('failed',async (job)=>{
                 
-                if(message.job.id == job.id && job.attemptsMade == 1){//模拟pending
+                if(message.job.id == job.id && job.attemptsMade == 1){//第一次获取失败
                     expect(job.data.action).toBe(JobAction.CHECK)
                     expect(job.attemptsMade).toBe(1)
                     mock.onPost(producer.api).reply(200,{
                         status: MessageStatus.PENDING
                     })
+                    expect(await message.job.context.getState()).toBe(JobStatus.DELAYED)
                 }
-                else if(message.job.id == job.id && job.attemptsMade == 2){//模拟done
+                else if(message.job.id == job.id && job.attemptsMade == 2){//第二次尝试成功
                     expect(job.data.action).toBe(JobAction.CHECK)
                     expect(job.attemptsMade).toBe(2)
                     mock.onPost(producer.api).reply(200,{
                         status: MessageStatus.DONE
                     })
+                    expect(await message.job.context.getState()).toBe(JobStatus.DELAYED)
                 }
             })
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 if(message.job.id == job.id){
                     expect(job.data.action).toBe(JobAction.CHECK)
                     expect(job.attemptsMade).toBe(2);
+                    expect(await message.job.context.getState()).toBe(JobStatus.COMPLETED)
                     done()
                 }
             })
@@ -115,7 +145,7 @@ describe('MessageService', () => {
         it('.cancel', async (done) => {
            
             message = await messageService.create(producerName,messageType,topic,{
-                delay:500,
+                delay:100,
                 attempts:5,
                 backoff:{
                     type:'exponential',
@@ -138,6 +168,61 @@ describe('MessageService', () => {
         });
 
 
+        it('.done after cancel', async (done) => {
+           
+            message = await messageService.create(producerName,messageType,topic,{
+                delay:100,
+                attempts:5,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.topic).toBe(topic);
+            let producer = actorManager.get(producerName); 
+
+            mock.onPost(producer.api).reply(200,{
+                status: MessageStatus.DONE
+            })
+            producer.coordinator.getQueue().on('completed',async (job)=>{
+                if(message.job.id == job.id){
+                    expect(job.data.action).toBe(JobAction.CHECK)
+                    done()
+                }
+            })
+            await actorManager.bootstrapActorsCoordinatorProcesser();
+
+        });
+
+        it('.create done after cancel on db2', async (done) => {
+            let producerName = 'content';
+            let messageType = MessageType.TRANSACTION;
+            let topic = 'posts_create';
+            let message:Message;
+           
+            message = await messageService.create(producerName,messageType,topic,{
+                delay:100,
+                attempts:5,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.topic).toBe(topic);
+            let producer = actorManager.get(producerName); 
+
+            mock.onPost(producer.api).reply(200,{
+                status: MessageStatus.DONE
+            })
+            producer.coordinator.getQueue().on('completed',async (job)=>{
+                if(message.job.id == job.id){
+                    expect(job.data.action).toBe(JobAction.CHECK)
+                    done()
+                }
+            })
+            await actorManager.bootstrapActorsCoordinatorProcesser();
+
+        });
 
 
     });

@@ -6,6 +6,10 @@ export enum MessageType{
 
 export enum MessageStatus{
     PENDING =  'PENDING',
+
+    DOING = 'DOING',
     DONE = 'DONE',
-    CANCELED = 'CANCELED'
+
+    CANCELLING = 'CANCELLING',
+    CANCELED = 'CANCELED',
 }

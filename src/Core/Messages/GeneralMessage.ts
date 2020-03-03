@@ -2,10 +2,13 @@ import { Message } from "./Message";
 
 
 export class GeneralMessage extends Message{
-    done() {
+    done():Promise<Message> {
         throw new Error("Method not implemented.");
     }
-    cancel() {
+    async confirm():Promise<Message>{
+        return this;
+    }
+    cancel():Promise<Message> {
         throw new Error("Method not implemented.");
     }
     createMessageJob(){

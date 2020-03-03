@@ -55,11 +55,16 @@ export class HttpCoordinator extends Coordinator{
 
         switch (result.data.status) {
             case MessageStatus.CANCELED:
-                await job.message.cancel();
+                await job.cancel();
                 break;
             case MessageStatus.DONE:
-                await job.message.done();
+                await job.done();
                 break;
+                /**
+                 * //todo::远程服务增加PENDING状态
+                 * 这里考虑，在远程直接加锁，然后用Read Uncommitted来读取PENDING状态，
+                 * 如果不能实现，就取消PENDING状态
+                 */
             case MessageStatus.PENDING:
                 throw new Error('MessageStatus is PENDING');
             default:

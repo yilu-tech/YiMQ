@@ -32,7 +32,7 @@ export class RedisManager {
 
     public getClientOptions(name?){
         name = name? name : this.config.system.default;
-        return this.config.system.redis[this.config.system.default];
+        return this.config.system.redis[name];
     }
 
     public async close(name:string = 'default'){

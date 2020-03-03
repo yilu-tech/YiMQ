@@ -14,6 +14,21 @@ export class Job{
         this.action = this.context.data.action;
         this.message = message;
     }
+
+    public async cancel(){
+        await this.message.cancel();
+    }
+
+    public async done(){
+        await this.message.done();
+    }
+
+    public async remove(){
+        return this.context.remove();
+    }
+    private async update(){
+        await this.context.update(this.toJson());
+    }
     /**
      * 整理数据
      */
