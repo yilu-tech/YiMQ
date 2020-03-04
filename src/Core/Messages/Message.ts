@@ -57,7 +57,8 @@ export abstract class Message{
     }
 
     abstract async confirm():Promise<Message>;
-    abstract async done():Promise<Message>;
+    abstract async statusToDoing():Promise<Message>;
+    abstract async statusToCancelling():Promise<Message>;
 
     abstract async cancel():Promise<Message>
 

@@ -13,3 +13,9 @@ export enum MessageStatus{
     CANCELLING = 'CANCELLING',
     CANCELED = 'CANCELED',
 }
+
+export enum ActorMessageStatus{
+    PENDING = 'PENDING',
+    DONE = 'DONE',
+    CANCELED = 'CANCELED',
+}

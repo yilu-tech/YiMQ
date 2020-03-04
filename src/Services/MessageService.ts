@@ -19,14 +19,17 @@ export class MessageService {
         return message;
     }
     async confirm(producerName:string,messageId):Promise<Message>{
-        let message:any;
         let producer = this.actorManger.get(producerName);
         if(!producer){
             throw new BusinessException('Producer not exists.')
         }
         return producer.messageManager.confirm(messageId);
     }
-    async cancel(){
-
+    async cancel(producerName:string,messageId){
+        let producer = this.actorManger.get(producerName);
+        if(!producer){
+            throw new BusinessException('Producer not exists.')
+        }
+        return producer.messageManager.cancel(messageId);
     }
 }

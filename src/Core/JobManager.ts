@@ -2,8 +2,8 @@ import { Actor } from "./Actor";
 import { Job } from "./Job/Job";
 import { JobType, JobAction } from "../Constants/JobConstants";
 import { GeneralJob } from "./Job/GeneralJob";
-import { TransactionJob } from "./Job/TransactionJob";
-import { TransactionItemJob } from "./Job/TransactionItemJob";
+import { TransactionMessageJob } from "./Job/TransactionMessageJob";
+import { TransactionSubtaskJob } from "./Job/TransactionSubtaskJob";
 import { BusinessException } from "../Exceptions/BusinessException";
 import { Message } from "./Messages/Message";
 import * as bull from 'bull';
@@ -51,10 +51,10 @@ export class JobManager{
                 job = new GeneralJob(message,jobContext);
                 break;
             case JobType.TRANSACTION:
-                job = new TransactionJob(message,jobContext);
+                job = new TransactionMessageJob(message,jobContext);
                 break;
             case JobType.TRANSACTION_ITEM:
-                job = new TransactionItemJob(message,jobContext);
+                job = new TransactionSubtaskJob(message,jobContext);
                 break;
             default:
                 throw new Error('JobType is not exists.');

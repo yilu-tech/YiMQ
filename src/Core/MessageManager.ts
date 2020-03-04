@@ -35,6 +35,10 @@ export class MessageManager {
         let message = await this.get(id);
         return message.confirm()
     }
+    async cancel(id):Promise<Message>{
+        let message = await this.get(id);
+        return message.cancel()
+    }
     private messageFactory(type,producer,messageModel):Message{
         let message;
         switch (type) {

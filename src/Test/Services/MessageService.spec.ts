@@ -61,40 +61,13 @@ describe('MessageService', () => {
     /**
      * 错误后，通过检查状态，校正任务完成
      */
-    describe('create transaction message', async () => {
+    describe('create transaction message timeout check status by remote', async () => {
         let producerName = 'user';
         let messageType = MessageType.TRANSACTION;
         let topic = 'goods_create';
         let message:Message;
-
-
-        it('.create after confirm', async (done) => {
-            let producerName = 'user';
-            let messageType = MessageType.TRANSACTION;
-            let topic = 'user_create';
-            let message:Message;
-           
-            message = await messageService.create(producerName,messageType,topic,{
-                delay:300,
-                attempts:5,
-                backoff:{
-                    type:'exponential',
-                    delay: 100  
-                }
-            });
-            let producer = actorManager.get(producerName); 
-            producer.coordinator.getQueue().on('removed',async (job)=>{
-                if(message.job.id == job.id){
-                    expect(await job.getState()).toBe(JobStatus.STUCK)
-                    done()
-                }
-            })
-            await actorManager.bootstrapActorsCoordinatorProcesser();
-            message = await messageService.confirm(producerName,message.id);
-        });
-
         
-        it('.timeout remote check failed to done', async (done) => {
+        it('.remote status pending after done', async (done) => {
            
             message = await messageService.create(producerName,messageType,topic,{
                 delay:100,
@@ -121,7 +94,7 @@ describe('MessageService', () => {
                     })
                     expect(await message.job.context.getState()).toBe(JobStatus.DELAYED)
                 }
-                else if(message.job.id == job.id && job.attemptsMade == 2){//第二次尝试成功
+                else if(message.job.id == job.id && job.attemptsMade == 2){//第二次尝试获取状态返回已完成
                     expect(job.data.action).toBe(JobAction.CHECK)
                     expect(job.attemptsMade).toBe(2)
                     mock.onPost(producer.api).reply(200,{
@@ -135,6 +108,8 @@ describe('MessageService', () => {
                     expect(job.data.action).toBe(JobAction.CHECK)
                     expect(job.attemptsMade).toBe(2);
                     expect(await message.job.context.getState()).toBe(JobStatus.COMPLETED)
+                    let updatedMessage = await producer.messageManager.get(message.id);
+                    expect(updatedMessage.status).toBe(MessageStatus.DOING)
                     done()
                 }
             })
@@ -142,7 +117,7 @@ describe('MessageService', () => {
         });
 
 
-        it('.cancel', async (done) => {
+        it('.status cancel', async (done) => {
            
             message = await messageService.create(producerName,messageType,topic,{
                 delay:100,
@@ -161,40 +136,15 @@ describe('MessageService', () => {
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 if(message.job.id == job.id){
                     expect(job.data.action).toBe(JobAction.CHECK)
+                    let updatedMessage = await producer.messageManager.get(message.id);
+                    expect(updatedMessage.status).toBe(MessageStatus.CANCELLING)
                     done()
                 }
             })
             await actorManager.bootstrapActorsCoordinatorProcesser();
         });
 
-
-        it('.done after cancel', async (done) => {
-           
-            message = await messageService.create(producerName,messageType,topic,{
-                delay:100,
-                attempts:5,
-                backoff:{
-                    type:'exponential',
-                    delay: 100  
-                }
-            });
-            expect(message.topic).toBe(topic);
-            let producer = actorManager.get(producerName); 
-
-            mock.onPost(producer.api).reply(200,{
-                status: MessageStatus.DONE
-            })
-            producer.coordinator.getQueue().on('completed',async (job)=>{
-                if(message.job.id == job.id){
-                    expect(job.data.action).toBe(JobAction.CHECK)
-                    done()
-                }
-            })
-            await actorManager.bootstrapActorsCoordinatorProcesser();
-
-        });
-
-        it('.create done after cancel on db2', async (done) => {
+        it('.status done on db2', async (done) => {
             let producerName = 'content';
             let messageType = MessageType.TRANSACTION;
             let topic = 'posts_create';
@@ -217,6 +167,8 @@ describe('MessageService', () => {
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 if(message.job.id == job.id){
                     expect(job.data.action).toBe(JobAction.CHECK)
+                    let updatedMessage = await producer.messageManager.get(message.id);
+                    expect(updatedMessage.status).toBe(MessageStatus.DOING)
                     done()
                 }
             })
@@ -226,4 +178,68 @@ describe('MessageService', () => {
 
 
     });
+
+
+    describe('create transaction message', async () => {
+        let producerName = 'user';
+        let messageType = MessageType.TRANSACTION;
+        let topic = 'goods_create';
+        let message:Message;
+
+
+        it('.after confirm', async (done) => {
+            let producerName = 'user';
+            let messageType = MessageType.TRANSACTION;
+            let topic = 'user_create';
+            let message:Message;
+           
+            message = await messageService.create(producerName,messageType,topic,{
+                delay:300,
+                attempts:5,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+            let producer = actorManager.get(producerName); 
+            //message确认后，移除message的检测job
+            producer.coordinator.getQueue().on('completed',async (job)=>{
+                if(message.job.id == job.id){
+                    expect(message.status).toBe(MessageStatus.DOING)
+                    done()
+                }
+            })
+            await actorManager.bootstrapActorsCoordinatorProcesser();
+            message = await messageService.confirm(producerName,message.id);
+        });
+
+        it('.after cancel', async (done) => {
+            let producerName = 'user';
+            let messageType = MessageType.TRANSACTION;
+            let topic = 'user_create';
+            let message:Message;
+           
+            message = await messageService.create(producerName,messageType,topic,{
+                delay:300,
+                attempts:5,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+            let producer = actorManager.get(producerName); 
+            //message确认后，移除message的检测job
+            producer.coordinator.getQueue().on('completed',async (job)=>{
+                if(message.job.id == job.id){
+                    expect(message.status).toBe(MessageStatus.CANCELLING)
+                    done()
+                }
+            })
+            await actorManager.bootstrapActorsCoordinatorProcesser();
+            message = await messageService.cancel(producerName,message.id);
+        });
+    });
+
 });

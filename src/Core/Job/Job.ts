@@ -1,7 +1,7 @@
 import * as bull from 'bull';
 import { JobAction, JobType } from '../../Constants/JobConstants';
 import { Message } from '../Messages/Message';
-export class Job{
+export abstract class Job{
     public id:number | string;
     public message_id:number | string;
     public action:JobAction;
@@ -15,17 +15,10 @@ export class Job{
         this.message = message;
     }
 
-    public async cancel(){
-        await this.message.cancel();
-    }
+    // abstract async cancel();
 
-    public async done(){
-        await this.message.done();
-    }
+    abstract async process();
 
-    public async remove(){
-        return this.context.remove();
-    }
     private async update(){
         await this.context.update(this.toJson());
     }
