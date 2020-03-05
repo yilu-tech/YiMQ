@@ -10,7 +10,7 @@ export class MessageManager {
 
     }
 
-    async add<P>(type:MessageType, topic:string,options?:bull.JobOptions):Promise<P> {
+    async create<P>(type:MessageType, topic:string,options?:bull.JobOptions):Promise<P> {
         let messageModel = new this.producer.messageModel();
         
         messageModel.property('topic',topic);
@@ -24,7 +24,7 @@ export class MessageManager {
        
         return message;
     }
-    async get(id):Promise<Message>{
+    async get(id):Promise<any>{
         let messageModel = await this.producer.messageModel.load(id);
         let message = this.messageFactory(messageModel.property('type'),this.producer,messageModel); 
         await (<Message>message).restore();
@@ -38,6 +38,11 @@ export class MessageManager {
     async cancel(id):Promise<Message>{
         let message = await this.get(id);
         return message.cancel()
+    }
+    async addSubtask(id,subtaskData){
+        // let message:TransactionMessage = await this.get(id);
+        // await message.addSubtask(subtaskData)
+
     }
     private messageFactory(type,producer,messageModel):Message{
         let message;

@@ -99,3 +99,15 @@
   返回:
 
 
+
+###事务类型
+EC eventually consistent 最终一致
+
+TCC
+
+XA
+
+
+
+TODO
+1. message update的时候加锁

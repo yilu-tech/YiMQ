@@ -8,6 +8,10 @@ export abstract class Coordinator{
     constructor(protected actor:Actor,options:RedisOptions){
         this.queue = new bull(this.actor.name,{redis:options});
     }
+
+    public abstract async processBootstrap();
+    public abstract async callActor(action,context);
+
     public getQueue():bull.Queue{
         return this.queue;
     }
@@ -15,7 +19,6 @@ export abstract class Coordinator{
         return this.queue.close();
     }
 
-    public abstract processBootstrap();
     public async pause(){
         return this.queue.pause();
     }

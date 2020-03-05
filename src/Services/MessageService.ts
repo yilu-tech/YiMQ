@@ -15,7 +15,7 @@ export class MessageService {
         if(!producer){
             throw new BusinessException('Producer not exists.')
         }
-        message =  await producer.messageManager.add(type,topic,options);
+        message =  await producer.messageManager.create(type,topic,options);
         return message;
     }
     async confirm(producerName:string,messageId):Promise<Message>{

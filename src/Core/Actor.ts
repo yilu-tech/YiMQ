@@ -9,6 +9,7 @@ import { GrpcCoordinator } from "./Coordinator/GrpcCoordinator";
 import { MessageModelClass } from "../Models/Message";
 import { MessageManager } from "./MessageManager";
 import { JobManager } from "./JobManager";
+import { ActorManager } from "./ActorManager";
 
 
 export class Actor{
@@ -29,7 +30,7 @@ export class Actor{
     public messageManager:MessageManager;
     public jobManager:JobManager;
 
-    constructor(private redisManager:RedisManager){
+    constructor(public actorManager:ActorManager,private redisManager:RedisManager){
 
     }
     public async init(){

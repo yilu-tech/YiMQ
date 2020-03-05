@@ -1,6 +1,9 @@
 
 import { Coordinator } from './Coordinator';
 import * as bull from 'bull';
+import {Logger } from '@nestjs/common';
+import axios from 'axios';
+import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
 export class HttpCoordinator extends Coordinator{
     
     public processBootstrap(){
@@ -15,4 +18,15 @@ export class HttpCoordinator extends Coordinator{
         })
     };
 
+    public async callActor(action:CoordinatorCallActorAction,context) {
+        Logger.debug(`${action}: ${this.actor.name}@${context.processer}`,'HttpCoordinator')
+
+        let result = await axios.post(this.actor.api,{
+            action: action,
+            context: context
+        });
+
+        return result;
+
+    }
 }

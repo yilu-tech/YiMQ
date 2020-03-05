@@ -28,7 +28,7 @@ export class ActorManager{
     public async initActors(){
         let actorsConfig = this.config.actors;
         for(let [i,actorConfig] of actorsConfig){
-            let actor = Object.assign(new Actor(this.redisManager),actorConfig);
+            let actor = Object.assign(new Actor(this,this.redisManager),actorConfig);
             await actor.init();
             this.actors.set(actor.id,actor);
             this.actorsName.set(actor.name,actor);
@@ -51,5 +51,11 @@ export class ActorManager{
         for(let [id,actor] of this.actors){
             actor.coordinator.processBootstrap();
         }
+    }
+
+    public async getTaskGlobalId(){
+        let masterRedisClient = await this.redisManager.client();
+        let taskId = await masterRedisClient.incr('task:id');
+        return taskId;
     }
 }
