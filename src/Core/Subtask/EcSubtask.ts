@@ -3,9 +3,9 @@ import { SubtaskStatus } from '../../Constants/SubtaskConstants';
 
 export class EcSubtask extends Subtask{
     async prepare() {
-        console.info('EcSubtask prepared.')
-        this.status = SubtaskStatus.PREPARED;
-        return true;
+        this.status = SubtaskStatus.PREPARING;
+        await this.message.update();
+        return this;
     }
 
 }

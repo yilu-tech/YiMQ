@@ -49,9 +49,8 @@ export class TransactionMessage extends Message{
         subtaskData.processer = processerName;
 
         let subtask = this.subtaskFactory(type,subtaskData);
-        await subtask.prepare();
         this.subtasks.set(subtaskData.id,subtask);
-        await this.update();
+        return subtask.prepare();
     }
     public getSubtask(index):Subtask{
         if(!this.subtasks.has(index)){

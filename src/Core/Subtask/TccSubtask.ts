@@ -1,24 +1,29 @@
 import {Subtask} from './Subtask';
 import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
-import { SubtaskStatus } from '../../Constants/SubtaskConstants';
-
+import { SubtaskStatus, SubtaskType } from '../../Constants/SubtaskConstants';
+import { BusinessException } from '../../Exceptions/BusinessException';
+import { Message } from '../Messages/Message';
 export class TccSubtask extends Subtask{
+    public prepareResult;
+    constructor(message:Message,type:SubtaskType,subtaskJson){
+        super(message,type,subtaskJson);
+        this.prepareResult = subtaskJson.prepareResult;
+    }
     async prepare() {
         this.status = SubtaskStatus.PREPARING;
         await this.message.update();
-        let json = this.toJson();
         try {
+            this.prepareResult = (await this.actor.coordinator.callActor(CoordinatorCallActorAction.TRY,this.toJson())).data; 
             this.status = SubtaskStatus.PREPARED;
-            json['result'] = await this.actor.coordinator.callActor(CoordinatorCallActorAction.TRY,this.toJson()); 
+            await this.message.update();
+            return this.toJson();
         } catch (error) {
-                //TODO 
-                //1. 记录错误到subtask
-                //2。 throw
+            this.prepareResult = error.response;
+            await this.message.update();
+            throw new BusinessException(error.message);//TODO  返回actor的详细错误
         }
+        return this;
         
-        
-        await this.message.update();
-        return json;
     } 
 
 }

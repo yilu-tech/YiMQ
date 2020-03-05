@@ -12,7 +12,9 @@ export abstract class Subtask{
     processer:string;
     actor:Actor;
     actorProcesserName:string;
-    constructor(public message:Message,type:SubtaskType,subtaskJson){
+    message:Message;
+    constructor(message:Message,type:SubtaskType,subtaskJson){
+        this.message = message;
         this.id = subtaskJson.id;
         this.type = type;
         this.status = subtaskJson.status;

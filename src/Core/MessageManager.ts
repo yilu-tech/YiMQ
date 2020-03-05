@@ -39,9 +39,9 @@ export class MessageManager {
         let message = await this.get(id);
         return message.cancel()
     }
-    async addSubtask(id,subtaskData){
-        // let message:TransactionMessage = await this.get(id);
-        // await message.addSubtask(subtaskData)
+    async addSubtask(id,type,processserName,data){
+        let message:TransactionMessage = await this.get(id);
+        return message.addSubtask(type,processserName,data)
 
     }
     private messageFactory(type,producer,messageModel):Message{
