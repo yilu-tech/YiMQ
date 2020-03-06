@@ -15,6 +15,7 @@ import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
 import { RedisClient } from 'src/Handlers/redis/RedisClient';
 import {JobStatus} from '../../Constants/JobConstants'
+import { TransactionMessage } from '../../Core/Messages/TransactionMessage';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('MessageService', () => {
@@ -203,7 +204,7 @@ describe('MessageService', () => {
             });
             expect(message.status).toBe(MessageStatus.PENDING)
             let producer = actorManager.get(producerName); 
-            //message确认后，移除message的检测job
+
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 if(message.job.id == job.id){
                     expect(message.status).toBe(MessageStatus.DOING)
@@ -211,7 +212,10 @@ describe('MessageService', () => {
                 }
             })
             await actorManager.bootstrapActorsCoordinatorProcesser();
+
             message = await messageService.confirm(producerName,message.id);
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            expect(updatedMessage.status).toBe(MessageStatus.DOING);
         });
 
         it('.after cancel', async (done) => {
@@ -239,6 +243,9 @@ describe('MessageService', () => {
             })
             await actorManager.bootstrapActorsCoordinatorProcesser();
             message = await messageService.cancel(producerName,message.id);
+
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            expect(updatedMessage.status).toBe(MessageStatus.CANCELLING);
         });
     });
 

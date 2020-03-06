@@ -36,7 +36,7 @@ export class TransactionMessage extends Message{
     }
 
     async confirm():Promise<Message>{
-        this.statusToDoing();
+        await this.statusToDoing();
         return this;
     }
     async addSubtask(type,processerName,data){
@@ -52,7 +52,7 @@ export class TransactionMessage extends Message{
         this.subtasks.set(subtaskData.id,subtask);
         return subtask.prepare();
     }
-    public getSubtask(index):Subtask{
+    public getSubtask(index):any{
         if(!this.subtasks.has(index)){
             throw new BusinessException('subtask not exist.')
         }
