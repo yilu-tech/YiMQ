@@ -3,7 +3,8 @@ import { Injectable } from "@nestjs/common";
 import { Config } from "../../Config";
 import * as Ioredis from 'ioredis'
 import { RedisClient } from "./RedisClient";
-
+import { BusinessException } from "../../Exceptions/BusinessException";
+import {Logger } from '@nestjs/common';
 
 
 @Injectable()
@@ -16,6 +17,7 @@ export class RedisManager {
     public async client(name?:string):Promise<RedisClient>
      {
         name = name? name : this.config.system.default;
+        
         if(this.clients[name]){
             return this.clients[name];
         }
@@ -32,7 +34,11 @@ export class RedisManager {
 
     public getClientOptions(name?){
         name = name? name : this.config.system.default;
-        return this.config.system.redis[name];
+        let redisOptions = this.config.system.redis[name];
+        if(!redisOptions){
+            throw new BusinessException('redis not exists')
+        }
+        return redisOptions;
     }
 
     public async close(name:string = 'default'){
@@ -41,6 +47,21 @@ export class RedisManager {
             delete this.clients[name];
         }
     }
+    public async quitAllDb(){
+        for (const key in this.clients) {
+           let redisClient:RedisClient =  this.clients[key];
+           await redisClient.quit();
+        }
+    }
+
+    public async flushAllDb(){
+        for (const redisName in this.config.system.redis) {
+            let redisClient:RedisClient =  await this.client(redisName);
+            await redisClient.flushdb();
+            Logger.debug(`Flushdb: ${redisName}.`,'RedisManager')
+        }
+    }
+    
 
 
 }

@@ -3,7 +3,7 @@ import { Actor } from "../Actor";
 import { MessageStatus, MessageType } from "../../Constants/MessageConstants";
 import { Logger } from "@nestjs/common";
 import { Job } from "../Job/Job";
-import { JobType, JobAction } from "../../Constants/JobConstants";
+import { JobType } from "../../Constants/JobConstants";
 import { MessageModelClass } from "../../Models/Message";
 import * as bull from 'bull';
 
@@ -35,9 +35,12 @@ export abstract class Message{
     }
 
 
-
-    async create(options:bull.JobOptions):Promise<any>{
-        this.job = await this.producer.jobManager.add(this,JobType.TRANSACTION,JobAction.CHECK,options);
+    /**
+     * 创建message对应的job
+     * @param options 
+     */
+    async create(jobOptions:bull.JobOptions):Promise<any>{
+        this.job = await this.producer.jobManager.add(this,JobType.TRANSACTION,jobOptions);
         this.job_id = this.job.id;
         await this.update();
     };

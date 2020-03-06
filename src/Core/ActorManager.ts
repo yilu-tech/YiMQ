@@ -53,9 +53,9 @@ export class ActorManager{
         }
     }
 
-    public async getTaskGlobalId(){
+    public async getJobGlobalId(){
         let masterRedisClient = await this.redisManager.client();
-        let taskId = await masterRedisClient.incr('task:id');
-        return taskId;
+        let jobId = await masterRedisClient.incr('job:id');
+        return jobId;
     }
 }

@@ -111,3 +111,11 @@ XA
 
 TODO
 1. message update的时候加锁
+
+
+
+
+message.id != message@job.id
+subtask.id = sutask@job.id
+
+message@job.id subtask@job.id  from getJobGlobalId

@@ -2,7 +2,7 @@ key: asdfasdfasdf
 protocol: http
 api: 'user/yimq'
 redis:
-  - main
+  - master
   
   
 topics:

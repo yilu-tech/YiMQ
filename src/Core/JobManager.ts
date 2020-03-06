@@ -1,20 +1,18 @@
 import { Actor } from "./Actor";
 import { Job } from "./Job/Job";
-import { JobType, JobAction } from "../Constants/JobConstants";
+import { JobType } from "../Constants/JobConstants";
 import { GeneralJob } from "./Job/GeneralJob";
 import { TransactionMessageJob } from "./Job/TransactionMessageJob";
 import { TransactionSubtaskJob } from "./Job/TransactionSubtaskJob";
-import { BusinessException } from "../Exceptions/BusinessException";
 import { Message } from "./Messages/Message";
 import * as bull from 'bull';
 export class JobManager{
     constructor(private actor:Actor){
     }
 
-    public async add(message:Message,type:JobType,action:JobAction,options:bull.JobOptions={}){
+    public async add(message:Message,type:JobType,jobOptions:bull.JobOptions={}){
         let data = {
             message_id: message.id,
-            action: action,
             type: type,
         }
         let defaultOptions:bull.JobOptions = {
@@ -25,8 +23,8 @@ export class JobManager{
                 delay: 5000  // delay*1  delay*3 delay*7 delay*15     delay*(times*2+1) times开始于0
             }
         };
-        options = Object.assign(defaultOptions,options);
-        let jobContext = await this.actor.coordinator.add(message.topic,data,options);
+        jobOptions = Object.assign(defaultOptions,jobOptions);
+        let jobContext = await this.actor.coordinator.add(message.topic,data,jobOptions);
         return this.factory(message,type,jobContext);
     }
     public async get(id){
@@ -53,7 +51,7 @@ export class JobManager{
             case JobType.TRANSACTION:
                 job = new TransactionMessageJob(message,jobContext);
                 break;
-            case JobType.TRANSACTION_ITEM:
+            case JobType.TRANSACTION_SUBTASK:
                 job = new TransactionSubtaskJob(message,jobContext);
                 break;
             default:

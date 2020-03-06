@@ -33,6 +33,10 @@ export abstract class Subtask{
 
     abstract async prepare();
 
+    public async update(){
+        await this.message.update();
+    }
+
       /**
      * 整理数据
      */

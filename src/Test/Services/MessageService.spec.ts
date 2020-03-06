@@ -8,12 +8,10 @@ import { modelsInjects} from '../../app.module';
 import { ActorManager } from '../../Core/ActorManager';
 import { services } from '../../Services';
 import { MessageService } from '../../Services/MessageService';
-import { MessageType, MessageStatus } from '../../Constants/MessageConstants';
+import { MessageType, MessageStatus, ActorMessageStatus } from '../../Constants/MessageConstants';
 import { Message } from '../../Core/Messages/Message';
-import { JobAction } from '../../Constants/JobConstants';
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
-import { RedisClient } from 'src/Handlers/redis/RedisClient';
 import {JobStatus} from '../../Constants/JobConstants'
 import { TransactionMessage } from '../../Core/Messages/TransactionMessage';
 const mock = new MockAdapter(axios);
@@ -24,7 +22,6 @@ describe('MessageService', () => {
     let redisManager:RedisManager;
     let messageService:MessageService;
     let actorManager:ActorManager;
-    let redisClient:RedisClient;
 
     beforeEach(async () => {
         process.env.CONFIG_DIR_PATH = join(__dirname,'../','config');
@@ -41,8 +38,7 @@ describe('MessageService', () => {
         ],
         }).compile();
         redisManager = app.get<RedisManager>(RedisManager);
-        redisClient = await redisManager.client();
-        await redisClient.flushdb();
+        await redisManager.flushAllDb();
         actorService = app.get<ActorService>(ActorService);
         await actorService.loadConfigFileToMasterRedis();
 
@@ -54,7 +50,7 @@ describe('MessageService', () => {
     });
 
     afterEach(async()=>{
-        await redisClient.quit();//todo::应该开发一个MQ.quit();
+        await redisManager.quitAllDb();
         await actorManager.closeActors();
     })
     
@@ -88,7 +84,6 @@ describe('MessageService', () => {
             producer.coordinator.getQueue().on('failed',async (job)=>{
                 
                 if(message.job.id == job.id && job.attemptsMade == 1){//第一次获取失败
-                    expect(job.data.action).toBe(JobAction.CHECK)
                     expect(job.attemptsMade).toBe(1)
                     mock.onPost(producer.api).reply(200,{
                         status: MessageStatus.PENDING
@@ -96,7 +91,6 @@ describe('MessageService', () => {
                     expect(await message.job.context.getState()).toBe(JobStatus.DELAYED)
                 }
                 else if(message.job.id == job.id && job.attemptsMade == 2){//第二次尝试获取状态返回已完成
-                    expect(job.data.action).toBe(JobAction.CHECK)
                     expect(job.attemptsMade).toBe(2)
                     mock.onPost(producer.api).reply(200,{
                         status: MessageStatus.DONE
@@ -106,7 +100,6 @@ describe('MessageService', () => {
             })
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 if(message.job.id == job.id){
-                    expect(job.data.action).toBe(JobAction.CHECK)
                     expect(job.attemptsMade).toBe(2);
                     expect(await message.job.context.getState()).toBe(JobStatus.COMPLETED)
                     let updatedMessage = await producer.messageManager.get(message.id);
@@ -136,7 +129,6 @@ describe('MessageService', () => {
             })
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 if(message.job.id == job.id){
-                    expect(job.data.action).toBe(JobAction.CHECK)
                     let updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.CANCELLING)
                     done()
@@ -163,11 +155,10 @@ describe('MessageService', () => {
             let producer = actorManager.get(producerName); 
 
             mock.onPost(producer.api).reply(200,{
-                status: MessageStatus.DONE
+                status: ActorMessageStatus.DONE
             })
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 if(message.job.id == job.id){
-                    expect(job.data.action).toBe(JobAction.CHECK)
                     let updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)
                     done()

@@ -37,13 +37,14 @@ export class TransactionMessage extends Message{
 
     async confirm():Promise<Message>{
         await this.statusToDoing();
+        //TODO 任务取消延时?
         return this;
     }
     async addSubtask(type,processerName,data){
         let subtaskData:any = {};
         subtaskData.data = data;
         let now = new Date().getTime();
-        subtaskData.id = await this.producer.actorManager.getTaskGlobalId();
+        subtaskData.id = await this.producer.actorManager.getJobGlobalId();
         subtaskData.created_at = now;
         subtaskData.updated_at = now;
         subtaskData.processer = processerName;

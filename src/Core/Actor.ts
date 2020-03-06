@@ -34,6 +34,7 @@ export class Actor{
 
     }
     public async init(){
+        
         this.redisClient = await this.redisManager.client(this.redis);
         this.initNohm();
         this.initCoordinator();

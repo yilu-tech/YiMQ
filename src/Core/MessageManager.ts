@@ -10,7 +10,7 @@ export class MessageManager {
 
     }
 
-    async create<P>(type:MessageType, topic:string,options?:bull.JobOptions):Promise<P> {
+    async create<P>(type:MessageType, topic:string,jobOptions?:bull.JobOptions):Promise<P> {
         let messageModel = new this.producer.messageModel();
         
         messageModel.property('topic',topic);
@@ -20,7 +20,8 @@ export class MessageManager {
         await messageModel.save();
         
         let message:any = this.messageFactory(type,this.producer,messageModel)
-        await (<Message>message).create(options);
+        jobOptions.jobId = await this.producer.actorManager.getJobGlobalId();
+        await (<Message>message).create(jobOptions);//创建job
        
         return message;
     }
@@ -32,7 +33,7 @@ export class MessageManager {
     }
 
     async confirm(id):Promise<Message>{
-        let message = await this.get(id);
+        let message:Message = await this.get(id);
         return message.confirm()
     }
     async cancel(id):Promise<Message>{

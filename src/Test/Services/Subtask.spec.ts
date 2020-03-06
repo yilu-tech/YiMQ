@@ -9,25 +9,20 @@ import { ActorManager } from '../../Core/ActorManager';
 import { services } from '../../Services';
 import { MessageService } from '../../Services/MessageService';
 import { MessageType, MessageStatus } from '../../Constants/MessageConstants';
-import { Message } from '../../Core/Messages/Message';
-import { JobAction } from '../../Constants/JobConstants';
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
-import { RedisClient } from 'src/Handlers/redis/RedisClient';
-import {JobStatus} from '../../Constants/JobConstants'
 import { TransactionMessage } from '../../Core/Messages/TransactionMessage';
-import { SubtaskType } from '../../Constants/SubtaskConstants';
+import { SubtaskType, SubtaskStatus } from '../../Constants/SubtaskConstants';
 import { EcSubtask } from '../../Core/Subtask/EcSubtask';
 import { TccSubtask } from '../../Core/Subtask/TccSubtask';
 const mock = new MockAdapter(axios);
-const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('Subtask', () => {
     let actorService:ActorService;
     let config:Config;
     let redisManager:RedisManager;
     let messageService:MessageService;
     let actorManager:ActorManager;
-    let redisClient:RedisClient;
+
 
     beforeEach(async () => {
         process.env.CONFIG_DIR_PATH = join(__dirname,'../','config');
@@ -44,8 +39,8 @@ describe('Subtask', () => {
         ],
         }).compile();
         redisManager = app.get<RedisManager>(RedisManager);
-        redisClient = await redisManager.client();
-        await redisClient.flushdb();
+
+        await redisManager.flushAllDb();
         actorService = app.get<ActorService>(ActorService);
         await actorService.loadConfigFileToMasterRedis();
 
@@ -57,7 +52,7 @@ describe('Subtask', () => {
     });
 
     afterEach(async()=>{
-        await redisClient.quit();//todo::应该开发一个MQ.quit();
+        await redisManager.quitAllDb();
         await actorManager.closeActors();
     })
     
@@ -65,7 +60,7 @@ describe('Subtask', () => {
   
 
 
-    describe('.create', async () => {
+    describe('.base create', async () => {
         //TODO 建立不同的配置文件隔离producer否则并行测试可能会发生冲突
         let producerName = 'user';
         let messageType = MessageType.TRANSACTION;
@@ -90,17 +85,15 @@ describe('Subtask', () => {
 
             //创建EC
             let processerName = 'content@post.change';
-            await message.addSubtask(SubtaskType.EC,processerName,{'name':1});
+            let ecSubtask = await message.addSubtask(SubtaskType.EC,processerName,{'name':1});
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
-            expect(updatedMessage.getSubtask(1).processer).toBe(processerName);
-            expect(updatedMessage.getSubtask(1).id).toBe(1);
-
-
+            let dbEcSubtaks = updatedMessage.getSubtask(ecSubtask.id);
+            expect(dbEcSubtaks.processer).toBe(processerName);
+            expect(dbEcSubtaks.status).toBe(SubtaskStatus.PREPARED);
         });
 
         it('.create tcc', async () => {
-
-           
+          
             message = await messageService.create(producerName,messageType,topic,{
                 delay:300,
                 attempts:5,
@@ -113,15 +106,22 @@ describe('Subtask', () => {
 
 
 
-            let processerName = 'content@post.create';
+
             let producer = actorManager.get(producerName); 
             mock.onPost(producer.api).reply(200,{
-                title: 'hello world'
+                title: 'get new post'
             })
-            await message.addSubtask(SubtaskType.TCC,processerName,{'name':1});
+
+            let tccsubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,{
+                type: SubtaskType.TCC,
+                processerName: 'content@post.create',
+                data: 'new post'
+            })          
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
-            expect(updatedMessage.getSubtask(1).type).toBe(SubtaskType.TCC);
-            expect(updatedMessage.getSubtask(1)['prepareResult']['title']).toBe('hello world');
+            let tccSubtask:TccSubtask = updatedMessage.getSubtask(tccsubtask.id);
+            expect(tccsubtask.toJson()['data']).toBe('new post');
+            expect(tccsubtask.toJson()['prepareResult'].title).toBe('get new post');
+            expect(tccSubtask.prepareResult.title).toBe('get new post');
         });
 
 
@@ -145,8 +145,10 @@ describe('Subtask', () => {
             })
             let producer = actorManager.get(producerName); 
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
-            expect(updatedMessage.getSubtask(1).type).toBe(SubtaskType.EC);
 
+            expect(updatedMessage.getSubtask(ecSubtask.id).type).toBe(SubtaskType.EC);
+            expect(updatedMessage.getSubtask(ecSubtask.id).status).toBe(SubtaskStatus.PREPARED);
+            
 
             mock.onPost(producer.api).reply(200,{
                 title: 'hello world'
@@ -158,10 +160,121 @@ describe('Subtask', () => {
             })
 
             updatedMessage = await producer.messageManager.get(message.id);
-            expect(updatedMessage.getSubtask(2).type).toBe(SubtaskType.TCC);
+            expect(updatedMessage.getSubtask(tccsubtask.id).type).toBe(SubtaskType.TCC);
             
         });
 
     });
 
+    describe('.tcc subjob create', async () => {
+
+        //TODO 建立不同的配置文件隔离producer否则并行测试可能会发生冲突
+        let producerName = 'user';
+        let messageType = MessageType.TRANSACTION;
+        let topic = 'subtask_test';
+        let message:TransactionMessage;
+
+
+       
+
+        it('.failed', async () => {
+
+           
+            message = await messageService.create(producerName,messageType,topic,{
+                delay:300,
+                attempts:5,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+
+
+
+            let processerName = 'content@post.create';
+            let producer = actorManager.get(producerName); 
+            mock.onPost(producer.api).reply(400,{
+                title: 'exists'
+            })
+            try {
+                let tccsubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,{
+                    type: SubtaskType.TCC,
+                    processerName: 'content@post.create',
+                    data: 'new post'
+                })                
+            } catch (error) {
+                let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+               
+                let tccSubtask:TccSubtask = updatedMessage.getSubtask(2);
+                expect(tccSubtask.type).toBe(SubtaskType.TCC);
+                expect(tccSubtask.prepareResult.status).toBe(400);
+            }
+        });
+
+        it('.prepared after confirm', async (done) => {
+
+           
+            message = await messageService.create(producerName,messageType,topic,{
+                delay:300,
+                attempts:5,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+
+
+
+
+            
+            let producer = actorManager.get(producerName); 
+
+            //mock添加tcc子任务时的远程调用
+            let prepareResult = {title: 'get new user'};
+            mock.onPost(producer.api).reply(200,prepareResult)
+            let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,{
+                type: SubtaskType.TCC,
+                processerName: 'user@user.create',
+                data: 'new user'
+            })          
+            expect(tccSubtask.toJson()['prepareResult'].title).toBe(prepareResult.title);
+
+            prepareResult = {title: 'get update user'};
+            mock.onPost(producer.api).reply(200,prepareResult)
+            let ecSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,{
+                type: SubtaskType.EC,
+                processerName: 'user@user.update',
+                data: 'update user'
+            })   
+
+            //把message确认
+            await messageService.confirm(producerName,message.id);
+
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            expect(updatedMessage.status).toBe(MessageStatus.DOING);
+
+            producer.coordinator.getQueue().on('completed',async (job)=>{
+                if(message.job.id == job.id){
+                    updatedMessage = await producer.messageManager.get(message.id);
+                    expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
+
+                    //检查TccsSubtask
+                    expect(updatedMessage.getSubtask(tccSubtask.id).type).toBe(SubtaskType.TCC)
+                    expect(updatedMessage.getSubtask(tccSubtask.id).status).toBe(SubtaskStatus.DOING)
+
+                    //检查EcSubtask
+                    expect(updatedMessage.getSubtask(ecSubtask.id).type).toBe(SubtaskType.EC)
+                    expect(updatedMessage.getSubtask(ecSubtask.id).status).toBe(SubtaskStatus.DOING)
+                    done()
+                }
+            })
+            await actorManager.bootstrapActorsCoordinatorProcesser();
+
+        });
+
+
+
+    });
 });

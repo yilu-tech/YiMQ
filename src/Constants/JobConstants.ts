@@ -2,14 +2,7 @@
 export enum JobType{
     GENERAL = 'GENERAL',
     TRANSACTION = 'TRANSACTION',
-    TRANSACTION_ITEM = 'TRANSACTION_ITEM'
-}
-
-
-export enum JobAction{ //TODO 因为job已经区分类型了，是否不再需要
-    CHECK = 'CHECK',
-    CONFIRM = 'CONFIRM',
-    ROLLBACK = 'ROLLBACK'
+    TRANSACTION_SUBTASK = 'TRANSACTION_SUBTASK'
 }
 
 export enum JobStatus{

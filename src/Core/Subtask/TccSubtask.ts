@@ -16,13 +16,12 @@ export class TccSubtask extends Subtask{
             this.prepareResult = (await this.actor.coordinator.callActor(CoordinatorCallActorAction.TRY,this.toJson())).data; 
             this.status = SubtaskStatus.PREPARED;
             await this.message.update();
-            return this.toJson();
+            return this;
         } catch (error) {
             this.prepareResult = error.response;
             await this.message.update();
             throw new BusinessException(error.message);//TODO  返回actor的详细错误
         }
-        return this;
         
     } 
 
