@@ -5,7 +5,7 @@ import * as Ioredis from 'ioredis'
 import { RedisClient } from "./RedisClient";
 import { BusinessException } from "../../Exceptions/BusinessException";
 import {Logger } from '@nestjs/common';
-
+const timeout = ms => new Promise(res => setTimeout(res, ms))
 
 @Injectable()
 export class RedisManager {
@@ -48,6 +48,7 @@ export class RedisManager {
         }
     }
     public async quitAllDb(){
+        await timeout(1);
         for (const key in this.clients) {
            let redisClient:RedisClient =  this.clients[key];
            await redisClient.quit();

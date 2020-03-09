@@ -68,7 +68,7 @@ describe('Subtask', () => {
         let message:TransactionMessage;
 
 
-        it('.create ec', async () => {
+        it('.create ec1', async () => {
 
            
             message = await messageService.create(producerName,messageType,topic,{
@@ -85,11 +85,14 @@ describe('Subtask', () => {
 
             //创建EC
             let processerName = 'content@post.change';
+
             let ecSubtask = await message.addSubtask(SubtaskType.EC,processerName,{'name':1});
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
-            let dbEcSubtaks = updatedMessage.getSubtask(ecSubtask.id);
-            expect(dbEcSubtaks.processer).toBe(processerName);
-            expect(dbEcSubtaks.status).toBe(SubtaskStatus.PREPARED);
+     
+            let savedSubtask = updatedMessage.subtasks[0];
+            expect(savedSubtask.id).toBe(ecSubtask.id);
+            expect(savedSubtask.processer).toBe(processerName);
+            expect(savedSubtask.status).toBe(SubtaskStatus.PREPARED);
         });
 
         it('.create tcc', async () => {
@@ -116,12 +119,14 @@ describe('Subtask', () => {
                 type: SubtaskType.TCC,
                 processerName: 'content@post.create',
                 data: 'new post'
-            })          
+            }) 
+
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
-            let tccSubtask:TccSubtask = updatedMessage.getSubtask(tccsubtask.id);
-            expect(tccsubtask.toJson()['data']).toBe('new post');
-            expect(tccsubtask.toJson()['prepareResult'].title).toBe('get new post');
-            expect(tccSubtask.prepareResult.title).toBe('get new post');
+            let savedTccSubtask = updatedMessage.subtasks[0];
+            expect(savedTccSubtask.id).toBe(tccsubtask.id);
+            expect(savedTccSubtask.toJson()['data']).toBe('new post');
+            expect(savedTccSubtask.toJson()['prepareResult'].title).toBe('get new post');
+            expect(savedTccSubtask['prepareResult'].title).toBe('get new post');
         });
 
 
@@ -145,9 +150,9 @@ describe('Subtask', () => {
             })
             let producer = actorManager.get(producerName); 
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
-
-            expect(updatedMessage.getSubtask(ecSubtask.id).type).toBe(SubtaskType.EC);
-            expect(updatedMessage.getSubtask(ecSubtask.id).status).toBe(SubtaskStatus.PREPARED);
+            let savedEcSubtask = updatedMessage.subtasks[0];;
+            expect(savedEcSubtask.type).toBe(SubtaskType.EC);
+            expect(savedEcSubtask.status).toBe(SubtaskStatus.PREPARED);
             
 
             mock.onPost(producer.api).reply(200,{
@@ -160,22 +165,10 @@ describe('Subtask', () => {
             })
 
             updatedMessage = await producer.messageManager.get(message.id);
-            expect(updatedMessage.getSubtask(tccsubtask.id).type).toBe(SubtaskType.TCC);
+            let savedTccSubtask = updatedMessage.subtasks[1];
+            expect(savedTccSubtask.type).toBe(SubtaskType.TCC);
             
         });
-
-    });
-
-    describe('.tcc subjob create', async () => {
-
-        //TODO 建立不同的配置文件隔离producer否则并行测试可能会发生冲突
-        let producerName = 'user';
-        let messageType = MessageType.TRANSACTION;
-        let topic = 'subtask_test';
-        let message:TransactionMessage;
-
-
-       
 
         it('.failed', async () => {
 
@@ -205,14 +198,73 @@ describe('Subtask', () => {
                 })                
             } catch (error) {
                 let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
-               
-                let tccSubtask:TccSubtask = updatedMessage.getSubtask(2);
-                expect(tccSubtask.type).toBe(SubtaskType.TCC);
-                expect(tccSubtask.prepareResult.status).toBe(400);
+                let savedTccSubtask = updatedMessage.subtasks[0];
+                expect(savedTccSubtask.type).toBe(SubtaskType.TCC);
+                expect(savedTccSubtask['prepareResult'].status).toBe(400);
             }
         });
 
-        it('.prepared after confirm', async (done) => {
+    });
+
+    describe('.prepared after message confirm to check create job of subtask', async () => {
+
+        //TODO 建立不同的配置文件隔离producer否则并行测试可能会发生冲突
+        let producerName = 'user';
+        let messageType = MessageType.TRANSACTION;
+        let topic = 'subtask_test';
+        let message:TransactionMessage;
+
+
+        it('.ec only', async (done) => {
+
+           
+            message = await messageService.create(producerName,messageType,topic,{
+                delay:300,
+                attempts:5,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+            expect(message.job_id).toBe(1)
+
+            
+            let producer = actorManager.get(producerName); 
+
+            let prepareResult = {title: 'get update user'};
+            mock.onPost(producer.api).reply(200,prepareResult)
+            process.env.SUBTASK_JOB_DELAY = '2000';//延迟subtask的job执行，便于只测试message job
+            let ecSubtask:EcSubtask= await messageService.addSubtask(producerName,message.id,{
+                type: SubtaskType.EC,
+                processerName: 'user@user.update',
+                data: 'update user'
+            })   
+
+            //把message确认
+            await messageService.confirm(producerName,message.id);
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            expect(updatedMessage.status).toBe(MessageStatus.DOING);
+
+            producer.coordinator.getQueue().on('completed',async (job)=>{
+                if(message.job.id == job.id){
+                    updatedMessage = await producer.messageManager.get(message.id);
+                    expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
+                    //检查EcSubtask
+                    expect(updatedMessage.subtasks[0].type).toBe(SubtaskType.EC)
+                    expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DOING)
+                    expect(updatedMessage.subtasks[0].job_id).toBe(2)
+                    done()
+                }
+            })
+            await actorManager.bootstrapActorsCoordinatorProcesser();
+
+        });
+
+
+       
+
+        it('.ec and tcc', async (done) => {
 
            
             message = await messageService.create(producerName,messageType,topic,{
@@ -230,7 +282,7 @@ describe('Subtask', () => {
 
             
             let producer = actorManager.get(producerName); 
-
+            process.env.SUBTASK_JOB_DELAY = '2000';//延迟subtask的job执行，便于只测试message job
             //mock添加tcc子任务时的远程调用
             let prepareResult = {title: 'get new user'};
             mock.onPost(producer.api).reply(200,prepareResult)
@@ -261,12 +313,12 @@ describe('Subtask', () => {
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
 
                     //检查TccsSubtask
-                    expect(updatedMessage.getSubtask(tccSubtask.id).type).toBe(SubtaskType.TCC)
-                    expect(updatedMessage.getSubtask(tccSubtask.id).status).toBe(SubtaskStatus.DOING)
+                    expect(updatedMessage.subtasks[0].type).toBe(SubtaskType.TCC)
+                    expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DOING)
 
                     //检查EcSubtask
-                    expect(updatedMessage.getSubtask(ecSubtask.id).type).toBe(SubtaskType.EC)
-                    expect(updatedMessage.getSubtask(ecSubtask.id).status).toBe(SubtaskStatus.DOING)
+                    expect(updatedMessage.subtasks[1].type).toBe(SubtaskType.EC)
+                    expect(updatedMessage.subtasks[1].status).toBe(SubtaskStatus.DOING)
                     done()
                 }
             })
@@ -274,7 +326,106 @@ describe('Subtask', () => {
 
         });
 
+    });
 
+
+    describe('.prepared after message confirm job of subtask to done', async () => {
+
+        //TODO 建立不同的配置文件隔离producer否则并行测试可能会发生冲突
+        let producerName = 'user';
+        let messageType = MessageType.TRANSACTION;
+        let topic = 'subtask_test';
+        let message:TransactionMessage;
+
+
+       
+
+        it('.ec tcc', async (done) => {
+
+           
+            message = await messageService.create(producerName,messageType,topic,{
+                delay:300,
+                attempts:5,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+
+
+
+
+            
+            let producer = actorManager.get(producerName); 
+
+            //mock添加tcc子任务时的远程调用
+            let prepareResult = {title: 'get new user'};
+            mock.onPost(producer.api).reply(200,prepareResult)
+            let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,{
+                type: SubtaskType.TCC,
+                processerName: 'user@user.create',
+                data: 'new user'
+            })          
+            expect(tccSubtask.toJson()['prepareResult'].title).toBe(prepareResult.title);
+
+            //mock添加ec子任务时的远程调用
+            prepareResult = {title: 'get update user'};
+            mock.onPost(producer.api).reply(200,prepareResult)
+            let ecSubtask:EcSubtask= await messageService.addSubtask(producerName,message.id,{
+                type: SubtaskType.EC,
+                processerName: 'user@user.update',
+                data: 'update user'
+            })   
+
+            //把message确认
+            await messageService.confirm(producerName,message.id);
+
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            expect(updatedMessage.status).toBe(MessageStatus.DOING);
+
+            producer.coordinator.getQueue().on('failed',async(job,err)=>{
+                console.log(err)
+            })
+            
+
+            mock.onPost(producer.api).reply(200,{message:'subtask process succeed'})
+            producer.coordinator.getQueue().on('active',async (job)=>{
+                // console.debug('Job active',job.id)
+                updatedMessage = await producer.messageManager.get(message.id);
+
+                if(message.job.id == job.id){
+                    expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
+                    
+                }else if(updatedMessage.subtasks[0].job_id == job.id){
+
+                    expect(job.data.message_id).toBe(updatedMessage.id);
+                }
+                else if(updatedMessage.subtasks[1].job_id == job.id){
+                    expect(job.data.producer_id).toBe(updatedMessage.producer.id);
+
+                }
+            })
+
+            producer.coordinator.getQueue().on('completed',async (job)=>{
+                // console.debug('Job completed',job.id)
+                updatedMessage = await producer.messageManager.get(message.id);
+
+                if(message.job.id == job.id){
+                    expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
+                    
+                }else if(updatedMessage.subtasks[0].job_id == job.id){
+
+                    expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DONE);
+                }
+                else if(updatedMessage.subtasks[1].job_id == job.id){
+                    expect(updatedMessage.subtasks[1].status).toBe(SubtaskStatus.DONE);
+                    done()
+                }
+            })
+            await actorManager.bootstrapActorsCoordinatorProcesser();
+
+        });
 
     });
 });

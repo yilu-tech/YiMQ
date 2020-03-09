@@ -10,6 +10,7 @@ import { MessageModelClass } from "../Models/Message";
 import { MessageManager } from "./MessageManager";
 import { JobManager } from "./JobManager";
 import { ActorManager } from "./ActorManager";
+import { SubtaskModelClass } from "../Models/SubtaskModel";
 
 
 export class Actor{
@@ -27,6 +28,7 @@ export class Actor{
     private redisClient:Redis;
     private nohm: NohmClass;
     public messageModel:IStaticMethods<MessageModelClass> ;
+    public subtaskModel:IStaticMethods<SubtaskModelClass>
     public messageManager:MessageManager;
     public jobManager:JobManager;
 
@@ -46,6 +48,7 @@ export class Actor{
         this.nohm = new NohmClass({});
         this.nohm.setClient(this.redisClient);
         this.messageModel = this.nohm.register(MessageModelClass)
+        this.subtaskModel = this.nohm.register(SubtaskModelClass)
     }
 
     private initCoordinator(){

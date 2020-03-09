@@ -36,8 +36,8 @@ export class MessageModelClass extends NohmModel<MessageProperties> {
             validations: ['notEmpty']
         },
         job_id: {
-            type: 'string',
-            index: true,
+            type: 'integer',
+            index: true
         },
         updated_at: {
             type: 'timestamp',

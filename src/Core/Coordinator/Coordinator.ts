@@ -10,7 +10,7 @@ export abstract class Coordinator{
     }
 
     public abstract async processBootstrap();
-    public abstract async callActor(action,context);
+    public abstract async callActor(producer,action,context);
 
     public getQueue():bull.Queue{
         return this.queue;

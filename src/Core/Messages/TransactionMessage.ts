@@ -6,21 +6,17 @@ import { TccSubtask } from "../Subtask/TccSubtask";
 import { Subtask } from "../Subtask/Subtask";
 import { Actor } from "../Actor";
 import { BusinessException } from "../../Exceptions/BusinessException";
-
-
-export class TransactionMessage extends Message{ 
-    public subtasks:Map<number,Subtask> = new Map();  //事物的子项目
+import { SubtaskModelClass } from "../../Models/SubtaskModel"
+import { TransactionMessageJob } from "../Job/TransactionMessageJob";
+import * as bull from 'bull';
+export class TransactionMessage extends Message{
+    public subtasks:Array<Subtask> = [];  //事物的子项目
 
     constructor(producer:Actor,messageModel){
         super(producer,messageModel);
-
-
-
-      for(const [index,subtaskJson] of Object.entries(messageModel.property('subtasks'))){
-          this.subtasks.set(Number(index),this.subtaskFactory(subtaskJson['type'],subtaskJson))
-      }
     }
-    
+
+
 
     async statusToDoing():Promise<Message>{
         this.status = MessageStatus.DOING;
@@ -37,27 +33,53 @@ export class TransactionMessage extends Message{
 
     async confirm():Promise<Message>{
         await this.statusToDoing();
-        //TODO 任务取消延时?
+        await this.job.context.promote();
         return this;
     }
+    /**
+     * 用于MessageManager get的时候重建信息
+     */
+    async restore(){
+        let jobContext = await this.producer.coordinator.getJob(this.job_id);
+        this.job = new TransactionMessageJob(this,jobContext);
+        this.subtasks = await this.getAllSubtasks();
+    }
     async addSubtask(type,processerName,data){
-        let subtaskData:any = {};
-        subtaskData.data = data;
-        let now = new Date().getTime();
-        subtaskData.id = await this.producer.actorManager.getJobGlobalId();
-        subtaskData.created_at = now;
-        subtaskData.updated_at = now;
-        subtaskData.processer = processerName;
 
-        let subtask = this.subtaskFactory(type,subtaskData);
-        this.subtasks.set(subtaskData.id,subtask);
+        let now = new Date().getTime();
+
+        let subtaskModel = new this.producer.subtaskModel();
+
+        subtaskModel.property('message_id',this.id);
+        subtaskModel.property('type',type);
+        subtaskModel.property('status',SubtaskStatus.PREPARING);
+        subtaskModel.property('data',data);
+        subtaskModel.property('created_at',now);
+        subtaskModel.property('updated_at',now);
+        subtaskModel.property('processer',processerName);
+        await subtaskModel.save() 
+        this.model.link(subtaskModel);
+        await this.model.save()
+    
+        let subtask = this.subtaskFactory(type,subtaskModel);
+        this.subtasks.push(subtask);
         return subtask.prepare();
     }
-    public getSubtask(index):any{
-        if(!this.subtasks.has(index)){
-            throw new BusinessException('subtask not exist.')
+    public async getAllSubtasks():Promise<Array<Subtask>>{
+        let subtaskIds = await this.model.getAll(SubtaskModelClass.modelName)
+        let subtaskModels = await this.producer.subtaskModel.loadMany(subtaskIds)
+        let subtasks:Array<Subtask> = [];
+        for(var i in subtaskModels){
+            let subtaskModel = subtaskModels[i];
+            let subtask = this.subtaskFactory(subtaskModel.property('type'),subtaskModel);
+            subtasks.push(subtask);
         }
-        return this.subtasks.get(index);
+        return subtasks;
+    }
+    public getSubtask(subtask_id):any{
+        return this.subtasks.find((subtask)=>{
+            return subtask.id == subtask_id
+        })
     }
     async update():Promise<Message>{
         this.subtasksToJson();
@@ -66,14 +88,14 @@ export class TransactionMessage extends Message{
         await super.update();
         return this;
     }
-    subtaskFactory(type,subtaskJson){
+    subtaskFactory(type,subtaskModel){
         let subtask:any;
         switch (type) {
             case SubtaskType.EC:
-                subtask = new EcSubtask(this,type,subtaskJson);
+                subtask = new EcSubtask(this,subtaskModel);
                 break;
             case SubtaskType.TCC:
-                subtask = new TccSubtask(this,type,subtaskJson);
+                subtask = new TccSubtask(this,subtaskModel);
                 break;
         
             default:

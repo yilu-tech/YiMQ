@@ -22,7 +22,6 @@ export class MessageManager {
         let message:any = this.messageFactory(type,this.producer,messageModel)
         jobOptions.jobId = await this.producer.actorManager.getJobGlobalId();
         await (<Message>message).create(jobOptions);//创建job
-       
         return message;
     }
     async get(id):Promise<any>{

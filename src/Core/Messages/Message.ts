@@ -11,7 +11,7 @@ export abstract class Message{
     id:string;
     topic: string;
     status: MessageStatus;
-    job_id: string | number;
+    job_id: number;
     updated_at: Number;
     created_at: Number;
     public type: MessageType; //普通消息，事物消息
@@ -21,7 +21,6 @@ export abstract class Message{
 
     constructor(producer:Actor,messageModel){
 
-        
         this.id = messageModel.id;
         this.type = messageModel.property('type');
         this.topic = messageModel.property('topic');
@@ -44,10 +43,10 @@ export abstract class Message{
         this.job_id = this.job.id;
         await this.update();
     };
-    async restore(){
 
-        this.job = await this.producer.jobManager.restoreByMessage(this);
-    }
+ 
+
+    async abstract restore();
 
     async update():Promise<Message>{
         this.model.property('topic',this.topic);
