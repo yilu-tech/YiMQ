@@ -61,7 +61,6 @@ describe('Subtask', () => {
 
 
     describe('.create:', async () => {
-        //TODO 建立不同的配置文件隔离producer否则并行测试可能会发生冲突
         let producerName = 'user';
         let messageType = MessageType.TRANSACTION;
         let topic = 'subtask_test';
@@ -331,7 +330,6 @@ describe('Subtask', () => {
 
     describe('.done:', async () => {
 
-        //TODO 建立不同的配置文件隔离producer否则并行测试可能会发生冲突
         let producerName = 'user';
         let messageType = MessageType.TRANSACTION;
         let topic = 'subtask_test';
@@ -496,7 +494,6 @@ describe('Subtask', () => {
 
     describe('.canceled:', async () => {
 
-        //TODO 建立不同的配置文件隔离producer否则并行测试可能会发生冲突
         let producerName = 'user';
         let messageType = MessageType.TRANSACTION;
         let topic = 'subtask_test';

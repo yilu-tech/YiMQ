@@ -47,7 +47,7 @@ export class JobManager{
                     message_id: message.id,
                     type: type,
                 };
-                jobOptions.delay = jobOptions.delay ? jobOptions.delay : Number(process.env.TRANSACATION_MESSAGE_JOB_DELAY); //TODO 提取到配置文件 trasaction message 默认超时时间5秒，
+                jobOptions.delay = jobOptions.delay ? jobOptions.delay : Number(process.env.TRANSACATION_MESSAGE_JOB_DELAY);
                 jobContext = await this.actor.coordinator.add(message.topic,data,jobOptions);
                 job = new TransactionMessageJob(message,jobContext);
                 break;

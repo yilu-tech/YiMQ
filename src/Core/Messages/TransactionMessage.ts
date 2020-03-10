@@ -23,7 +23,7 @@ export class TransactionMessage extends Message{
         //     await subtask.statusToDoing();
         // }
         //并行执行
-        //TODO 增加防重复执行，导致重复给subtask添加任务
+        //TODO 增加防重复执行，导致重复给subtask添加任务,其中一个创建失败，再次尝试的时候，要避免已经成功的重复创建
         await Promise.all(this.subtasks.map((subtask)=>{
             return subtask.setStatusAddJobFor(SubtaskStatus.DOING)
         }))
