@@ -2,9 +2,6 @@ import { Job } from "./Job";
 import { ActorMessageStatus, MessageStatus } from "../../Constants/MessageConstants";
 import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
 import { TransactionMessage } from "../Messages/TransactionMessage";
-import { JobType } from "../../Constants/JobConstants";
-import { SubtaskStatus } from "../../Constants/SubtaskConstants";
-import { TransactionSubtaskJob } from "./TransactionSubtaskJob";
 import * as bull from 'bull';
 export class TransactionMessageJob extends Job{
     public message_id:number | string;

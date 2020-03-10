@@ -33,8 +33,13 @@ export class TransactionMessage extends Message{
 
     async confirm():Promise<Message>{
         await this.statusToDoing();
-        await this.job.context.promote();
+        await this.job.context.promote();//立即执行job
         return this;
+    }
+    async cancel():Promise<Message>{
+        this.statusToCancelling();
+        await this.job.context.promote();//立即执行job
+        return this.update();
     }
     /**
      * 用于MessageManager get的时候重建信息
@@ -102,10 +107,6 @@ export class TransactionMessage extends Message{
                 throw new Error('SubtaskType is not exists.');
         }
         return subtask;
-    }
-    async cancel():Promise<Message>{
-        this.statusToCancelling();
-        return this.update();
     }
 
     private subtasksToJson(){

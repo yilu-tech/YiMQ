@@ -186,7 +186,7 @@ describe('MessageService', () => {
             let message:Message;
            
             message = await messageService.create(producerName,messageType,topic,{
-                delay:300,
+                delay:8000, //设置超过5秒，检查confirm后是否立即执行job
                 attempts:5,
                 backoff:{
                     type:'exponential',
@@ -216,7 +216,7 @@ describe('MessageService', () => {
             let message:Message;
            
             message = await messageService.create(producerName,messageType,topic,{
-                delay:300,
+                delay:8000,
                 attempts:5,
                 backoff:{
                     type:'exponential',

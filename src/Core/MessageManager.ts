@@ -20,7 +20,6 @@ export class MessageManager {
         await messageModel.save();
         
         let message:any = this.messageFactory(type,this.producer,messageModel)
-        jobOptions.jobId = await this.producer.actorManager.getJobGlobalId();
         await (<Message>message).create(jobOptions);//创建job
         return message;
     }
@@ -36,7 +35,7 @@ export class MessageManager {
         return message.confirm()
     }
     async cancel(id):Promise<Message>{
-        let message = await this.get(id);
+        let message:Message = await this.get(id);
         return message.cancel()
     }
     async addSubtask(id,type,processserName,data){
