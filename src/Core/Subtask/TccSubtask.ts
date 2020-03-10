@@ -10,14 +10,13 @@ export class TccSubtask extends Subtask{
         this.prepareResult = subtaskModel.property('prepareResult');
     }
     async prepare() {
-
         try {
             this.prepareResult = (await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.TRY,this.toJson())).data; 
             this.status = SubtaskStatus.PREPARED;
             await this.update();
             return this;
         } catch (error) {
-            this.prepareResult = error.response;
+            this.prepareResult = error.message;
             await this.update();
             throw new BusinessException(error.message);//TODO  返回actor的详细错误
         }

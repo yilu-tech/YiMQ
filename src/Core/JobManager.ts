@@ -59,6 +59,10 @@ export class JobManager{
                     type: JobType.TRANSACTION_SUBTASK,
                 }
                 jobOptions.delay = Number(process.env.SUBTASK_JOB_DELAY) || 0;//单元测试部分地方需要延时
+                jobOptions.backoff = {
+                    type:'exponential',
+                    delay: Number(process.env.SUBTASK_JOB_BACKOFF_DELAY) || 5000 // delay*1  delay*3 delay*7 delay*15     delay*(times*2+1) times开始于0
+                }
                 jobContext = await this.actor.coordinator.add(subtask.message.topic,data,jobOptions);
                 job = new TransactionSubtaskJob(subtask,jobContext);
                 break;

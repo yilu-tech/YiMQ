@@ -25,12 +25,18 @@ export class HttpCoordinator extends Coordinator{
 
     public async callActor(producer:Actor,action:CoordinatorCallActorAction,context) {
         Logger.debug(`${action}: ${producer.name} --> ${context.processer||''}`,'HttpCoordinator')
-        let result = await axios.post(this.actor.api,{
-            action: action,
-            context: context
-        });
+        try {
+            let result = await axios.post(this.actor.api,{
+                action: action,
+                context: context
+            });
+            return result;            
+        } catch (error) {
+            if(error.response){
+                throw new Error(JSON.stringify(error.response))
+            }
+            throw error;
 
-        return result;
-
+        }
     }
 }

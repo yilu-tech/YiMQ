@@ -4,8 +4,6 @@ import { Actor } from "../Actor";
 import { SubtaskModelClass } from "../../Models/SubtaskModel";
 import { Job } from "../Job/Job";
 import { JobType } from "../../Constants/JobConstants";
-import * as bull from 'bull';
-import { TransactionSubtaskJob } from "../Job/TransactionSubtaskJob";
 export abstract class Subtask{
     id:Number;
     job_id:Number;
@@ -85,6 +83,7 @@ export abstract class Subtask{
         delete json['message'];
         delete json['consumer'];
         delete json['consumerProcesserName'];
+        delete json['model'];
         return json;
     }
     
