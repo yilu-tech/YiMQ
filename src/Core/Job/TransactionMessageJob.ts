@@ -12,19 +12,21 @@ export class TransactionMessageJob extends Job{
         this.message = message;
     }
     async process() {
+        let result = 'success';
         switch (this.message.status) {
             case MessageStatus.DOING:
-                await this.toDo();
+                await this.message.toDoing();
                 break;
             case MessageStatus.CANCELLING:
-                await this.toCancel()
+                await this.message.toCancelling()
                 break;
-            case MessageStatus.PENDING:
-                await this.remoteCheck();
+            case MessageStatus.PENDING://超时后远程检查任务状态
+                result = await this.remoteCheck();
                 break;
             default:
                 throw new Error('MessageStatus is not exists.');
         }
+        return result;
 
     
     }
@@ -37,35 +39,17 @@ export class TransactionMessageJob extends Job{
         let result = await this.message.producer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.MESSAGE_CHECK,context);
         switch (result.data.status) {
             case ActorMessageStatus.CANCELED:
-                await this.message.statusToCancelling();
-                await this.toCancel();
+                await this.message.toCancelling();
                 break;
             case ActorMessageStatus.DONE:
-                await this.message.statusToDoing();
-                await this.toDo();
+                await this.message.toDoing();
                 break;
             case ActorMessageStatus.PENDING:
                 throw new Error('ActorMessageStatus is PENDING');
             default:
                 throw new Error('ActorMessageStatus is not exists.');
         }
+        return result;
     }
-
-    private async toDo(){
-        // for (const subtask of this.message.subtasks) {
-        //     await subtask.statusToDoing();
-        // }
-        //并行执行
-        //TODO 增加防重复执行，导致重复给subtask添加任务
-        return Promise.all(this.message.subtasks.map((subtask)=>{
-            return subtask.statusToDoing();
-        }))
-
-    }
-    private async toCancel(){
-        //TODO 创建子任务
-
-    }
-
 
 }

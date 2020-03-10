@@ -18,26 +18,37 @@ export class TransactionMessage extends Message{
 
 
 
-    async statusToDoing():Promise<Message>{
-        this.status = MessageStatus.DOING;
-        await this.update();
+    async toDoing():Promise<Message>{
+        // for (const subtask of this.message.subtasks) {
+        //     await subtask.statusToDoing();
+        // }
+        //并行执行
+        //TODO 增加防重复执行，导致重复给subtask添加任务
+        await Promise.all(this.subtasks.map((subtask)=>{
+            return subtask.setStatusAddJobFor(SubtaskStatus.DOING)
+        }))
+
+        await this.setStatus(MessageStatus.DOING);
         return this;
         
     }
 
-    async statusToCancelling(){
-        this.status = MessageStatus.CANCELLING;
-        await this.update();
+    async toCancelling(){
+        await Promise.all(this.subtasks.map((subtask)=>{
+            return subtask.setStatusAddJobFor(SubtaskStatus.CANCELLING)
+        }))
+        await this.setStatus(MessageStatus.CANCELLING);
         return this;
     }
 
     async confirm():Promise<Message>{
-        await this.statusToDoing();
+        await this.setStatus(MessageStatus.DOING);
+        
         await this.job.context.promote();//立即执行job
         return this;
     }
     async cancel():Promise<Message>{
-        this.statusToCancelling();
+        await this.setStatus(MessageStatus.CANCELLING);
         await this.job.context.promote();//立即执行job
         return this.update();
     }

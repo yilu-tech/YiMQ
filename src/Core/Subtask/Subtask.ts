@@ -4,6 +4,7 @@ import { Actor } from "../Actor";
 import { SubtaskModelClass } from "../../Models/SubtaskModel";
 import { Job } from "../Job/Job";
 import { JobType } from "../../Constants/JobConstants";
+import { CoordinatorCallActorAction } from "../../Constants/Coordinator";
 export abstract class Subtask{
     id:Number;
     job_id:Number;
@@ -44,33 +45,44 @@ export abstract class Subtask{
     abstract async prepare();
 
 
-    async statusToDoing(){
-        this.status = SubtaskStatus.DOING;
+ 
+    async setStatusAddJobFor(status:SubtaskStatus){
+        this.status = status;
         this.job = await this.consumer.jobManager.add(this,JobType.TRANSACTION_SUBTASK)
         this.job_id = this.job.id;
-        await this.update();
-
+        this.model.property('job_id',this.job_id);//和status一起保存
+        await this.setStatus(status).save();
     }
-    async statusToDone(){
-        this.status = SubtaskStatus.DONE;
+    
+    async toDo(){
+        let callContext = {
+            message_id: this.message.id,
+            subtask_id: this.id
+        }
+        let result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CONFIRM,callContext);
+
+        await this.setStatus(SubtaskStatus.DONE).save();
+        return result.data;
+    }
+    async toCancel(){
+        let callContext = {
+            message_id: this.message.id,
+            subtask_id: this.id
+        }
+        let result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CANCEL,callContext);
+
+        await this.setStatus(SubtaskStatus.CANCELED).save()
+        return result.data;
+    }
+    setStatus(status:SubtaskStatus){
+        this.status = status;
         this.model.property('status',this.status);
-        await this.model.save();
+        return this;
     }
-    async done(){
-        //TODO
-    };
-    async cancel(){
-        //TODO
-    };
-
-    public async update(){
-        this.model.property('type',this.type);
-        this.model.property('status',this.status);
-        this.model.property('job_id',this.job_id);
-        this.model.property('updated_at',new Date().getTime());
-
-        await this.model.save();
+    async save(){
+        return this.model.save();
     }
+
     public getJobID(){
         return this.model.property('job_id');
     }
