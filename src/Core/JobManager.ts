@@ -23,7 +23,6 @@ export class JobManager{
         let jobContext;
         let data;
         let defaultOptions:bull.JobOptions = {
-            jobId: await this.actor.actorManager.getJobGlobalId(),
             attempts:5,
             backoff:{
                 type:'exponential',
@@ -47,7 +46,8 @@ export class JobManager{
                     message_id: message.id,
                     type: type,
                 };
-                jobOptions.delay = jobOptions.delay ? jobOptions.delay : Number(process.env.TRANSACATION_MESSAGE_JOB_DELAY);
+                let defaultDelay = 2000;
+                jobOptions.delay = jobOptions.delay > defaultDelay ? jobOptions.delay : Number(process.env.TRANSACATION_MESSAGE_JOB_DELAY) || defaultDelay;
                 jobContext = await this.actor.coordinator.add(message.topic,data,jobOptions);
                 job = new TransactionMessageJob(message,jobContext);
                 break;

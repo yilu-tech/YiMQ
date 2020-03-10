@@ -1,7 +1,7 @@
 key: asdfasdfasdf
 protocol: http
 api: 'user/yimq'
-redis: main
+redis: db2
 
 topics:
 consumeTopics:

@@ -65,9 +65,9 @@ describe('MessageService', () => {
         let message:Message;
         
         it('.remote status pending after done', async (done) => {
-           
+            process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
             message = await messageService.create(producerName,messageType,topic,{
-                delay:100,
+                delay:50,
                 attempts:5,
                 backoff:{
                     type:'exponential',
@@ -84,6 +84,7 @@ describe('MessageService', () => {
             producer.coordinator.getQueue().on('failed',async (job)=>{
                 
                 if(message.job.id == job.id && job.attemptsMade == 1){//第一次获取失败
+                    expect(job.opts.delay).toBe(Number(process.env.TRANSACATION_MESSAGE_JOB_DELAY));
                     expect(job.attemptsMade).toBe(1)
                     mock.onPost(producer.api).reply(200,{
                         status: MessageStatus.PENDING
@@ -112,9 +113,8 @@ describe('MessageService', () => {
 
 
         it('.status cancel', async (done) => {
-           
+            process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
             message = await messageService.create(producerName,messageType,topic,{
-                delay:100,
                 attempts:5,
                 backoff:{
                     type:'exponential',
@@ -142,9 +142,8 @@ describe('MessageService', () => {
             let messageType = MessageType.TRANSACTION;
             let topic = 'posts_create';
             let message:Message;
-           
+            process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
             message = await messageService.create(producerName,messageType,topic,{
-                delay:100,
                 attempts:5,
                 backoff:{
                     type:'exponential',

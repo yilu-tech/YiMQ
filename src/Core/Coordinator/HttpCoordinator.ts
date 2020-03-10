@@ -17,7 +17,7 @@ export class HttpCoordinator extends Coordinator{
                 let job = await this.actor.jobManager.restoreByContext(jobContext);
                 return job.process();
             } catch (err) {
-                // Logger.debug(err,'HttpCoordinator');
+                // Logger.error(err.message,'HttpCoordinator');
                 throw err;
             }
         })
@@ -33,7 +33,12 @@ export class HttpCoordinator extends Coordinator{
             return result;            
         } catch (error) {
             if(error.response){
-                throw new Error(JSON.stringify(error.response))
+                let message = {
+                    message: error.message,
+                    statusCode: error.response.status,
+                    data: error.response.data
+                }
+                throw new Error(JSON.stringify(message))
             }
             throw error;
 

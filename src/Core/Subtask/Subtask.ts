@@ -5,9 +5,10 @@ import { SubtaskModelClass } from "../../Models/SubtaskModel";
 import { Job } from "../Job/Job";
 import { JobType } from "../../Constants/JobConstants";
 import { CoordinatorCallActorAction } from "../../Constants/Coordinator";
+import * as bull from 'bull';
 export abstract class Subtask{
     id:Number;
-    job_id:Number;
+    job_id:number;
     type:SubtaskType;
     status: SubtaskStatus;
     data:any;
@@ -48,9 +49,11 @@ export abstract class Subtask{
  
     async setStatusAddJobFor(status:SubtaskStatus){
         this.status = status;
-        this.job = await this.consumer.jobManager.add(this,JobType.TRANSACTION_SUBTASK)
-        this.job_id = this.job.id;
-        this.model.property('job_id',this.job_id);//和status一起保存
+        let jobOptions:bull.JobOptions = {
+            jobId: await this.message.producer.actorManager.getJobGlobalId()
+        }
+        await this.setJobId(jobOptions.jobId).save();//先保存job_id占位
+        this.job = await this.consumer.jobManager.add(this,JobType.TRANSACTION_SUBTASK,jobOptions)
         await this.setStatus(status).save();
     }
     
@@ -73,6 +76,11 @@ export abstract class Subtask{
 
         await this.setStatus(SubtaskStatus.CANCELED).save()
         return result.data;
+    }
+    setJobId(jobId){
+        this.job_id = jobId;
+        this.model.property('job_id',this.job_id);
+        return this;
     }
     setStatus(status:SubtaskStatus){
         this.status = status;

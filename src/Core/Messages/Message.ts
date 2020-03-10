@@ -39,9 +39,10 @@ export abstract class Message{
      * @param options 
      */
     async create(jobOptions:bull.JobOptions):Promise<any>{
-        this.job = await this.producer.jobManager.add(this,JobType.TRANSACTION,jobOptions);
-        this.job_id = this.job.id;
+        jobOptions.jobId = await this.producer.actorManager.getJobGlobalId();
+        this.job_id = jobOptions.jobId;//先保存job_id，如果先创建job再保存id可能产生，message未记录job_id的情况
         await this.update();
+        this.job = await this.producer.jobManager.add(this,JobType.TRANSACTION,jobOptions);
     };
 
  
@@ -76,6 +77,7 @@ export abstract class Message{
     public toJson(){
         let json:object = Object.assign({},this);
         delete json['actorManger'];
+        delete json['model'];
         json['producer'] = this.producer.name;
         json['job'] = this.job.toJson();
         return json;

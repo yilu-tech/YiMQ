@@ -10,7 +10,7 @@ export class MessageManager {
 
     }
 
-    async create<P>(type:MessageType, topic:string,jobOptions?:bull.JobOptions):Promise<P> {
+    async create<P>(type:MessageType, topic:string,jobOptions:bull.JobOptions={}):Promise<P> {
         let messageModel = new this.producer.messageModel();
         
         messageModel.property('topic',topic);

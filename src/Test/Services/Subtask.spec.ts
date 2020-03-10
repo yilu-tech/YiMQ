@@ -196,10 +196,11 @@ describe('Subtask', () => {
                     data: 'new post'
                 })                
             } catch (error) {
+                console.log(error)
                 let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
                 let savedTccSubtask = updatedMessage.subtasks[0];
                 expect(savedTccSubtask.type).toBe(SubtaskType.TCC);
-                expect(savedTccSubtask['prepareResult'].status).toBe(400);
+                expect(savedTccSubtask['prepareResult'].statusCode).toBe(400);
             }
         });
 
