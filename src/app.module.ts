@@ -1,6 +1,4 @@
 import { Module } from '@nestjs/common';
-import { TransactionController } from './Controllers/TransactionController';
-import { JobController } from './Controllers/JobController';
 import { Config } from './Config';
 import { RedisManager } from './Handlers/redis/RedisManager';
 import { services } from './Services';

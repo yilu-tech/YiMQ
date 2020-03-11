@@ -1,31 +1,37 @@
-import { IsDefined,ValidateNested,IsNumber } from 'class-validator';
+import { IsDefined,ValidateNested,IsNumber, IsIn } from 'class-validator';
+import { MessageType } from '../Constants/MessageConstants';
+import { SubtaskType } from '../Constants/SubtaskConstants';
 
-export class CreateTransactionMessageDto{
+export class CreateMessageDto{
     @IsDefined()
     actor:string;
     @IsDefined()
     topic:string;
+
+    @IsDefined()
+    @IsIn([MessageType.GENERAL,MessageType.TRANSACTION])
+    type:MessageType;
+
+    delay:number;
 }
 
-export class TransactionItemDto{
-    @IsDefined()
-    type:string;
-    @IsDefined()
-    url:string;
-    data:object;
-}
 
-export class AddTransactionItemDto{
+
+export class AddSubtaskDto{
     @IsDefined()
-    coordinator:string;
-    @IsDefined()
-    transaction_id:string;
+    actor:string;
 
     @IsDefined()
-    type:string;
+    message_id:string;
+
     @IsDefined()
-    url:string;
-    data:any;
+    @IsIn([SubtaskType.EC,SubtaskType.TCC])
+    type:SubtaskType;
+
+    @IsDefined()
+    processer:string;
+
+    data:JSON;
 }
 
 

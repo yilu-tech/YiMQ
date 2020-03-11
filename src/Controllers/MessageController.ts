@@ -1,9 +1,8 @@
 import { Controller, Post, Patch, Body, Inject, UseFilters } from '@nestjs/common';
 import { HttpExceptionFilter } from '../ExceptionFilters/HttpExceptionFilter';
-import { CreateTransactionMessageDto } from '../Dto/TransactionDto';
-import { AddTransactionItemDto } from '../Dto/TransactionDto';
+import { CreateMessageDto, AddSubtaskDto } from '../Dto/TransactionDto';
+
 import { MessageService } from '../Services/MessageService';
-import { MessageType } from '../Constants/MessageConstants';
 import { TransactionMessage } from '../Core/Messages/TransactionMessage';
 
 
@@ -16,29 +15,30 @@ export class MessagesController {
 
     }
 
-    @Post('general.create')
-    async create(): Promise<any> {
-
-
-    }
-
     /**
      * 开启事物
      */
-    @Post('transaction.begin')
-    async begin(@Body() createTransactionMessageDto: CreateTransactionMessageDto): Promise<any> {
-        // let transactionMessage:TransactionMessage = await this.messageManager.create<TransactionMessage>(createTransactionMessageDto.actor, MessageType.TRANSACTION, createTransactionMessageDto.topic);
-        // return transactionMessage.toJson();
-        let transactionMessage = await this.messageService.create<TransactionMessage>(createTransactionMessageDto.actor, MessageType.TRANSACTION, createTransactionMessageDto.topic);
-        return transactionMessage.toJson();
+    @Post('create')
+    async begin(@Body() createMessageDto: CreateMessageDto): Promise<any> {
+        let message = await this.messageService.create<TransactionMessage>(createMessageDto.actor, createMessageDto.type, createMessageDto.topic,{
+            delay: createMessageDto.delay
+        });
+        return message.toJson();
     }
 
     /**
      * 创建事物任务
      */
-    @Post('transaction.item')
-    async jobs(@Body() body: AddTransactionItemDto): Promise<any> {
-
+    @Post('subtask')
+    async jobs(@Body() addSubtaskDto: AddSubtaskDto): Promise<any> {
+        let subtask = await this.messageService.addSubtask(
+            addSubtaskDto.actor,
+            addSubtaskDto.message_id,
+            addSubtaskDto.type,
+            addSubtaskDto.processer,
+            addSubtaskDto.data
+            );
+        return subtask.toJson();
     }
 
 
@@ -46,17 +46,17 @@ export class MessagesController {
     /**
      * 提交事物
      */
-    @Patch('transaction.commit')
+    @Post('confirm')
     async commit(@Body() body): Promise<any> {
-
+        return (await this.messageService.confirm(body.actor,body.message_id)).toJson();
     }
 
     /**
      * 回滚事物
      */
-    @Patch('transaction.rollback')
+    @Post('cancel')
     async rollback(@Body() body): Promise<any> {
-
+        return (await this.messageService.cancel(body.actor,body.message_id)).toJson();
     }
 
 }

@@ -6,6 +6,7 @@ import { Job } from "../Job/Job";
 import { JobType } from "../../Constants/JobConstants";
 import { CoordinatorCallActorAction } from "../../Constants/Coordinator";
 import * as bull from 'bull';
+import { BusinessException } from "../../Exceptions/BusinessException";
 export abstract class Subtask{
     id:Number;
     job_id:number;
@@ -38,6 +39,9 @@ export abstract class Subtask{
        
         let [consumerName,consumerProcesserName] =this.processer.split('@');
         this.consumer = this.message.producer.actorManager.get(consumerName);
+        if(!this.consumer){
+            throw new BusinessException('Consumer not exists.')
+        }
         this.consumerProcesserName = consumerProcesserName;
 
 

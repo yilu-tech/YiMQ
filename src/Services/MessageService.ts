@@ -4,6 +4,7 @@ import { ActorManager } from "../Core/ActorManager";
 import { BusinessException } from "../Exceptions/BusinessException";
 import * as bull from 'bull';
 import { Message } from "../Core/Messages/Message";
+import { SubtaskType } from "../Constants/SubtaskConstants";
 @Injectable()
 export class MessageService {
     constructor(private actorManger:ActorManager){
@@ -32,11 +33,11 @@ export class MessageService {
         }
         return producer.messageManager.cancel(messageId);
     }
-    async addSubtask(producerName:string,messageId,subtaskBody:any):Promise<any>{
+    async addSubtask(producerName:string,messageId,subtaskType:SubtaskType,processer,subtaskData:any):Promise<any>{
         let producer = this.actorManger.get(producerName);
         if(!producer){
             throw new BusinessException('Producer not exists.')
         }
-        return producer.messageManager.addSubtask(messageId,subtaskBody.type,subtaskBody.processerName,subtaskBody.data);
+        return producer.messageManager.addSubtask(messageId,subtaskType,processer,subtaskData);
     }
 }
