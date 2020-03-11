@@ -1,5 +1,4 @@
-import { Controller, Post, Patch, Body, Inject, UseFilters } from '@nestjs/common';
-import { HttpExceptionFilter } from '../ExceptionFilters/HttpExceptionFilter';
+import { Controller, Post, Body } from '@nestjs/common';
 import { CreateMessageDto, AddSubtaskDto } from '../Dto/TransactionDto';
 
 import { MessageService } from '../Services/MessageService';
@@ -9,7 +8,6 @@ import { TransactionMessage } from '../Core/Messages/TransactionMessage';
 
 
 @Controller('message')
-@UseFilters(new HttpExceptionFilter())
 export class MessagesController {
     constructor(private messageService:MessageService){
 

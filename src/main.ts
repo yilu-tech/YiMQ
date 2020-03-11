@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { BusinessExceptionFilter } from './ExceptionFilters/BusinessExceptionFilter';
 import {
   FastifyAdapter,
   NestFastifyApplication,
@@ -13,7 +14,7 @@ async function bootstrap() {
   });
   // app.useLogger(app.get(AppLogger));
   app.useGlobalPipes(new ValidationPipe());
-  // app.useGlobalFilters(new HttpExceptionFilter());
+  app.useGlobalFilters(new BusinessExceptionFilter());
   await app.listen(7379,'0.0.0.0');
 }
 bootstrap();

@@ -1,12 +1,12 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpStatus } from '@nestjs/common';
-import { TransactionException } from '../Exceptions/TransactionException';
 
-@Catch(TransactionException)
-export class HttpExceptionFilter implements ExceptionFilter {
-  catch(exception: TransactionException, host: ArgumentsHost) {
+import { BusinessException } from '../Exceptions/BusinessException';
+
+@Catch(BusinessException)
+export class BusinessExceptionFilter implements ExceptionFilter {
+  catch(exception: BusinessException, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
-    const request = ctx.getRequest();
 
     response
       .code(HttpStatus.BAD_REQUEST)
