@@ -1,15 +1,15 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpStatus } from '@nestjs/common';
 
-import { BusinessException } from '../Exceptions/BusinessException';
+import { SystemException } from '../Exceptions/SystemException';
 
-@Catch(BusinessException)
-export class BusinessExceptionFilter implements ExceptionFilter {
-  catch(exception: BusinessException, host: ArgumentsHost) {
+@Catch(SystemException)
+export class SystemExceptionFilter implements ExceptionFilter {
+  catch(exception: SystemException, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
 
     response
-      .code(HttpStatus.BAD_REQUEST)
+      .code(HttpStatus.INTERNAL_SERVER_ERROR)
       .send({
         message: exception.message,
         error: exception.error

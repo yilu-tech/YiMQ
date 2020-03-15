@@ -31,14 +31,13 @@
 
 ###subtask create
 
-  接口: subtask/create
+  接口: message/subtask
   请求参数:
 
         {
             "actor":"user",
             "message_id":'3',
             "type": "ec|tcc",
-            "topic": "test",
             "process": "post@update",
             "data":{}
         }
@@ -46,20 +45,15 @@
   返回:
 
     {
-        "id": "1",
-        "type": "TRANSACTION",
-        "topic": "test",
-        "status": "PENDING",
-        "job_id": 1,
-        "updated_at": "0",
-        "created_at": "1583893390398",
-        "producer": "user",
-        "subtasks": [],
-        "job": {
-            "id": 1,
-            "type": "TRANSACTION",
-            "message_id": "1"
-        }
+      id: '1',
+      job_id: -1,
+      type: 'TCC',
+      status: 'PREPARED',
+      data: { title: 'new post' },
+      created_at: '1584156250751',
+      updated_at: '1584156250751',
+      processer: 'user',
+      prepareResult: { title: 'get new post' }
     }
 
 

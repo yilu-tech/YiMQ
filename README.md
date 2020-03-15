@@ -1,10 +1,10 @@
-
+#YiMQ
 
 
 ###事务类型
-1. EC eventually consistent 最终一致
-2. TCC
-3. XA
+1. EC  (eventually consistent)
+2. TCC (try confirm cancel)
+3. XA  
 
 
 
