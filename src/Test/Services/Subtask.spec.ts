@@ -312,6 +312,56 @@ describe('Subtask', () => {
 
         });
 
+
+        it('.message confirm after add  ec and tcc', async () => {
+
+           
+            message = await messageService.create(producerName,messageType,topic,{
+                delay:300,
+                attempts:5,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+
+
+
+
+            
+            let producer = actorManager.get(producerName); 
+            //把message确认
+            await messageService.confirm(producerName,message.id);
+
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            expect(updatedMessage.status).toBe(MessageStatus.DOING);
+
+            let prepareResult = {title: 'get new user'};
+
+
+            let tccErrorMessage;
+            try {
+                let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,producerName,{
+                    title: 'new post'
+                })  
+            } catch (error) {
+                tccErrorMessage = error.message;
+            }        
+            expect(tccErrorMessage).toBe('The status of this message is DOING instead of PENDING');
+
+            let ECErrorMessage;
+            try {
+                let ecSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,producerName,{
+                    title: 'new post'
+                })   
+            } catch (error) {
+                ECErrorMessage = error.message;
+            }        
+            expect(ECErrorMessage).toBe('The status of this message is DOING instead of PENDING');
+
+        });
+
     });
 
 

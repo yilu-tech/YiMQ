@@ -66,7 +66,9 @@ export class TransactionMessage extends Message{
         this.subtasks = await this.getAllSubtasks();
     }
     async addSubtask(type,processerName,data){
-
+        if(this.status != MessageStatus.PENDING){
+            throw new BusinessException(`The status of this message is ${this.status} instead of ${MessageStatus.PENDING}`);
+        }
         let now = new Date().getTime();
 
         let subtaskModel = new this.producer.subtaskModel();
