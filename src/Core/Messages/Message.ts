@@ -64,6 +64,9 @@ export abstract class Message{
         this.model.property('status',this.status);
         return this.model.save();
     }
+    async getStatus(){
+        return this.status;
+    }
 
     abstract async confirm():Promise<Message>;
     // abstract async statusToDoing():Promise<Message>;

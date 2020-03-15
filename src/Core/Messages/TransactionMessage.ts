@@ -42,12 +42,17 @@ export class TransactionMessage extends Message{
     }
 
     async confirm():Promise<Message>{
+        if(this.status != MessageStatus.PENDING){
+            throw new BusinessException(`The status of this message is ${this.status} instead of ${MessageStatus.PENDING} `);
+        }
         await this.setStatus(MessageStatus.DOING);
-        
         await this.job.context.promote();//立即执行job
         return this;
     }
     async cancel():Promise<Message>{
+        if(this.status != MessageStatus.PENDING){
+            throw new BusinessException(`The status of this message is ${this.status} instead of ${MessageStatus.PENDING} `);
+        }
         await this.setStatus(MessageStatus.CANCELLING);
         await this.job.context.promote();//立即执行job
         return this.update();

@@ -5,6 +5,7 @@ import { TransactionMessage } from './Messages/TransactionMessage';
 import { BusinessException } from '../Exceptions/BusinessException';
 import { Actor } from './Actor';
 import * as bull from 'bull';
+import { SystemException } from '../Exceptions/SystemException';
 export class MessageManager {
     constructor(private producer:Actor){
 
@@ -24,7 +25,16 @@ export class MessageManager {
         return message;
     }
     async get(id):Promise<any>{
-        let messageModel = await this.producer.messageModel.load(id);
+        try{
+            var messageModel = await this.producer.messageModel.load(id);
+        }catch(error){
+            if(error && error.message === 'not found'){
+                throw new BusinessException('Message not found');
+            }
+            throw new SystemException(error.message);
+        }
+        
+
         let message = this.messageFactory(messageModel.property('type'),this.producer,messageModel); 
         await (<Message>message).restore();
         return message;
