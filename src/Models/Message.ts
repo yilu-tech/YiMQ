@@ -15,7 +15,7 @@ interface MessageProperties {
 
 export class MessageModelClass extends NohmModel<MessageProperties> {
     public static modelName = 'message';
-    public static idGenerator = 'increment';
+    // public static idGenerator = 'increment';
     protected static definitions: TTypedDefinitions<MessageProperties> = {
         topic: {
             type: 'string',

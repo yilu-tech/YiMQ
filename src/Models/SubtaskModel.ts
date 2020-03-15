@@ -17,7 +17,7 @@ interface SubtaskProperties {
 
 export class SubtaskModelClass extends NohmModel<SubtaskProperties> {
     public static modelName = 'subtask';
-    public static idGenerator = 'increment';
+    // public static idGenerator = 'increment';
     protected static definitions: TTypedDefinitions<SubtaskProperties> = {
         message_id: {
             type: 'integer',

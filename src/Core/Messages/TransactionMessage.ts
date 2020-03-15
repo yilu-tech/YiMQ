@@ -72,7 +72,7 @@ export class TransactionMessage extends Message{
         let now = new Date().getTime();
 
         let subtaskModel = new this.producer.subtaskModel();
-
+        subtaskModel.id = String(await this.producer.actorManager.getSubtaskGlobalId());
         subtaskModel.property('message_id',this.id);
         subtaskModel.property('type',type);
         subtaskModel.property('status',SubtaskStatus.PREPARING);

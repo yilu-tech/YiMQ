@@ -14,6 +14,7 @@ export class MessageManager {
     async create<P>(type:MessageType, topic:string,jobOptions:bull.JobOptions={}):Promise<P> {
         let messageModel = new this.producer.messageModel();
         
+        messageModel.id = String(await this.producer.actorManager.getMessageGlobalId());
         messageModel.property('topic',topic);
         messageModel.property('type',type);
         messageModel.property('status',MessageStatus.PENDING);
