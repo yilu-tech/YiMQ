@@ -40,6 +40,13 @@ export class MessagesController {
     }
 
 
+    /**
+     * 预提交
+     */
+    @Post('prepare')
+    async prepare(@Body() body): Promise<any> {
+        return (await this.messageService.prepare(body.actor,body.message_id,body));
+    }
 
     /**
      * 提交事物

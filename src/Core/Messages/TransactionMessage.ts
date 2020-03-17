@@ -49,6 +49,24 @@ export class TransactionMessage extends Message{
         await this.job.context.promote();//立即执行job
         return this;
     }
+    async prepare(body){
+        let data = {
+            id:  this.id,
+            ec_subtasks : []
+        };
+        if(body.ec_subtasks && body.ec_subtasks.length > 0 ){
+            data.ec_subtasks = await this.prepareEcSubtasks(body.ec_subtasks);
+        }
+        return data;   
+    }
+    private async prepareEcSubtasks(ecSubtasksBody){
+        let ecSubtasksResult = [];
+        for (const ecSubtaskBody of ecSubtasksBody) {
+            let ecSubtask = await this.addSubtask(SubtaskType.EC,ecSubtaskBody.processer,ecSubtaskBody.data);
+            ecSubtasksResult.push(ecSubtask.toJson());
+        }
+        return ecSubtasksResult;
+    }
     async cancel():Promise<Message>{
         if(this.status != MessageStatus.PENDING){
             throw new BusinessException(`The status of this message is ${this.status} instead of ${MessageStatus.PENDING} `);

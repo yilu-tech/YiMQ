@@ -40,7 +40,7 @@ export abstract class Subtask{
         let [consumerName,consumerProcesserName] =this.processer.split('@');
         this.consumer = this.message.producer.actorManager.get(consumerName);
         if(!this.consumer){
-            throw new BusinessException('Consumer not exists.')
+            throw new BusinessException(`Consumer <${consumerName}> not exists.`)
         }
         this.consumerProcesserName = consumerProcesserName;
 

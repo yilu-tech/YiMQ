@@ -46,6 +46,10 @@ export class MessageManager {
         let message:Message = await this.get(id);
         return message.confirm()
     }
+    async prepare(id,data):Promise<any>{
+        let message:TransactionMessage = await this.get(id);
+        return message.prepare(data)
+    }
     async cancel(id):Promise<Message>{
         let message:Message = await this.get(id);
         return message.cancel()

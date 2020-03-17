@@ -36,9 +36,9 @@
 
         {
             "actor":"user",
-            "message_id":'3',
-            "type": "ec|tcc",
-            "process": "post@update",
+            "message_id":"1",
+            "type": "TCC",
+            "processer": "user@update",
             "data":{}
         }
 
@@ -56,6 +56,57 @@
       prepareResult: { title: 'get new post' }
     }
 
+###message prepare
+
+  接口: message/confirm
+  请求参数:
+
+        {
+            "actor":"user",
+            "message_id":"1",
+            "ec_subtasks":[
+                {
+                    "processer":"user@update",
+                    "data":{"title":"test"}
+                },
+                {
+                    "processer":"user@update1",
+                    "data":{"title":"test1"}
+                }
+            ]
+        }
+    
+    返回:
+
+        {
+            "id": "1",
+            "ec_subtasks": [
+                {
+                    "id": "7",
+                    "job_id": -1,
+                    "type": "EC",
+                    "status": "PREPARED",
+                    "data": {
+                        "title": "test"
+                    },
+                    "created_at": "1584446474827",
+                    "updated_at": "1584446474827",
+                    "processer": "user@update"
+                },
+                {
+                    "id": "8",
+                    "job_id": -1,
+                    "type": "EC",
+                    "status": "PREPARED",
+                    "data": {
+                        "title": "test1"
+                    },
+                    "created_at": "1584446474842",
+                    "updated_at": "1584446474842",
+                    "processer": "user@update1"
+                }
+            ]
+        }
 
 ###message confirm
 

@@ -1,11 +1,13 @@
 actors:
-    1:
+    -
+        id: 1
         name: user
         key: asdfasdfasdf
         protocol: http
         api: 'user/yimq'
         redis: master
-    2:
+    -
+        id: 2
         name: content
         key: asdfasdfasdf
         protocol: http

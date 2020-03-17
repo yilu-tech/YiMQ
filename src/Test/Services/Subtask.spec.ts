@@ -163,6 +163,37 @@ describe('Subtask', () => {
             
         });
 
+        it('.add ec by prepare', async () => {
+            message = await messageService.create(producerName,messageType,topic,{
+                delay:300,
+                attempts:5,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+            let processerName = 'content@post.create';
+            let producer = actorManager.get(producerName); 
+            let body = {
+                ec_subtasks:[
+                    {
+                        processer:'user@update',
+                        data:{'title':'test'}
+                    },
+                    {
+                        processer:'user@update1',
+                        data:{'title':'test1'}
+                    }
+                ]
+            }
+            let prepareResult = await messageService.prepare(producerName,message.id,body);
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            expect(updatedMessage.subtasks.length).toBe(2);
+            expect(updatedMessage.subtasks['0'].data).toMatchObject(body.ec_subtasks[0].data);
+            expect(updatedMessage.subtasks['1'].data).toMatchObject(body.ec_subtasks[1].data)
+        })
+
         it('.add tcc failed', async () => {
 
            

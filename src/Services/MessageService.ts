@@ -26,6 +26,13 @@ export class MessageService {
         }
         return producer.messageManager.confirm(messageId);
     }
+    async prepare(producerName:string,messageId,data):Promise<any>{
+        let producer = this.actorManger.get(producerName);
+        if(!producer){
+            throw new BusinessException('Producer not exists.')
+        }
+        return producer.messageManager.prepare(messageId,data);
+    }
     async cancel(producerName:string,messageId){
         let producer = this.actorManger.get(producerName);
         if(!producer){
