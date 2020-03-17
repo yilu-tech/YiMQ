@@ -27,6 +27,7 @@ export class MessageManager {
     }
     async get(id):Promise<any>{
         try{
+            //TODO 这里要添加一个添加查询 producer.id  = message.producer_id
             var messageModel = await this.producer.messageModel.load(id);
         }catch(error){
             if(error && error.message === 'not found'){

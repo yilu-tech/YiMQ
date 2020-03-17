@@ -9,7 +9,7 @@ import { ActorConfig } from "./ActorConfig";
 export class Config {
     configDirPath:string;
     system: SystemConfig  ;
-    actors: Map<string,ActorConfig>;
+    actors: Map<number,ActorConfig>;
     constructor(){
         this.configDirPath = process.env.CONFIG_DIR_PATH ? process.env.CONFIG_DIR_PATH : join(process.cwd(),'config');
         this.system = new SystemConfig(this.loadConfig(join(this.configDirPath,'system.config.yml')));
@@ -18,16 +18,9 @@ export class Config {
     }
 
     loadActors(){
-        let dirPath = join(this.configDirPath,'actors');
-        let actorsMap = new Map<string,ActorConfig>();
-        let files = readdirSync(dirPath,"utf8");
-    
-        files.forEach((filename)=>{
-            let nameSplit = filename.split('.');
-            let filepath = join(dirPath,filename);
-            let actorConfig: ActorConfig = this.loadConfig(filepath);
-            actorConfig.id = nameSplit[0];
-            actorConfig.name = nameSplit[1];
+        let actorsMap = new Map<number,ActorConfig>();
+        let fileContent = this.loadConfig(join(this.configDirPath,'actors.config.yml'));
+        fileContent.actors.forEach((actorConfig)=>{
             actorsMap.set(actorConfig.id,actorConfig);
         })
         return actorsMap;

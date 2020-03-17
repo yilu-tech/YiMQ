@@ -6,7 +6,7 @@ export abstract class Coordinator{
     
     protected queue:bull.Queue;
     constructor(protected actor:Actor,options:RedisOptions){
-        this.queue = new bull(this.actor.name,{redis:options});
+        this.queue = new bull(String(this.actor.id),{redis:options});
     }
 
     public abstract async processBootstrap();
