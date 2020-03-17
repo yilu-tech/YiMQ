@@ -5,7 +5,7 @@ import { MessageStatus } from "../Constants/MessageConstants";
 interface MessageProperties {
     topic: string;
     type:string;
-    subtasks: object;
+    pending_subtask_total: number;
     status: MessageStatus;
     job_id: number;
     updated_at: number;
@@ -27,8 +27,8 @@ export class MessageModelClass extends NohmModel<MessageProperties> {
             index:true,
             validations: ['notEmpty']
         },
-        subtasks: {
-            type: 'json',
+        pending_subtask_total: {
+            type: 'integer',
         },
         status: {
             type: 'string',

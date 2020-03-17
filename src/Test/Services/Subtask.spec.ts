@@ -148,7 +148,7 @@ describe('Subtask', () => {
             let savedEcSubtask = updatedMessage.subtasks[0];;
             expect(savedEcSubtask.type).toBe(SubtaskType.EC);
             expect(savedEcSubtask.status).toBe(SubtaskStatus.PREPARED);
-            
+            expect(updatedMessage.pending_subtask_total).toBe(1);
 
             mock.onPost(producer.api).reply(200,{
                 title: 'hello world'
@@ -160,6 +160,7 @@ describe('Subtask', () => {
             updatedMessage = await producer.messageManager.get(message.id);
             let savedTccSubtask = updatedMessage.subtasks[1];
             expect(savedTccSubtask.type).toBe(SubtaskType.TCC);
+            expect(updatedMessage.pending_subtask_total).toBe(2);
             
         });
 
@@ -441,7 +442,7 @@ describe('Subtask', () => {
 
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
             expect(updatedMessage.status).toBe(MessageStatus.DOING);
-
+            expect(updatedMessage.pending_subtask_total).toBe(2);
             producer.coordinator.getQueue().on('failed',async(job,err)=>{
                 console.log(err)
             })
@@ -456,7 +457,6 @@ describe('Subtask', () => {
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
                     
                 }else if(updatedMessage.subtasks[0].job_id == job.id){
-
                     expect(job.data.message_id).toBe(updatedMessage.id);
                 }
                 else if(updatedMessage.subtasks[1].job_id == job.id){
@@ -468,16 +468,18 @@ describe('Subtask', () => {
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 console.debug('Job completed',job.id)
                 updatedMessage = await producer.messageManager.get(message.id);
-
                 if(message.job.id == job.id){
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
                     
                 }else if(updatedMessage.subtasks[0].job_id == job.id){
 
                     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DONE);
+                    expect(updatedMessage.status).toBe(MessageStatus.DOING)
                 }
                 else if(updatedMessage.subtasks[1].job_id == job.id){
                     expect(updatedMessage.subtasks[1].status).toBe(SubtaskStatus.DONE);
+                    expect(updatedMessage.pending_subtask_total).toBe(0);
+                    expect(updatedMessage.status).toBe(MessageStatus.DONE)
                     done()
                 }
             })
@@ -636,6 +638,8 @@ describe('Subtask', () => {
                 }
                 else if(updatedMessage.subtasks[1].job_id == job.id){
                     expect(updatedMessage.subtasks[1].status).toBe(SubtaskStatus.CANCELED);
+                    expect(updatedMessage.pending_subtask_total).toBe(0);
+                    expect(updatedMessage.status).toBe(MessageStatus.CANCELED)
                     done()
                 }
             })

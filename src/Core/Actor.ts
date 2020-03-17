@@ -25,7 +25,7 @@ export class Actor{
 
     public coordinator:Coordinator;
 
-    private redisClient:Redis;
+    public redisClient:Redis;
     private nohm: NohmClass;
     public messageModel:IStaticMethods<MessageModelClass> ;
     public subtaskModel:IStaticMethods<SubtaskModelClass>

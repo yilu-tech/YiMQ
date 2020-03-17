@@ -11,9 +11,11 @@ import { TransactionMessageJob } from "../Job/TransactionMessageJob";
 import * as bull from 'bull';
 export class TransactionMessage extends Message{
     public subtasks:Array<Subtask> = [];  //事物的子项目
+    public pending_subtask_total:number;
 
     constructor(producer:Actor,messageModel){
         super(producer,messageModel);
+        this.pending_subtask_total = messageModel.property('pending_subtask_total');
     }
 
 
@@ -101,10 +103,20 @@ export class TransactionMessage extends Message{
         await subtaskModel.save() 
         this.model.link(subtaskModel);
         await this.model.save()
-    
+        await this.incrPendingSubtaskTotal();
+
         let subtask = this.subtaskFactory(type,subtaskModel);
         this.subtasks.push(subtask);
         return subtask.prepare();
+    }
+    private async incrPendingSubtaskTotal(){
+        return this.producer.redisClient.hincrby(this.getMessageHash(),'pending_subtask_total',1);
+    }
+    public async decrPendingSubtaskTotal(){
+        return this.producer.redisClient.hincrby(this.getMessageHash(),'pending_subtask_total',-1);
+    }
+    private getMessageHash(){
+        return `${this.model['nohmClass'].prefix.hash}${this.model.modelName}:${this.id}`;
     }
     public async getAllSubtasks():Promise<Array<Subtask>>{
         let subtaskIds = await this.model.getAll(SubtaskModelClass.modelName)
@@ -124,7 +136,6 @@ export class TransactionMessage extends Message{
     }
     async update():Promise<Message>{
         this.subtasksToJson();
-        this.model.property('subtasks',this.subtasksToJson())
 
         await super.update();
         return this;

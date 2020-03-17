@@ -7,6 +7,8 @@ import { JobType } from "../../Constants/JobConstants";
 import { CoordinatorCallActorAction } from "../../Constants/Coordinator";
 import * as bull from 'bull';
 import { BusinessException } from "../../Exceptions/BusinessException";
+import { TransactionMessage } from "../Messages/TransactionMessage";
+import { MessageStatus } from "../../Constants/MessageConstants";
 export abstract class Subtask{
     id:Number;
     job_id:number;
@@ -21,10 +23,10 @@ export abstract class Subtask{
     consumerProcesserName:string;
 
 
-    message:Message;
+    message:TransactionMessage;
     model:SubtaskModelClass
     job:Job;
-    constructor(message:Message,subtaskModel){
+    constructor(message:TransactionMessage,subtaskModel){
         this.model = subtaskModel;
         this.message = message;
 
@@ -69,6 +71,10 @@ export abstract class Subtask{
         let result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CONFIRM,callContext);
 
         await this.setStatus(SubtaskStatus.DONE).save();
+        let pendingSubtaskTotal = await this.message.decrPendingSubtaskTotal();
+        if(pendingSubtaskTotal == 0){
+            await this.message.setStatus(MessageStatus.DONE);
+        }
         return result.data;
     }
     async toCancel(){
@@ -77,8 +83,11 @@ export abstract class Subtask{
             subtask_id: this.id
         }
         let result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CANCEL,callContext);
-
         await this.setStatus(SubtaskStatus.CANCELED).save()
+        let pendingSubtaskTotal = await this.message.decrPendingSubtaskTotal();
+        if(pendingSubtaskTotal == 0){
+            await this.message.setStatus(MessageStatus.CANCELED);
+        }
         return result.data;
     }
     setJobId(jobId){
