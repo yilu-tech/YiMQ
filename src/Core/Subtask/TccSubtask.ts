@@ -1,11 +1,11 @@
 import {Subtask} from './Subtask';
 import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
-import { SubtaskStatus, SubtaskType } from '../../Constants/SubtaskConstants';
-import { Message } from '../Messages/Message';
+import { SubtaskStatus } from '../../Constants/SubtaskConstants';
 import { BusinessException } from '../../Exceptions/BusinessException';
+import { TransactionMessage } from '../Messages/TransactionMessage';
 export class TccSubtask extends Subtask{
     public prepareResult;
-    constructor(message:Message,subtaskModel){
+    constructor(message:TransactionMessage,subtaskModel){
         super(message,subtaskModel);
         this.prepareResult = subtaskModel.property('prepareResult');
     }
