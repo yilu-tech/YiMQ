@@ -165,3 +165,21 @@
                 "message_id": "5"
             }
         }
+
+
+TRY process
+
+    {
+      action: 'TRY',
+      context: {
+        id: '1',
+        job_id: -1,
+        type: 'TCC',
+        status: 'PREPARING',
+        data: { title: 'new post' },
+        created_at: '1584504107165',
+        updated_at: '1584504107165',
+        processer: 'user',
+        prepareResult: 0
+      }
+    }

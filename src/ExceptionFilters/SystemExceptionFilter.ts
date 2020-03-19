@@ -1,4 +1,4 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpStatus } from '@nestjs/common';
+import { ExceptionFilter, Catch, ArgumentsHost, HttpStatus, Logger } from '@nestjs/common';
 
 import { SystemException } from '../Exceptions/SystemException';
 
@@ -7,7 +7,7 @@ export class SystemExceptionFilter implements ExceptionFilter {
   catch(exception: SystemException, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
-
+    Logger.error(`${exception.message} > ${exception.error} `)
     response
       .code(HttpStatus.INTERNAL_SERVER_ERROR)
       .send({

@@ -26,19 +26,25 @@ export class HttpCoordinator extends Coordinator{
     public async callActor(producer:Actor,action:CoordinatorCallActorAction,context) {
         Logger.debug(`${action}: ${producer.name} --> ${context.processer||''}`,'HttpCoordinator')
         try {
+            let config = {
+                headers:{
+                    'content-type':'application/json'
+                }
+            }
             let result = await axios.post(this.actor.api,{
                 action: action,
                 context: context
-            });
+            },config);
             return result;            
         } catch (error) {
             if(error.response){
-                let message = {
-                    message: error.message,
-                    statusCode: error.response.status,
-                    data: error.response.data
-                }
-                throw new Error(JSON.stringify(message))
+                // let message = {
+                //     message: `${this.actor.api} ${error.message}`,
+                //     statusCode: error.response.status,
+                //     data: error.response.data
+                // }
+                let message = `${this.actor.api} ${error.message} > ${error.response.data.message};`
+                throw new Error(message)
             }
             throw error;
 

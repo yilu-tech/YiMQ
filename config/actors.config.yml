@@ -4,7 +4,7 @@ actors:
         name: user
         key: asdfasdfasdf
         protocol: http
-        api: 'user/yimq'
+        api: 'http://127.0.0.1:8000/yimq'
         redis: master
     -
         id: 2

@@ -3,6 +3,7 @@ import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
 import { SubtaskStatus } from '../../Constants/SubtaskConstants';
 import { BusinessException } from '../../Exceptions/BusinessException';
 import { TransactionMessage } from '../Messages/TransactionMessage';
+import { SystemException } from '../../Exceptions/SystemException';
 export class TccSubtask extends Subtask{
     public prepareResult;
     constructor(message:TransactionMessage,subtaskModel){
@@ -20,7 +21,7 @@ export class TccSubtask extends Subtask{
             return this;
         } catch (error) {
             await this.setPrepareResult(error.message).save()
-            throw new BusinessException('Subtask prepare failed.',error.message);//TODO  返回actor的详细错误
+            throw new SystemException('Subtask prepare failed.',error.message);//TODO  返回actor的详细错误
         }
         
     } 
