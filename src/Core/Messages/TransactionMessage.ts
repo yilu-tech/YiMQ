@@ -64,7 +64,7 @@ export class TransactionMessage extends Message{
     private async prepareEcSubtasks(ecSubtasksBody){
         let ecSubtasksResult = [];
         for (const ecSubtaskBody of ecSubtasksBody) {
-            let ecSubtask = await this.addSubtask(SubtaskType.EC,ecSubtaskBody.processer,ecSubtaskBody.data);
+            let ecSubtask = await this.addSubtask(SubtaskType.EC,ecSubtaskBody.processor,ecSubtaskBody.data);
             ecSubtasksResult.push(ecSubtask.toJson());
         }
         return ecSubtasksResult;
@@ -85,7 +85,7 @@ export class TransactionMessage extends Message{
         this.job = new TransactionMessageJob(this,jobContext);
         this.subtasks = await this.getAllSubtasks();
     }
-    async addSubtask(type,processerName,data){
+    async addSubtask(type,processorName,data){
         if(this.status != MessageStatus.PENDING){
             throw new BusinessException(`The status of this message is ${this.status} instead of ${MessageStatus.PENDING}`);
         }
@@ -99,7 +99,7 @@ export class TransactionMessage extends Message{
         subtaskModel.property('data',data);
         subtaskModel.property('created_at',now);
         subtaskModel.property('updated_at',now);
-        subtaskModel.property('processer',processerName);
+        subtaskModel.property('processor',processorName);
         await subtaskModel.save() 
         this.model.link(subtaskModel);
         await this.model.save()

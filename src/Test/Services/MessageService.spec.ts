@@ -108,7 +108,7 @@ describe('MessageService', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorProcesser();
+            await actorManager.bootstrapActorsCoordinatorprocessor();
         });
 
 
@@ -134,7 +134,7 @@ describe('MessageService', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorProcesser();
+            await actorManager.bootstrapActorsCoordinatorprocessor();
         });
 
         it('.status done on db2', async (done) => {
@@ -163,7 +163,7 @@ describe('MessageService', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorProcesser();
+            await actorManager.bootstrapActorsCoordinatorprocessor();
 
         });
 
@@ -201,7 +201,7 @@ describe('MessageService', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorProcesser();
+            await actorManager.bootstrapActorsCoordinatorprocessor();
 
             message = await messageService.confirm(producerName,message.id);
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
@@ -231,7 +231,7 @@ describe('MessageService', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorProcesser();
+            await actorManager.bootstrapActorsCoordinatorprocessor();
             message = await messageService.cancel(producerName,message.id);
 
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);

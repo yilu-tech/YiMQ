@@ -83,14 +83,14 @@ describe('Subtask', () => {
             let producer = actorManager.get(producerName); 
 
             //创建EC
-            let processerName = 'content@post.change';
+            let processorName = 'content@post.change';
 
-            let ecSubtask = await message.addSubtask(SubtaskType.EC,processerName,{'name':1});
+            let ecSubtask = await message.addSubtask(SubtaskType.EC,processorName,{'name':1});
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
      
             let savedSubtask = updatedMessage.subtasks[0];
             expect(savedSubtask.id).toBe(ecSubtask.id);
-            expect(savedSubtask.processer).toBe(processerName);
+            expect(savedSubtask.processor).toBe(processorName);
             expect(savedSubtask.status).toBe(SubtaskStatus.PREPARED);
         });
 
@@ -174,16 +174,16 @@ describe('Subtask', () => {
                 }
             });
             expect(message.status).toBe(MessageStatus.PENDING)
-            let processerName = 'content@post.create';
+            let processorName = 'content@post.create';
             let producer = actorManager.get(producerName); 
             let body = {
                 ec_subtasks:[
                     {
-                        processer:'user@update',
+                        processor:'user@update',
                         data:{'title':'test'}
                     },
                     {
-                        processer:'user@update1',
+                        processor:'user@update1',
                         data:{'title':'test1'}
                     }
                 ]
@@ -210,7 +210,7 @@ describe('Subtask', () => {
 
 
 
-            let processerName = 'content@post.create';
+            let processorName = 'content@post.create';
             let producer = actorManager.get(producerName); 
             mock.onPost(producer.api).reply(400,{
                 title: 'exists'
@@ -279,7 +279,7 @@ describe('Subtask', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorProcesser();
+            await actorManager.bootstrapActorsCoordinatorprocessor();
 
         });
 
@@ -340,7 +340,7 @@ describe('Subtask', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorProcesser();
+            await actorManager.bootstrapActorsCoordinatorprocessor();
 
         });
 
@@ -483,7 +483,7 @@ describe('Subtask', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorProcesser();
+            await actorManager.bootstrapActorsCoordinatorprocessor();
 
         });
 
@@ -550,7 +550,7 @@ describe('Subtask', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorProcesser();
+            await actorManager.bootstrapActorsCoordinatorprocessor();
         });
 
     });
@@ -643,7 +643,7 @@ describe('Subtask', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorProcesser();
+            await actorManager.bootstrapActorsCoordinatorprocessor();
 
         });
 
@@ -711,7 +711,7 @@ describe('Subtask', () => {
                 }
                 //TODO 子任务完成后检查message状态为完成
             })
-            await actorManager.bootstrapActorsCoordinatorProcesser();
+            await actorManager.bootstrapActorsCoordinatorprocessor();
         });
 
     });

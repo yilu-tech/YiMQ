@@ -17,10 +17,10 @@ export abstract class Subtask{
     data:any;
     created_at:Number;
     updated_at:Number;
-    processer:string;
+    processor:string;
 
     consumer:Actor;
-    consumerProcesserName:string;
+    consumerprocessorName:string;
 
 
     message:TransactionMessage;
@@ -37,14 +37,14 @@ export abstract class Subtask{
         this.data = subtaskModel.property('data');
         this.created_at = subtaskModel.property('created_at');
         this.updated_at = subtaskModel.property('updated_at');
-        this.processer = subtaskModel.property('processer');
+        this.processor = subtaskModel.property('processor');
        
-        let [consumerName,consumerProcesserName] =this.processer.split('@');
+        let [consumerName,consumerprocessorName] =this.processor.split('@');
         this.consumer = this.message.producer.actorManager.get(consumerName);
         if(!this.consumer){
             throw new BusinessException(`Consumer <${consumerName}> not exists.`)
         }
-        this.consumerProcesserName = consumerProcesserName;
+        this.consumerprocessorName = consumerprocessorName;
 
 
     }
@@ -115,7 +115,7 @@ export abstract class Subtask{
         let json:object = Object.assign({},this);
         delete json['message'];
         delete json['consumer'];
-        delete json['consumerProcesserName'];
+        delete json['consumerprocessorName'];
         delete json['model'];
         return json;
     }

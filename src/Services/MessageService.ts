@@ -41,11 +41,11 @@ export class MessageService {
         }
         return producer.messageManager.cancel(messageId);
     }
-    async addSubtask(producerName:string,messageId,subtaskType:SubtaskType,processer,subtaskData:any):Promise<any>{
+    async addSubtask(producerName:string,messageId,subtaskType:SubtaskType,processor,subtaskData:any):Promise<any>{
         let producer = this.actorManger.get(producerName);
         if(!producer){
             throw new SystemException(`Producer <${producerName}> not exists.`)
         }
-        return producer.messageManager.addSubtask(messageId,subtaskType,processer,subtaskData);
+        return producer.messageManager.addSubtask(messageId,subtaskType,processor,subtaskData);
     }
 }

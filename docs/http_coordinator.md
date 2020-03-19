@@ -38,7 +38,7 @@
             "actor":"user",
             "message_id":"1",
             "type": "TCC",
-            "processer": "user@update",
+            "processor": "user@update",
             "data":{}
         }
 
@@ -52,7 +52,7 @@
       data: { title: 'new post' },
       created_at: '1584156250751',
       updated_at: '1584156250751',
-      processer: 'user',
+      processor: 'user',
       prepareResult: { title: 'get new post' }
     }
 
@@ -66,11 +66,11 @@
             "message_id":"1",
             "ec_subtasks":[
                 {
-                    "processer":"user@update",
+                    "processor":"user@update",
                     "data":{"title":"test"}
                 },
                 {
-                    "processer":"user@update1",
+                    "processor":"user@update1",
                     "data":{"title":"test1"}
                 }
             ]
@@ -91,7 +91,7 @@
                     },
                     "created_at": "1584446474827",
                     "updated_at": "1584446474827",
-                    "processer": "user@update"
+                    "processor": "user@update"
                 },
                 {
                     "id": "8",
@@ -103,7 +103,7 @@
                     },
                     "created_at": "1584446474842",
                     "updated_at": "1584446474842",
-                    "processer": "user@update1"
+                    "processor": "user@update1"
                 }
             ]
         }
@@ -179,7 +179,7 @@ TRY process
         data: { title: 'new post' },
         created_at: '1584504107165',
         updated_at: '1584504107165',
-        processer: 'user',
+        processor: 'user',
         prepareResult: 0
       }
     }

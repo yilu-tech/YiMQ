@@ -29,7 +29,7 @@ export class AddSubtaskDto{
     type:SubtaskType;
 
     @IsDefined()
-    processer:string;
+    processor:string;
 
     data:JSON;
 }

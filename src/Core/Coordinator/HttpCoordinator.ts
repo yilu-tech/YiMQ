@@ -24,7 +24,7 @@ export class HttpCoordinator extends Coordinator{
     };
 
     public async callActor(producer:Actor,action:CoordinatorCallActorAction,context) {
-        Logger.debug(`${action}: ${producer.name} --> ${context.processer||''}`,'HttpCoordinator')
+        Logger.debug(`${action}: ${producer.name} --> ${context.processor||''}`,'HttpCoordinator')
         try {
             let config = {
                 headers:{

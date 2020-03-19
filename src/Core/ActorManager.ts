@@ -50,7 +50,7 @@ export class ActorManager{
         return this.actors.get(id);
     }
 
-    public async bootstrapActorsCoordinatorProcesser(){
+    public async bootstrapActorsCoordinatorprocessor(){
         for(let [id,actor] of this.actors){
             actor.coordinator.processBootstrap();
         }
