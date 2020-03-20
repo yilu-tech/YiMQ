@@ -165,6 +165,7 @@ export class TransactionMessage extends Message{
     }
     toJson(){
         let json = super.toJson();
+        json['subtasks'] = this.subtasksToJson();
         return json;
     }
 }

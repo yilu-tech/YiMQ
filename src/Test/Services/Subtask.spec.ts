@@ -648,6 +648,64 @@ describe('Subtask', () => {
         });
 
 
+        it('.message cancel ec to canceled', async (done) => {
+
+           
+            message = await messageService.create(producerName,messageType,topic,{
+                delay:300,
+                attempts:5,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+        
+            let producer = actorManager.get(producerName); 
+
+            //mock添加tcc子任务时的远程调用
+            let prepareResult = {title: 'get new user'};
+    
+
+
+            prepareResult = {title: 'get update user'};
+            let ecSubtask:EcSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,producerName,{
+                title: 'new post'
+            })   
+
+            //把message取消
+            await messageService.cancel(producerName,message.id);
+
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            expect(updatedMessage.status).toBe(MessageStatus.CANCELLING);
+
+            producer.coordinator.getQueue().on('failed',async(job,err)=>{
+                console.log(err)
+            })
+            
+
+
+            //任务执行完毕
+            producer.coordinator.getQueue().on('completed',async (job)=>{
+                // console.debug('Job completed',job.id)
+                updatedMessage = await producer.messageManager.get(message.id);
+
+                if(message.job.id == job.id){
+                    expect(updatedMessage.status).toBe(MessageStatus.CANCELLING)//检查message
+                    
+                }else if(updatedMessage.subtasks[0].job_id == job.id){
+
+                    expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.CANCELED);
+                    expect(updatedMessage.pending_subtask_total).toBe(0);
+                    expect(updatedMessage.status).toBe(MessageStatus.CANCELED)
+                    done()
+                }
+            })
+            await actorManager.bootstrapActorsCoordinatorprocessor();
+
+        });
+
+
 
         it('.message confirm tcc remote call failed to canceled', async (done) => {
 

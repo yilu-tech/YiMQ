@@ -4,6 +4,7 @@ import { SubtaskStatus } from '../../Constants/SubtaskConstants';
 import { BusinessException } from '../../Exceptions/BusinessException';
 import { TransactionMessage } from '../Messages/TransactionMessage';
 import { SystemException } from '../../Exceptions/SystemException';
+import { MessageStatus } from '../../Constants/MessageConstants';
 export class TccSubtask extends Subtask{
     public prepareResult;
     constructor(message:TransactionMessage,subtaskModel){
@@ -25,6 +26,36 @@ export class TccSubtask extends Subtask{
         }
         
     } 
+
+    async toDo(){
+        let callContext = {
+            message_id: this.message.id,
+            subtask_id: this.id,
+            processor: this.processor
+        }
+        let result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CONFIRM,callContext);
+
+        await this.setStatus(SubtaskStatus.DONE).save();
+        let pendingSubtaskTotal = await this.message.decrPendingSubtaskTotal();
+        if(pendingSubtaskTotal == 0){
+            await this.message.setStatus(MessageStatus.DONE);
+        }
+        return result.data;
+    }
+    async toCancel(){
+        let callContext = {
+            message_id: this.message.id,
+            subtask_id: this.id,
+            processor: this.processor
+        }
+        let result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CANCEL,callContext);
+        await this.setStatus(SubtaskStatus.CANCELED).save()
+        let pendingSubtaskTotal = await this.message.decrPendingSubtaskTotal();
+        if(pendingSubtaskTotal == 0){
+            await this.message.setStatus(MessageStatus.CANCELED);
+        }
+        return result.data;
+    }
 
     public setPrepareResult(prepareResult){
         this.prepareResult = prepareResult;

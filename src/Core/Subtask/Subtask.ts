@@ -18,6 +18,7 @@ export abstract class Subtask{
     created_at:Number;
     updated_at:Number;
     processor:string;
+    message_id:string;
 
     consumer:Actor;
     consumerprocessorName:string;
@@ -38,6 +39,7 @@ export abstract class Subtask{
         this.created_at = subtaskModel.property('created_at');
         this.updated_at = subtaskModel.property('updated_at');
         this.processor = subtaskModel.property('processor');
+        this.message_id = subtaskModel.property('message_id');
        
         let [consumerName,consumerprocessorName] =this.processor.split('@');
         this.consumer = this.message.producer.actorManager.get(consumerName);
@@ -63,33 +65,8 @@ export abstract class Subtask{
         await this.setStatus(status).save();
     }
     
-    async toDo(){
-        let callContext = {
-            message_id: this.message.id,
-            subtask_id: this.id
-        }
-        let result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CONFIRM,callContext);
-
-        await this.setStatus(SubtaskStatus.DONE).save();
-        let pendingSubtaskTotal = await this.message.decrPendingSubtaskTotal();
-        if(pendingSubtaskTotal == 0){
-            await this.message.setStatus(MessageStatus.DONE);
-        }
-        return result.data;
-    }
-    async toCancel(){
-        let callContext = {
-            message_id: this.message.id,
-            subtask_id: this.id
-        }
-        let result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CANCEL,callContext);
-        await this.setStatus(SubtaskStatus.CANCELED).save()
-        let pendingSubtaskTotal = await this.message.decrPendingSubtaskTotal();
-        if(pendingSubtaskTotal == 0){
-            await this.message.setStatus(MessageStatus.CANCELED);
-        }
-        return result.data;
-    }
+    abstract async toDo();
+    abstract async toCancel();
     setJobId(jobId){
         this.job_id = jobId;
         this.model.property('job_id',this.job_id);

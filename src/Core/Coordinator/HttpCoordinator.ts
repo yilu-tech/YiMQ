@@ -43,7 +43,7 @@ export class HttpCoordinator extends Coordinator{
                 //     statusCode: error.response.status,
                 //     data: error.response.data
                 // }
-                let message = `${this.actor.api} ${error.message} > ${error.response.data.message};`
+                let message = `${this.actor.api} ${error.message} > ${error.response.data ?  error.response.data.message : ''};`
                 throw new Error(message)
             }
             throw error;
