@@ -8,7 +8,7 @@ import { Actor } from "../Actor";
 import { BusinessException } from "../../Exceptions/BusinessException";
 import { SubtaskModelClass } from "../../Models/SubtaskModel"
 import { TransactionMessageJob } from "../Job/TransactionMessageJob";
-import * as bull from 'bull';
+import { XaSubtask } from "../Subtask/XaSubtask";
 export class TransactionMessage extends Message{
     public subtasks:Array<Subtask> = [];  //事物的子项目
     public pending_subtask_total:number;
@@ -86,6 +86,7 @@ export class TransactionMessage extends Message{
         this.subtasks = await this.getAllSubtasks();
     }
     async addSubtask(type,processorName,data){
+        console.log(type,processorName,data);
         if(this.status != MessageStatus.PENDING){
             throw new BusinessException(`The status of this message is ${this.status} instead of ${MessageStatus.PENDING}`);
         }
@@ -148,6 +149,9 @@ export class TransactionMessage extends Message{
                 break;
             case SubtaskType.TCC:
                 subtask = new TccSubtask(this,subtaskModel);
+                break;
+            case SubtaskType.XA:
+                subtask = new XaSubtask(this,subtaskModel);
                 break;
         
             default:

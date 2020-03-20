@@ -2,6 +2,7 @@
 export enum SubtaskType{
     EC = 'EC',
     TCC = 'TCC',
+    XA = "XA"
 }
 
 

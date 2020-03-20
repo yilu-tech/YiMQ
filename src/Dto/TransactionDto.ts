@@ -25,7 +25,7 @@ export class AddSubtaskDto{
     message_id:string;
 
     @IsDefined()
-    @IsIn([SubtaskType.EC,SubtaskType.TCC])
+    @IsIn([SubtaskType.EC,SubtaskType.TCC,SubtaskType.XA])
     type:SubtaskType;
 
     @IsDefined()

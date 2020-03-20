@@ -14,8 +14,9 @@ export class EcSubtask extends Subtask{
      */
     async toDo(){
         let callContext = {
+            id: this.id,
             message_id: this.message.id,
-            subtask_id: this.id,
+            type: this.type,
             processor: this.processor,
             data:this.data
         }
