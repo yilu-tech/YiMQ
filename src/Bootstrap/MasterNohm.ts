@@ -1,6 +1,6 @@
 
 import  {NohmClass} from 'nohm';
-import { RedisManager } from "../handlers/redis/RedisManager"
+import { RedisManager } from "../Handlers/redis/RedisManager"
 
 
 /**
