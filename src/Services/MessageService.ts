@@ -6,6 +6,8 @@ import * as bull from 'bull';
 import { Message } from "../Core/Messages/Message";
 import { SubtaskType } from "../Constants/SubtaskConstants";
 import { SystemException } from "../Exceptions/SystemException";
+import { MessagesDto } from "../Dto/AdminControllerDto";
+import e = require("express");
 @Injectable()
 export class MessageService {
     constructor(private actorManger:ActorManager){
@@ -47,5 +49,53 @@ export class MessageService {
             throw new SystemException(`Producer <${producerName}> not exists.`)
         }
         return producer.messageManager.addSubtask(messageId,subtaskType,processor,subtaskData);
+    }
+
+    async list(actor_id:number,query:MessagesDto){
+        let producer = this.actorManger.getById(actor_id);
+        let messages;
+        if(query.message_id){
+            messages = await this.findByMessageId(producer,query.message_id);
+        }
+        else if(query.topic){
+            messages = await this.findByMessageId(producer,query.topic);
+        }
+        else{
+            messages = await this.findAll(producer);
+        }
+        
+
+        let messagesJson = messages.map((message) => {
+            return message.allProperties();
+         });
+        return messagesJson;
+
+       
+    }
+    private async findByMessageId(producer,message_id){
+        return producer.messageModel.findAndLoad({
+            id: message_id
+        })
+    }
+    private async findByTopic(producer,topic){
+        return producer.messageModel.findAndLoad({
+            topic: topic
+        })
+    }
+    private async findAll(producer){
+        let PendingIds = await producer.messageModel.find({
+            status: "PENDING"
+        });
+        let doingIds = await producer.messageModel.find({
+            status: "DOING"
+        });
+        let ids = PendingIds.concat(doingIds);
+        let sorIds = await producer.messageModel.sort({
+            field:'id',
+            direction: 'DESC',
+            limit:[0,10]
+        },ids);
+        return await producer.messageModel.loadMany(sorIds);
+
     }
 }

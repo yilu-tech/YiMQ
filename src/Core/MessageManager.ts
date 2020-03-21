@@ -15,6 +15,7 @@ export class MessageManager {
         let messageModel = new this.producer.messageModel();
         
         messageModel.id = String(await this.producer.actorManager.getMessageGlobalId());
+        messageModel.property('id',messageModel.id);
         messageModel.property('topic',topic);
         messageModel.property('type',type);
         messageModel.property('status',MessageStatus.PENDING);

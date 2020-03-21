@@ -3,6 +3,7 @@ import { NohmModel, TTypedDefinitions } from "nohm";
 import { MessageStatus } from "../Constants/MessageConstants";
 
 interface MessageProperties {
+    id:number,
     topic: string;
     type:string;
     pending_subtask_total: number;
@@ -17,6 +18,11 @@ export class MessageModelClass extends NohmModel<MessageProperties> {
     public static modelName = 'message';
     // public static idGenerator = 'increment';
     protected static definitions: TTypedDefinitions<MessageProperties> = {
+        id:{
+            type:'integer',
+            index:true,
+            validations: ['notEmpty']
+        },
         topic: {
             type: 'string',
             index:true,

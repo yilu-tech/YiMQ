@@ -15,6 +15,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule,new FastifyAdapter(),{
   });
   app.useGlobalPipes(new ValidationPipe({
+    transform:true,
     exceptionFactory:(errors)=>{
       return new ValidationException(errors);
     }

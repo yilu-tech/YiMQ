@@ -9,6 +9,7 @@ import { ConfigToMasterRedis } from './Bootstrap/ConfigToMasterRedis';
 import { ActorManager } from './Core/ActorManager';
 import { MessagesController } from './Controllers/MessageController';
 import { IndexController } from './Controllers/IndexController';
+import { AdminController } from './Controllers/AdminController';
 
 
 
@@ -35,7 +36,8 @@ export const ActorManagerBootstrap = {
   imports: [],
   controllers: [
     MessagesController,
-    IndexController
+    IndexController,
+    AdminController
     // AppController,
     // TransactionController,
     // JobController,
