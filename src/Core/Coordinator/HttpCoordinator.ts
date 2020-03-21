@@ -5,26 +5,46 @@ import {Logger } from '@nestjs/common';
 import axios from 'axios';
 import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
 import { Actor } from '../Actor';
-
+import { HttpCoordinatorRequestException } from '../../Exceptions/HttpCoordinatorRequestException';
+import { Job } from '../Job/Job';
 export class HttpCoordinator extends Coordinator{
     
     public processBootstrap(){
         this.queue.process('*',1000,async (jobContext:bull.Job)=>{
+            let job:Job = null;
             try {
                 let debugMsg = `Process job: message-${jobContext.data.message_id} ${jobContext.data.type}`;
                 debugMsg += jobContext.data.subtask_id? ` subtask-${jobContext.data.subtask_id||''}` : '';
                 Logger.debug(debugMsg,'HttpCoordinator')
-                let job = await this.actor.jobManager.restoreByContext(jobContext);
-                return job.process();
-            } catch (err) {
-                // Logger.error(err.message,'HttpCoordinator');
-                throw err;
+                job = await this.actor.jobManager.restoreByContext(jobContext);
+                return await job.process();
+            } catch (error) {
+                let logMessage = {
+                    message: error.message,
+                    job: null
+                }                
+                if(job){
+                    logMessage.job = job.toJson();
+                }
+                Logger.error(logMessage,null,'HttpCoordinator.process');
+
+
+                let message = {
+                    message: error.message,
+                    data: null
+    
+                }
+                //统一格式化http request excepiton 记录到bull.job 的failedReason中
+                if(error instanceof HttpCoordinatorRequestException){
+                    message.data = error.data
+                }
+                throw new Error(JSON.stringify(message));
             }
         })
     };
 
     public async callActor(producer:Actor,action:CoordinatorCallActorAction,context) {
-        Logger.debug(`${action}: ${producer.name} --> ${context.processor||''}`,'HttpCoordinator')
+        Logger.debug(context,'HttpCoordinator.callActor')
         try {
             let config = {
                 headers:{
@@ -37,16 +57,17 @@ export class HttpCoordinator extends Coordinator{
             },config);
             return result;            
         } catch (error) {
-            if(error.response){
-                // let message = {
-                //     message: `${this.actor.api} ${error.message}`,
-                //     statusCode: error.response.status,
-                //     data: error.response.data
-                // }
-                let message = `${this.actor.api} ${error.message} > ${error.response.data ?  error.response.data.message : ''};`
-                throw new Error(message)
+            let message = `${action}: <${this.actor.api}> ${error.message}`;
+            let data = {
+                api: this.actor.api,
+                context: context,
+                response: null
             }
-            throw error;
+            if(error.response){
+                data.response = error.response.data
+            }
+
+            throw new HttpCoordinatorRequestException(message,data);
 
         }
     }

@@ -3,6 +3,7 @@ import { ActorMessageStatus, MessageStatus } from "../../Constants/MessageConsta
 import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
 import { TransactionMessage } from "../Messages/TransactionMessage";
 import * as bull from 'bull';
+import { SystemException } from "../../Exceptions/SystemException";
 export class TransactionMessageJob extends Job{
     public message_id:number | string;
     public message:TransactionMessage;
@@ -24,7 +25,7 @@ export class TransactionMessageJob extends Job{
                 result = await this.remoteCheck();
                 break;
             default:
-                throw new Error('MessageStatus is not exists.');
+                throw new SystemException('MessageStatus is not exists.');
         }
         return result;
 
@@ -34,7 +35,10 @@ export class TransactionMessageJob extends Job{
     private async remoteCheck(){
 
         let context = {
-            message_id: this.message_id
+            message_id: this.message_id,
+            actor_id: this.message.producer.id,
+            job_id: this.message.job_id,
+            job_key: `bull:${this.message.producer.id}:${this.message.job_id}`
         }
         let result = await this.message.producer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.MESSAGE_CHECK,context);
         switch (result.data.status) {

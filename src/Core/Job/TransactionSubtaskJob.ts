@@ -5,6 +5,7 @@ import { Message } from "../Messages/Message";
 import * as bull from 'bull';
 import { SubtaskStatus } from "../../Constants/SubtaskConstants";
 import { CoordinatorCallActorAction } from "../../Constants/Coordinator";
+import { SystemException } from "../../Exceptions/SystemException";
 export class TransactionSubtaskJob extends Job{
     public subtask_id:Number;
     public subtask:Subtask;
@@ -14,7 +15,6 @@ export class TransactionSubtaskJob extends Job{
         this.subtask_id = subtask.id;
     }
     async process() {
-        console.log('TransactionSubtaskJob process--->',this.subtask.job_id,this.subtask.status)
         let result;
         switch (this.subtask.status) {
             //重复做到成功为止
@@ -25,12 +25,12 @@ export class TransactionSubtaskJob extends Job{
                 result = await this.subtask.toCancel();
                 break;
             case SubtaskStatus.PREPARING:
-                throw new Error('SubtaskStatus is PENDING');
+                throw new SystemException('SubtaskStatus is PENDING');
             case SubtaskStatus.DONE:
-                throw new Error('SubtaskStatus is DONE');
+                throw new SystemException('SubtaskStatus is DONE');
                 break;
             default:
-                throw new Error('SubtaskStatus is not exists.');
+                throw new SystemException('SubtaskStatus is not exists.');
         }
         return result;
     }

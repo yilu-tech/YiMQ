@@ -21,8 +21,13 @@ export class TccSubtask extends Subtask{
             .save()
             return this;
         } catch (error) {
-            await this.setPrepareResult(error.message).save()
-            throw new SystemException('Subtask prepare failed.',error.message);//TODO  返回actor的详细错误
+            let prepareResult = {
+                message: error.message,
+                data: error.data
+
+            }
+            await this.setPrepareResult(JSON.stringify(prepareResult)).save()
+            throw new SystemException(error.message,error.data);
         }
         
     } 

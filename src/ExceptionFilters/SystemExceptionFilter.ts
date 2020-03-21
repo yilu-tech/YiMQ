@@ -7,7 +7,7 @@ export class SystemExceptionFilter implements ExceptionFilter {
   catch(exception: SystemException, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();
-    Logger.error(`${exception.message} > ${exception.error} `)
+    Logger.error(`${exception.message} `,exception.stack,'System exception')
     response
       .code(HttpStatus.INTERNAL_SERVER_ERROR)
       .send({
