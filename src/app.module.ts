@@ -8,7 +8,7 @@ import { MasterNohm } from './Bootstrap/MasterNohm';
 import { ConfigToMasterRedis } from './Bootstrap/ConfigToMasterRedis';
 import { ActorManager } from './Core/ActorManager';
 import { MessagesController } from './Controllers/MessageController';
-import { MessageManager } from './Core/MessageManager';
+import { IndexController } from './Controllers/IndexController';
 
 
 
@@ -34,7 +34,8 @@ export const ActorManagerBootstrap = {
 @Module({
   imports: [],
   controllers: [
-    MessagesController
+    MessagesController,
+    IndexController
     // AppController,
     // TransactionController,
     // JobController,

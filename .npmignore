@@ -1,11 +1,20 @@
+#dir
+src/Test/config/*
+src/Test/*
+.vscode/*
+test/*
+config/*
+logs/*
+docs/*
+
+
 # source
 **/*.ts
 *.ts
 
 
-# definitions
-!**/*.d.ts
-!*.d.ts
+
+
 
 # configuration
 package-lock.json
@@ -14,7 +23,13 @@ tsconfig.json
 .prettierrc
 nodemon.json
 nodemon-debug.json
+nest-cli.json
+tsconfig.build.json
 
 
-#other
-.vscode/
+
+
+
+# definitions
+!**/*.d.ts
+!*.d.ts
