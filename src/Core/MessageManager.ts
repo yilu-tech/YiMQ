@@ -16,6 +16,7 @@ export class MessageManager {
         
         messageModel.id = String(await this.producer.actorManager.getMessageGlobalId());
         messageModel.property('id',messageModel.id);
+        messageModel.property('actor_id',this.producer.id);
         messageModel.property('topic',topic);
         messageModel.property('type',type);
         messageModel.property('status',MessageStatus.PENDING);

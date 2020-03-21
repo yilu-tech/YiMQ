@@ -79,14 +79,17 @@ export class MessageService {
     }
     private async findByTopic(producer,topic){
         return producer.messageModel.findAndLoad({
+            actor_id: producer.id,
             topic: topic
         })
     }
     private async findAll(producer){
         let PendingIds = await producer.messageModel.find({
-            status: "PENDING"
+            actor_id: producer.id,
+            status: "PENDING",
         });
         let doingIds = await producer.messageModel.find({
+            actor_id: producer.id,
             status: "DOING"
         });
         let ids = PendingIds.concat(doingIds);

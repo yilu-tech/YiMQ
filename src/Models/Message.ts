@@ -4,6 +4,7 @@ import { MessageStatus } from "../Constants/MessageConstants";
 
 interface MessageProperties {
     id:number,
+    actor_id:number,
     topic: string;
     type:string;
     pending_subtask_total: number;
@@ -19,6 +20,11 @@ export class MessageModelClass extends NohmModel<MessageProperties> {
     // public static idGenerator = 'increment';
     protected static definitions: TTypedDefinitions<MessageProperties> = {
         id:{
+            type:'integer',
+            index:true,
+            validations: ['notEmpty']
+        },
+        actor_id:{
             type:'integer',
             index:true,
             validations: ['notEmpty']
