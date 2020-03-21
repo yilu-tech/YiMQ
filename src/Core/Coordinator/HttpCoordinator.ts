@@ -19,42 +19,39 @@ export class HttpCoordinator extends Coordinator{
                 job = await this.actor.jobManager.restoreByContext(jobContext);
                 return await job.process();
             } catch (error) {
-                let logMessage = {
-                    message: error.message,
-                    job: null
-                }                
-                if(job){
-                    logMessage.job = job.toJson();
-                }
-                Logger.error(logMessage,null,'HttpCoordinator.process');
-
-
+                       
                 let message = {
                     message: error.message,
-                    data: null
+                    data: null,
+                    job: null
     
                 }
                 //统一格式化http request excepiton 记录到bull.job 的failedReason中
                 if(error instanceof HttpCoordinatorRequestException){
                     message.data = error.data
                 }
+                if(job){
+                    message.job = job.toJson();
+                }
+                Logger.error(message,null,'HttpCoordinator.process');
                 throw new Error(JSON.stringify(message));
             }
         })
     };
 
     public async callActor(producer:Actor,action:CoordinatorCallActorAction,context) {
-        Logger.debug(context,'HttpCoordinator.callActor')
         try {
             let config = {
                 headers:{
                     'content-type':'application/json'
                 }
             }
-            let result = await axios.post(this.actor.api,{
+            let body = {
                 action: action,
                 context: context
-            },config);
+            };
+            Logger.debug(body,'CallActor')
+            let result = await axios.post(this.actor.api,body,config);
             return result;            
         } catch (error) {
             let message = `${action}: <${this.actor.api}> ${error.message}`;
