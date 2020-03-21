@@ -26,14 +26,15 @@ export class HttpCoordinator extends Coordinator{
                     job: null
     
                 }
-                //统一格式化http request excepiton 记录到bull.job 的failedReason中
-                if(error instanceof HttpCoordinatorRequestException){
-                    message.data = error.data
-                }
                 if(job){
                     message.job = job.toJson();
                 }
-                Logger.error(message,null,'HttpCoordinator.process');
+                Logger.error(message,null,'HttpCoordinator.process');//TODO 移动到throw的前一行
+                //统一格式化http request excepiton 记录到bull.job 的failedReason中
+                if(error instanceof HttpCoordinatorRequestException){
+                    message.data = error.data//TODO:: 规定客户端返回的格式
+                }
+                
                 throw new Error(JSON.stringify(message));
             }
         })

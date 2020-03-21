@@ -17,7 +17,7 @@ export class AdminController {
     }
     @Get('message')
     public async message(@Query('actor_id',new ParseIntPipe()) actor_id,@Query() query:MessageDetailDto){
-        return (await this.messageService.get(actor_id,query.message_id)).toJson();
+        return (await this.messageService.get(actor_id,query.message_id)).toJson(true);
     }
 
 

@@ -19,13 +19,25 @@ export abstract class Job{
     /**
      * 整理数据
      */
-    public toJson(){
+    public toJson(full=false){
         let json:object = Object.assign({},this);
-        // delete json['context'];
-        json['context'] = this.context.toJSON();
-        json['context']['failedReason'] = JSON.parse(json['context']['failedReason'])
+        delete json['context'];
         delete json['message'];
+        if(full){
+            json['context'] = this.getContextJson();
+        }
+
         return json;
+    }
+
+    public getContextJson(){
+        let context = this.context.toJSON();
+        try{
+            context['failedReason'] = JSON.parse(context['failedReason'])
+        }catch(e){
+            context['failedReason'] = context['failedReason'];
+        }
+        return context;
     }
 
     // public async retry():Promise<void>{

@@ -79,12 +79,12 @@ export abstract class Message{
      /**
      * 整理数据
      */
-    public toJson(){
+    public toJson(full=false){
         let json:object = Object.assign({},this);
         delete json['actorManger'];
         delete json['model'];
         json['producer'] = this.producer.name;
-        json['job'] = this.job.toJson();
+        json['job'] = this.job.toJson(full);
         return json;
     }
 }
