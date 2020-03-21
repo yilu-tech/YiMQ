@@ -9,6 +9,7 @@ import * as bull from 'bull';
 
 export abstract class Message{
     id:string;
+    actor_id:number;
     topic: string;
     status: MessageStatus;
     job_id: number;
@@ -22,6 +23,7 @@ export abstract class Message{
     constructor(producer:Actor,messageModel){
 
         this.id = messageModel.id;
+        this.actor_id = messageModel.property('actor_id');
         this.type = messageModel.property('type');
         this.topic = messageModel.property('topic');
         this.status = messageModel.property('status');

@@ -21,7 +21,9 @@ export abstract class Job{
      */
     public toJson(){
         let json:object = Object.assign({},this);
-        delete json['context'];
+        // delete json['context'];
+        json['context'] = this.context.toJSON();
+        json['context']['failedReason'] = JSON.parse(json['context']['failedReason'])
         delete json['message'];
         return json;
     }

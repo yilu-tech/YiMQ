@@ -31,6 +31,9 @@ export class MessageManager {
         try{
             //TODO 这里要添加一个添加查询 producer.id  = message.producer_id
             var messageModel = await this.producer.messageModel.load(id);
+            if(messageModel.property('actor_id') != this.producer.id){
+                throw new SystemException(`Message ${id} is not ${messageModel.property('actor_id')} actor.`)
+            }
         }catch(error){
             if(error && error.message === 'not found'){
                 throw new BusinessException('Message not found');

@@ -7,3 +7,10 @@ export class MessagesDto{
     message_id:number;
     topic:string;
 }
+
+export class MessageDetailDto{
+    @IsDefined()
+    actor_id:number;
+    @IsDefined()
+    message_id:number;
+}

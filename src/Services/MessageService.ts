@@ -51,7 +51,15 @@ export class MessageService {
         return producer.messageManager.addSubtask(messageId,subtaskType,processor,subtaskData);
     }
 
-    async list(actor_id:number,query:MessagesDto){
+    async get(actor_id:number,message_id:number):Promise<any>{
+        let producer = this.actorManger.getById(actor_id);
+        if(!producer){
+            throw new SystemException(`Actor <${actor_id}> not exists.`)
+        }
+        return producer.messageManager.get(message_id);
+    }
+
+    async list(actor_id:number,query:MessagesDto):Promise<any>{
         let producer = this.actorManger.getById(actor_id);
         let messages;
         if(query.message_id){
