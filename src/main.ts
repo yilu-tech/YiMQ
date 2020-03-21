@@ -7,14 +7,18 @@ import {
 } from '@nestjs/platform-fastify';
 import { ValidationPipe } from '@nestjs/common';
 import { SystemExceptionFilter } from './ExceptionFilters/SystemExceptionFilter';
+import { ValidationException } from './Exceptions/ValidationException';
 
 
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule,new FastifyAdapter(),{
   });
-  // app.useLogger(app.get(AppLogger));
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(new ValidationPipe({
+    exceptionFactory:(errors)=>{
+      return new ValidationException(errors);
+    }
+  }));
   app.useGlobalFilters(new BusinessExceptionFilter(),new SystemExceptionFilter());
   await app.listen(7379,'0.0.0.0');
 }

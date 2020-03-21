@@ -1,6 +1,7 @@
-import { IsDefined,ValidateNested,IsNumber, IsIn } from 'class-validator';
+import { IsDefined,ValidateNested,IsNumber, IsIn, IsInt } from 'class-validator';
 import { MessageType } from '../Constants/MessageConstants';
 import { SubtaskType } from '../Constants/SubtaskConstants';
+import { isNumber } from 'util';
 
 export class CreateMessageDto{
     @IsDefined()
@@ -12,6 +13,7 @@ export class CreateMessageDto{
     @IsIn([MessageType.GENERAL,MessageType.TRANSACTION])
     type:MessageType;
 
+    @IsInt()
     delay:number;
 }
 
