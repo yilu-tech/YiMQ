@@ -22,11 +22,8 @@ export class EcSubtask extends Subtask{
         }
         let result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CONFIRM,callContext);
 
-        await this.setStatus(SubtaskStatus.DONE).save();
-        let pendingSubtaskTotal = await this.message.decrPendingSubtaskTotal();
-        if(pendingSubtaskTotal == 0){
-            await this.message.setStatus(MessageStatus.DONE);
-        }
+        await this.completeAndSetMeesageStatus(SubtaskStatus.DONE,MessageStatus.DONE);
+
         return result.data;
     }
 
@@ -34,12 +31,7 @@ export class EcSubtask extends Subtask{
      * ec subtask取消的时候只标记状态
      */
     async toCancel(){
-        await this.setStatus(SubtaskStatus.CANCELED).save()
-        let pendingSubtaskTotal = await this.message.decrPendingSubtaskTotal();
-        if(pendingSubtaskTotal == 0){
-            await this.message.setStatus(MessageStatus.CANCELED);
-        }
-        return null;
+        await this.completeAndSetMeesageStatus(SubtaskStatus.CANCELED,MessageStatus.CANCELED);
     }
 
 }

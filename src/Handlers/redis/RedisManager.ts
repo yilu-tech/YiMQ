@@ -5,6 +5,7 @@ import * as Ioredis from 'ioredis'
 import { RedisClient } from "./RedisClient";
 import { BusinessException } from "../../Exceptions/BusinessException";
 import {Logger } from '@nestjs/common';
+import { redisCustomCommand } from "./RedisCustomCommand";
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 
 @Injectable()
@@ -22,6 +23,7 @@ export class RedisManager {
             return this.clients[name];
         }
         let client = new Ioredis(this.getClientOptions(name));
+        redisCustomCommand(client);
 
         return new Promise((res,rej)=>{
             client.on('ready',()=>{
@@ -48,7 +50,7 @@ export class RedisManager {
         }
     }
     public async quitAllDb(){
-        await timeout(1);
+        await timeout(500);
         for (const key in this.clients) {
            let redisClient:RedisClient =  this.clients[key];
            if(redisClient.status == 'ready'){//已经被单独关闭的情况下，避免发生错误(主要发生在单元测试中)

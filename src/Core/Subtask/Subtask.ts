@@ -77,6 +77,32 @@ export abstract class Subtask{
         this.model.property('status',this.status);
         return this;
     }
+    public getDbHash(){
+        return `${this.model['nohmClass'].prefix.hash}${this.model.modelName}:${this.id}`;
+    }
+    public async completeAndSetMeesageStatusByScript(status,messageStatus:MessageStatus){
+        try {
+            return await this.message.producer.redisClient['subtaskCompleteAndSetMessageStatus'](this.getDbHash(),this.message.getMessageHash(),status,messageStatus);    
+        } catch (error) {
+            console.error(error)
+            throw error;
+        }   
+    }
+    public async completeAndSetMeesageStatus(status,messageStatus){
+        let [subtaskStatus,
+            currentMessageStatus,
+            pendingSubtaskTotal,
+            updatedMessageStatus
+        ] = await this.completeAndSetMeesageStatusByScript(status,messageStatus);
+        /**
+         * 这里先通过script修改了数据库，保证一致性，然后又用norm操作一次，更新索引
+         */
+        await this.setStatus(status).save()
+        if(pendingSubtaskTotal == 0){
+            await this.message.setStatus(messageStatus);
+        }
+        return pendingSubtaskTotal;
+    }
     async save(){
         return this.model.save();
     }

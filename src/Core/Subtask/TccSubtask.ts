@@ -40,11 +40,7 @@ export class TccSubtask extends Subtask{
         }
         let result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CONFIRM,callContext);
 
-        await this.setStatus(SubtaskStatus.DONE).save();
-        let pendingSubtaskTotal = await this.message.decrPendingSubtaskTotal();
-        if(pendingSubtaskTotal == 0){
-            await this.message.setStatus(MessageStatus.DONE);
-        }
+        await this.completeAndSetMeesageStatus(SubtaskStatus.DONE,MessageStatus.DONE);
         return result.data;
     }
     async toCancel(){
@@ -54,11 +50,7 @@ export class TccSubtask extends Subtask{
             processor: this.processor
         }
         let result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CANCEL,callContext);
-        await this.setStatus(SubtaskStatus.CANCELED).save()
-        let pendingSubtaskTotal = await this.message.decrPendingSubtaskTotal();
-        if(pendingSubtaskTotal == 0){
-            await this.message.setStatus(MessageStatus.CANCELED);
-        }
+        await this.completeAndSetMeesageStatus(SubtaskStatus.CANCELED,MessageStatus.CANCELED);
         return result.data;
     }
 

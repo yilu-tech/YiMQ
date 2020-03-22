@@ -112,10 +112,7 @@ export class TransactionMessage extends Message{
     private async incrPendingSubtaskTotal(){
         return this.producer.redisClient.hincrby(this.getMessageHash(),'pending_subtask_total',1);
     }
-    public async decrPendingSubtaskTotal(){
-        return this.producer.redisClient.hincrby(this.getMessageHash(),'pending_subtask_total',-1);
-    }
-    private getMessageHash(){
+    public getMessageHash(){
         return `${this.model['nohmClass'].prefix.hash}${this.model.modelName}:${this.id}`;
     }
     public async getAllSubtasks():Promise<Array<Subtask>>{

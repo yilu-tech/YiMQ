@@ -16,6 +16,7 @@ import { SubtaskType, SubtaskStatus } from '../../Constants/SubtaskConstants';
 import { EcSubtask } from '../../Core/Subtask/EcSubtask';
 import { TccSubtask } from '../../Core/Subtask/TccSubtask';
 const mock = new MockAdapter(axios);
+const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('Subtask', () => {
     let actorService:ActorService;
     let config:Config;
@@ -443,7 +444,7 @@ describe('Subtask', () => {
             expect(updatedMessage.status).toBe(MessageStatus.DOING);
             expect(updatedMessage.pending_subtask_total).toBe(2);
             producer.coordinator.getQueue().on('failed',async(job,err)=>{
-                console.log(job.toJSON(),err)
+                // console.log(job.toJSON(),err)
             })
             
             mock.onPost(producer.api).reply(200,{message:'subtask process succeed'})
@@ -466,20 +467,19 @@ describe('Subtask', () => {
             //任务执行完毕
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 console.debug('Job completed',job.id)
-                
+                updatedMessage = await producer.messageManager.get(message.id);
                 if(message.job.id == job.id){
-                    updatedMessage = await producer.messageManager.get(message.id);
+                    
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
                     
                 }else if(updatedMessage.subtasks[0].job_id == job.id){
-                    updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DONE);
-                    expect(updatedMessage.status).toBe(MessageStatus.DOING)
                 }
                 else if(updatedMessage.subtasks[1].job_id == job.id){
-                    updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.subtasks[1].status).toBe(SubtaskStatus.DONE);
-                    expect(updatedMessage.pending_subtask_total).toBe(0);
+                }
+
+                if(updatedMessage.pending_subtask_total == 0){
                     expect(updatedMessage.status).toBe(MessageStatus.DONE)
                     done()
                 }
@@ -583,6 +583,8 @@ describe('Subtask', () => {
         
             let producer = actorManager.get(producerName); 
 
+            process.env.SUBTASK_JOB_DELAY = '100';//子任务延迟，否则会有一定几率比message的job先执行完毕
+
             //mock添加tcc子任务时的远程调用
             let prepareResult = {title: 'get new user'};
             mock.onPost(producer.api).reply(200,prepareResult)
@@ -628,22 +630,27 @@ describe('Subtask', () => {
             })
             //任务执行完毕
             producer.coordinator.getQueue().on('completed',async (job)=>{
-                // console.debug('Job completed',job.id)
-                // updatedMessage = await producer.messageManager.get(message.id); 
+                console.debug('Job completed',job.id)
+                updatedMessage = await producer.messageManager.get(message.id); 
                 //tips:: 不能在if外查询，有可能已经done了，还有任务完成，但是redis已经被关闭 TODO::如果还有问题，实现一个bull.process强制暂停，done后直接暂停
 
                 if(message.job.id == job.id){
-                    updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.CANCELLING)//检查message
-                    
-                }else if(updatedMessage.subtasks[0].job_id == job.id){
-                    updatedMessage = await producer.messageManager.get(message.id);
+                }
+
+                if(updatedMessage.subtasks[0].job_id == job.id){
+
                     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.CANCELED);
                 }
-                else if(updatedMessage.subtasks[1].job_id == job.id){
-                    updatedMessage = await producer.messageManager.get(message.id);
+
+                if(updatedMessage.subtasks[1].job_id == job.id){
+
                     expect(updatedMessage.subtasks[1].status).toBe(SubtaskStatus.CANCELED);
-                    expect(updatedMessage.pending_subtask_total).toBe(0);
+                   
+                }
+                // console.log(job.id,updatedMessage.toJson())
+                if(updatedMessage.pending_subtask_total == 0){
+
                     expect(updatedMessage.status).toBe(MessageStatus.CANCELED)
                     done()
                 }
