@@ -30,7 +30,7 @@ export class TransactionMessage extends Message{
             return subtask.setStatusAddJobFor(SubtaskStatus.DOING)
         }))
 
-        await this.setStatus(MessageStatus.DOING);
+        await this.setStatus(MessageStatus.DOING).save();
         return this;
         
     }
@@ -39,7 +39,7 @@ export class TransactionMessage extends Message{
         await Promise.all(this.subtasks.map((subtask)=>{
             return subtask.setStatusAddJobFor(SubtaskStatus.CANCELLING)
         }))
-        await this.setStatus(MessageStatus.CANCELLING);
+        await this.setStatus(MessageStatus.CANCELLING).save();
         return this;
     }
 
@@ -47,7 +47,7 @@ export class TransactionMessage extends Message{
         if(this.status != MessageStatus.PENDING){
             throw new BusinessException(`The status of this message is ${this.status} instead of ${MessageStatus.PENDING} `);
         }
-        await this.setStatus(MessageStatus.DOING);
+        await this.setStatus(MessageStatus.DOING).save();
         await this.job.context.promote();//立即执行job
         return this;
     }
@@ -73,9 +73,9 @@ export class TransactionMessage extends Message{
         if(this.status != MessageStatus.PENDING){
             throw new BusinessException(`The status of this message is ${this.status} instead of ${MessageStatus.PENDING} `);
         }
-        await this.setStatus(MessageStatus.CANCELLING);
+        await this.setStatus(MessageStatus.CANCELLING).save();
         await this.job.context.promote();//立即执行job
-        return this.update();
+        return this;
     }
     /**
      * 用于MessageManager get的时候重建信息
@@ -130,12 +130,6 @@ export class TransactionMessage extends Message{
         return this.subtasks.find((subtask)=>{
             return subtask.id == subtask_id
         })
-    }
-    async update():Promise<Message>{
-        this.subtasksToJson();
-
-        await super.update();
-        return this;
     }
     subtaskFactory(type,subtaskModel){
         let subtask:any;

@@ -42,8 +42,7 @@ export abstract class Message{
      */
     async create(jobOptions:bull.JobOptions):Promise<any>{
         jobOptions.jobId = await this.producer.actorManager.getJobGlobalId();
-        this.job_id = jobOptions.jobId;//先保存job_id，如果先创建job再保存id可能产生，message未记录job_id的情况
-        await this.update();
+        await this.setJobId(jobOptions.jobId).save();//先保存job_id，如果先创建job再保存id可能产生，message未记录job_id的情况
         this.job = await this.producer.jobManager.add(this,JobType.TRANSACTION,jobOptions);
     };
 
@@ -51,19 +50,18 @@ export abstract class Message{
 
     async abstract restore();
 
-    async update():Promise<Message>{
-        this.model.property('topic',this.topic);
-        this.model.property('type',this.type);
+    private setJobId(jobId){
+        this.job_id = jobId;
         this.model.property('job_id',this.job_id);
-        this.model.property('status',this.status);
-        this.model.property('updated_at',new Date().getTime());
-        await this.model.save();
         return this;
     }
 
-    async setStatus(status:MessageStatus){
+    setStatus(status:MessageStatus){
         this.status = status;
         this.model.property('status',this.status);
+        return this;
+    }
+    async save(){
         return this.model.save();
     }
     async getStatus(){
@@ -71,8 +69,6 @@ export abstract class Message{
     }
 
     abstract async confirm():Promise<Message>;
-    // abstract async statusToDoing():Promise<Message>;
-    // abstract async statusToCancelling():Promise<Message>;
 
     abstract async cancel():Promise<Message>
 
