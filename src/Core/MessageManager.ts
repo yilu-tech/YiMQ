@@ -38,7 +38,7 @@ export class MessageManager {
             if(error && error.message === 'not found'){
                 throw new BusinessException('Message not found');
             }
-            throw new SystemException(error.message);
+            throw error;
         }
         
 

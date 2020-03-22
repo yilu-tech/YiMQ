@@ -443,7 +443,7 @@ describe('Subtask', () => {
             expect(updatedMessage.status).toBe(MessageStatus.DOING);
             expect(updatedMessage.pending_subtask_total).toBe(2);
             producer.coordinator.getQueue().on('failed',async(job,err)=>{
-                console.log(err)
+                console.log(job.toJSON(),err)
             })
             
             mock.onPost(producer.api).reply(200,{message:'subtask process succeed'})
@@ -466,16 +466,18 @@ describe('Subtask', () => {
             //任务执行完毕
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 console.debug('Job completed',job.id)
-                updatedMessage = await producer.messageManager.get(message.id);
+                
                 if(message.job.id == job.id){
+                    updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
                     
                 }else if(updatedMessage.subtasks[0].job_id == job.id){
-
+                    updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DONE);
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)
                 }
                 else if(updatedMessage.subtasks[1].job_id == job.id){
+                    updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.subtasks[1].status).toBe(SubtaskStatus.DONE);
                     expect(updatedMessage.pending_subtask_total).toBe(0);
                     expect(updatedMessage.status).toBe(MessageStatus.DONE)
@@ -538,13 +540,14 @@ describe('Subtask', () => {
             //任务执行完毕
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 // console.debug('Job completed',job.id)
-                updatedMessage = await producer.messageManager.get(message.id);
+
 
                 if(message.job.id == job.id){
+                    updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
                     
                 }else if(updatedMessage.subtasks[0].job_id == job.id){
-
+                    updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DONE);
                     done()
                 }
@@ -626,16 +629,19 @@ describe('Subtask', () => {
             //任务执行完毕
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 // console.debug('Job completed',job.id)
-                updatedMessage = await producer.messageManager.get(message.id);
+                // updatedMessage = await producer.messageManager.get(message.id); 
+                //tips:: 不能在if外查询，有可能已经done了，还有任务完成，但是redis已经被关闭 TODO::如果还有问题，实现一个bull.process强制暂停，done后直接暂停
 
                 if(message.job.id == job.id){
+                    updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.CANCELLING)//检查message
                     
                 }else if(updatedMessage.subtasks[0].job_id == job.id){
-
+                    updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.CANCELED);
                 }
                 else if(updatedMessage.subtasks[1].job_id == job.id){
+                    updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.subtasks[1].status).toBe(SubtaskStatus.CANCELED);
                     expect(updatedMessage.pending_subtask_total).toBe(0);
                     expect(updatedMessage.status).toBe(MessageStatus.CANCELED)
@@ -740,14 +746,14 @@ describe('Subtask', () => {
             process.env.SUBTASK_JOB_BACKOFF_DELAY = '100';//加快二次尝试，防止测试超时
             mock.onPost(producer.api).timeout()//模拟超时
             producer.coordinator.getQueue().on('failed',async(job,err)=>{
-                updatedMessage = await producer.messageManager.get(message.id);
-                if(updatedMessage.subtasks[0].job_id != job.id){
-                   return;
-                }
+                
+           
                 if(job.attemptsMade == 1){
+                    updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.CANCELLING);
                     mock.onPost(producer.api).reply(400,{message:'server error'})//模拟400错误
                 }else if(job.attemptsMade == 2){
+                    updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.CANCELLING);
                     mock.onPost(producer.api).reply(200,{message:'success'})
                 }
@@ -756,13 +762,14 @@ describe('Subtask', () => {
             //任务执行完毕
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 // console.debug('Job completed',job.id)
-                updatedMessage = await producer.messageManager.get(message.id);
+               
 
                 if(message.job.id == job.id){
+                    updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.CANCELLING)//检查message
                     
                 }else if(updatedMessage.subtasks[0].job_id == job.id){
-
+                    updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.CANCELED);
                     done()
                 }

@@ -51,7 +51,9 @@ export class RedisManager {
         await timeout(1);
         for (const key in this.clients) {
            let redisClient:RedisClient =  this.clients[key];
-           await redisClient.quit();
+           if(redisClient.status == 'ready'){//已经被单独关闭的情况下，避免发生错误(主要发生在单元测试中)
+                await redisClient.quit();
+            }
         }
     }
 

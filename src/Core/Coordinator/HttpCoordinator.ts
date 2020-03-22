@@ -29,7 +29,7 @@ export class HttpCoordinator extends Coordinator{
                 if(job){
                     message.job = job.toJson();
                 }
-                Logger.error(message,null,'HttpCoordinator.process');//TODO 移动到throw的前一行
+                Logger.error(message,error.stack,'HttpCoordinator.process');//TODO 移动到throw的前一行
                 //统一格式化http request excepiton 记录到bull.job 的failedReason中
                 if(error instanceof HttpCoordinatorRequestException){
                     message.data = error.data//TODO:: 规定客户端返回的格式
