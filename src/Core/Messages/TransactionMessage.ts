@@ -1,4 +1,4 @@
-import { Message } from "./Message";
+import { Message ,MessageControlResult} from "./Message";
 import { MessageStatus } from "../../Constants/MessageConstants";
 import { SubtaskType, SubtaskStatus } from "../../Constants/SubtaskConstants";
 import { EcSubtask } from "../Subtask/EcSubtask";
@@ -9,6 +9,7 @@ import { BusinessException } from "../../Exceptions/BusinessException";
 import { SubtaskModelClass } from "../../Models/SubtaskModel"
 import { TransactionMessageJob } from "../Job/TransactionMessageJob";
 import { XaSubtask } from "../Subtask/XaSubtask";
+import {JobStatus} from "../../Constants/JobConstants"
 export class TransactionMessage extends Message{
     public subtasks:Array<Subtask> = [];  //事物的子项目
     public pending_subtask_total:number;
@@ -21,9 +22,11 @@ export class TransactionMessage extends Message{
 
 
     async toDoing():Promise<Message>{
-        // for (const subtask of this.message.subtasks) {
-        //     await subtask.statusToDoing();
-        // }
+        
+        if(this.pending_subtask_total == 0){
+            await this.setStatus(MessageStatus.DONE).save();
+            return this;
+        }
         //并行执行
         //TODO 增加防重复执行，导致重复给subtask添加任务,其中一个创建失败，再次尝试的时候，要避免已经成功的重复创建
         await Promise.all(this.subtasks.map((subtask)=>{
@@ -36,6 +39,12 @@ export class TransactionMessage extends Message{
     }
 
     async toCancelling(){
+        //没有子任务直接完成message
+        if(this.pending_subtask_total == 0){
+            await this.setStatus(MessageStatus.CANCELED).save();
+            return this;
+        }
+
         await Promise.all(this.subtasks.map((subtask)=>{
             return subtask.setStatusAddJobFor(SubtaskStatus.CANCELLING)
         }))
@@ -43,13 +52,40 @@ export class TransactionMessage extends Message{
         return this;
     }
 
-    async confirm():Promise<Message>{
-        if(this.status != MessageStatus.PENDING){
-            throw new BusinessException(`The status of this message is ${this.status} instead of ${MessageStatus.PENDING} `);
+    async cancel():Promise<MessageControlResult>{
+        let result:MessageControlResult=<MessageControlResult>{};
+
+        if([MessageStatus.CANCELED,MessageStatus.CANCELLING].includes(this.status)){
+            result.message = `Message already ${this.status}.`;
+        }else if([MessageStatus.DOING,MessageStatus.DONE].includes(this.status)){
+            throw new BusinessException(`The status of this message is ${this.status}.`);
         }
-        await this.setStatus(MessageStatus.DOING).save();
-        await this.job.context.promote();//立即执行job
-        return this;
+        else if(await this.job.getStatus() != JobStatus.DELAYED ){
+            result.message = `Message job timeout check ${await this.job.getStatus()}.`;
+        }else{
+            await this.setStatus(MessageStatus.CANCELLING).save();
+            await this.job.context.promote();//立即执行job
+            result.message = 'success';
+        }
+        return result;
+    
+    }
+
+    async confirm():Promise<MessageControlResult>{
+        let result:MessageControlResult=<MessageControlResult>{};
+
+        if([MessageStatus.DOING,MessageStatus.DONE].includes(this.status)){
+            result.message = `Message already ${this.status}.`;
+        }else if([MessageStatus.DOING,MessageStatus.DONE].includes(this.status)){
+            throw new BusinessException(`The status of this message is ${this.status}.`);
+        }else if(await this.job.getStatus() != JobStatus.DELAYED ){
+            result.message = `Message job timeout check ${await this.job.getStatus()}.`;
+        }else{
+            await this.setStatus(MessageStatus.DOING).save();
+            await this.job.context.promote();//立即执行job
+            result.message = 'success';
+        }
+        return result;
     }
     async prepare(body){
         let data = {
@@ -68,14 +104,6 @@ export class TransactionMessage extends Message{
             ecSubtasksResult.push(ecSubtask.toJson());
         }
         return ecSubtasksResult;
-    }
-    async cancel():Promise<Message>{
-        if(this.status != MessageStatus.PENDING){
-            throw new BusinessException(`The status of this message is ${this.status} instead of ${MessageStatus.PENDING} `);
-        }
-        await this.setStatus(MessageStatus.CANCELLING).save();
-        await this.job.context.promote();//立即执行job
-        return this;
     }
     /**
      * 用于MessageManager get的时候重建信息

@@ -24,7 +24,7 @@ export class EcSubtask extends Subtask{
 
         await this.completeAndSetMeesageStatus(SubtaskStatus.DONE,MessageStatus.DONE);
 
-        return result.data;
+        return result;
     }
 
     /**

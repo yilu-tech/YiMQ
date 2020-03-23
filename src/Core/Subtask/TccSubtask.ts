@@ -15,7 +15,7 @@ export class TccSubtask extends Subtask{
     async prepare() {
         let prepareResult;
         try {
-            prepareResult = (await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.TRY,this.toJson())).data; 
+            prepareResult = (await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.TRY,this.toJson())); 
             await this.setPrepareResult(prepareResult)
             .setStatus(SubtaskStatus.PREPARED)
             .save()
@@ -41,7 +41,7 @@ export class TccSubtask extends Subtask{
         let result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CONFIRM,callContext);
 
         await this.completeAndSetMeesageStatus(SubtaskStatus.DONE,MessageStatus.DONE);
-        return result.data;
+        return result;
     }
     async toCancel(){
         let callContext = {
@@ -51,7 +51,7 @@ export class TccSubtask extends Subtask{
         }
         let result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CANCEL,callContext);
         await this.completeAndSetMeesageStatus(SubtaskStatus.CANCELED,MessageStatus.CANCELED);
-        return result.data;
+        return result;
     }
 
     public setPrepareResult(prepareResult){

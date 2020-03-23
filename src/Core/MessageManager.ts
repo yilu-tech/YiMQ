@@ -1,5 +1,5 @@
 import { MessageType, MessageStatus } from '../Constants/MessageConstants';
-import { Message } from './Messages/Message';
+import { Message, MessageControlResult } from './Messages/Message';
 import { GeneralMessage } from './Messages/GeneralMessage';
 import { TransactionMessage } from './Messages/TransactionMessage';
 import { BusinessException } from '../Exceptions/BusinessException';
@@ -47,7 +47,7 @@ export class MessageManager {
         return message;
     }
 
-    async confirm(id):Promise<Message>{
+    async confirm(id):Promise<MessageControlResult>{
         let message:Message = await this.get(id);
         return message.confirm()
     }
@@ -55,7 +55,7 @@ export class MessageManager {
         let message:TransactionMessage = await this.get(id);
         return message.prepare(data)
     }
-    async cancel(id):Promise<Message>{
+    async cancel(id):Promise<MessageControlResult>{
         let message:Message = await this.get(id);
         return message.cancel()
     }

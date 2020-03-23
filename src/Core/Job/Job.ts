@@ -16,6 +16,10 @@ export abstract class Job{
     private async update(){
         await this.context.update(this.toJson());
     }
+
+    public async getStatus(){
+        return await this.context.getState();
+    }
     /**
      * 整理数据
      */
@@ -29,6 +33,7 @@ export abstract class Job{
 
         return json;
     }
+    
 
     public getContextJson(){
         let context = this.context.toJSON();

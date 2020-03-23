@@ -3,7 +3,7 @@ import { Injectable } from "@nestjs/common";
 import { ActorManager } from "../Core/ActorManager";
 import { BusinessException } from "../Exceptions/BusinessException";
 import * as bull from 'bull';
-import { Message } from "../Core/Messages/Message";
+import { Message, MessageControlResult } from "../Core/Messages/Message";
 import { SubtaskType } from "../Constants/SubtaskConstants";
 import { SystemException } from "../Exceptions/SystemException";
 import { MessagesDto } from "../Dto/AdminControllerDto";
@@ -22,7 +22,7 @@ export class MessageService {
         message =  await producer.messageManager.create(type,topic,jobOptions);
         return message;
     }
-    async confirm(producerName:string,messageId):Promise<Message>{
+    async confirm(producerName:string,messageId):Promise<MessageControlResult>{
         let producer = this.actorManger.get(producerName);
         if(!producer){
             throw new SystemException(`Producer <${producerName}> not exists.`)

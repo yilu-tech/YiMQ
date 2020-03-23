@@ -68,9 +68,9 @@ export abstract class Message{
         return this.status;
     }
 
-    abstract async confirm():Promise<Message>;
+    abstract async confirm():Promise<MessageControlResult>;
 
-    abstract async cancel():Promise<Message>
+    abstract async cancel():Promise<MessageControlResult>
 
      /**
      * 整理数据
@@ -83,4 +83,9 @@ export abstract class Message{
         json['job'] = this.job.toJson(full);
         return json;
     }
+}
+
+
+export interface MessageControlResult{
+    message:string
 }

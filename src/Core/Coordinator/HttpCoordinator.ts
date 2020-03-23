@@ -34,7 +34,7 @@ export class HttpCoordinator extends Coordinator{
                 if(error instanceof HttpCoordinatorRequestException){
                     message.data = error.data//TODO:: 规定客户端返回的格式
                 }
-                
+
                 throw new Error(JSON.stringify(message));
             }
         })
@@ -53,7 +53,7 @@ export class HttpCoordinator extends Coordinator{
             };
             Logger.debug(body,'CallActor')
             let result = await axios.post(this.actor.api,body,config);
-            return result;            
+            return result.data;            
         } catch (error) {
             let message = `${action}: <${this.actor.api}> ${error.message}`;
             let data = {

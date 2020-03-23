@@ -11,6 +11,7 @@ import { MessagesController } from './Controllers/MessageController';
 import { IndexController } from './Controllers/IndexController';
 import { AdminController } from './Controllers/AdminController';
 
+const { setQueues } = require('bull-board')
 
 
 
@@ -26,6 +27,13 @@ export const ActorManagerBootstrap = {
   useFactory: async(actorManager:ActorManager)=>{
     await actorManager.initActors();
     await actorManager.bootstrapActorsCoordinatorprocessor();
+
+    //TODO 自己开发ui后移除
+    let queues = [];
+    actorManager.actors.forEach((actor)=>{
+        queues.push(actor.coordinator.getQueue());
+    })
+    setQueues(queues);
   },
   inject:[ActorManager]
 }

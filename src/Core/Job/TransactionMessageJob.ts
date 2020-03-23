@@ -4,6 +4,7 @@ import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
 import { TransactionMessage } from "../Messages/TransactionMessage";
 import * as bull from 'bull';
 import { SystemException } from "../../Exceptions/SystemException";
+import { BusinessException } from "../../Exceptions/BusinessException";
 export class TransactionMessageJob extends Job{
     public message_id:number | string;
     public message:TransactionMessage;
@@ -13,7 +14,7 @@ export class TransactionMessageJob extends Job{
         this.message = message;
     }
     async process() {
-        let result = 'success';
+        let result = {};
         switch (this.message.status) {
             case MessageStatus.DOING:
                 await this.message.toDoing();
@@ -24,8 +25,12 @@ export class TransactionMessageJob extends Job{
             case MessageStatus.PENDING://超时后远程检查任务状态
                 result = await this.remoteCheck();
                 break;
+            case MessageStatus.DONE:
+                throw new SystemException('MessageStatus is CANCELED.');
+            case MessageStatus.CANCELED:
+                throw new SystemException('MessageStatus is CANCELED.');
             default:
-                throw new SystemException('MessageStatus is not exists.');
+                throw new SystemException(`MessageStatus <${this.message.status}> is not exists.`);
         }
         return result;
 
@@ -41,7 +46,7 @@ export class TransactionMessageJob extends Job{
             job_key: `bull:${this.message.producer.id}:${this.message.job_id}`
         }
         let result = await this.message.producer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.MESSAGE_CHECK,context);
-        switch (result.data.status) {
+        switch (result.status) {
             case ActorMessageStatus.CANCELED:
                 await this.message.toCancelling();
                 break;
@@ -49,9 +54,9 @@ export class TransactionMessageJob extends Job{
                 await this.message.toDoing();
                 break;
             case ActorMessageStatus.PENDING:
-                throw new Error('ActorMessageStatus is PENDING');
+                throw new SystemException('ActorMessageStatus is PENDING');
             default:
-                throw new Error('ActorMessageStatus is not exists.');
+                throw new SystemException(`ActorMessageStatus ${result.status} is not exists.`);
         }
         return result;
     }

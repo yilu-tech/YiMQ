@@ -10,7 +10,7 @@ import { of } from 'rxjs';
 
 @Injectable()
 export class ActorManager{
-    private actors : Map<number,Actor> = new Map();
+    public actors : Map<number,Actor> = new Map();
     private actorsName: Map<string,Actor> = new Map();
     
     /**

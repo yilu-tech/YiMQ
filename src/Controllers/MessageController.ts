@@ -53,7 +53,7 @@ export class MessagesController {
      */
     @Post('confirm')
     async commit(@Body() body): Promise<any> {
-        return (await this.messageService.confirm(body.actor,body.message_id)).toJson();
+        return (await this.messageService.confirm(body.actor,body.message_id));
     }
 
     /**
@@ -61,7 +61,7 @@ export class MessagesController {
      */
     @Post('cancel')
     async rollback(@Body() body): Promise<any> {
-        return (await this.messageService.cancel(body.actor,body.message_id)).toJson();
+        return (await this.messageService.cancel(body.actor,body.message_id));
     }
 
 }

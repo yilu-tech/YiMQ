@@ -1,4 +1,4 @@
-import { Message } from "./Message";
+import { Message, MessageControlResult } from "./Message";
 
 
 export class GeneralMessage extends Message{
@@ -14,11 +14,13 @@ export class GeneralMessage extends Message{
     done():Promise<Message> {
         throw new Error("Method not implemented.");
     }
-    async confirm():Promise<Message>{
-        return this;
+    async confirm():Promise<MessageControlResult>{
+        let result:MessageControlResult=<MessageControlResult>{};
+        return result;
     }
-    cancel():Promise<Message> {
-        throw new Error("Method not implemented.");
+    async cancel():Promise<MessageControlResult> {
+        let result:MessageControlResult=<MessageControlResult>{};
+        return result;
     }
     createMessageJob(){
         console.log('transaction message job create.');
