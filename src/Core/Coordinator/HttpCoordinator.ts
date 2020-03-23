@@ -32,7 +32,7 @@ export class HttpCoordinator extends Coordinator{
 
                 //统一格式化http request excepiton 记录到bull.job 的failedReason中
                 if(error instanceof HttpCoordinatorRequestException){
-                    message.actor_response = <HttpCoordinatorRequestException>error.getRespone();
+                    message.actor_response = error.getRespone();
                 }
 
                 Logger.error({

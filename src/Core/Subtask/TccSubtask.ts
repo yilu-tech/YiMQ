@@ -13,22 +13,12 @@ export class TccSubtask extends Subtask{
     }
     
     async prepare() {
-        let prepareResult;
-        try {
-            prepareResult = (await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.TRY,this.toJson())); 
-            await this.setPrepareResult(prepareResult)
-            .setStatus(SubtaskStatus.PREPARED)
-            .save()
-            return this;
-        } catch (error) {
-            let prepareResult = {
-                message: error.message,
-                data: error.data
 
-            }
-            await this.setPrepareResult(JSON.stringify(prepareResult)).save()
-            throw new SystemException(error.message,error.data);
-        }
+        let prepareResult = (await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.TRY,this.toJson())); 
+        await this.setPrepareResult(prepareResult)
+        .setStatus(SubtaskStatus.PREPARED)
+        .save()
+        return this;
         
     } 
 

@@ -8,6 +8,7 @@ import {
 import { ValidationPipe } from '@nestjs/common';
 import { SystemExceptionFilter } from './ExceptionFilters/SystemExceptionFilter';
 import { ValidationException } from './Exceptions/ValidationException';
+import { CoordinatorRequestExceptionFilter } from './ExceptionFilters/CoordinatorRequestExceptionFilter';
 const { UI } = require('bull-board');
 
 
@@ -21,8 +22,14 @@ async function bootstrap() {
     }
   }));
   
-  app.useGlobalFilters(new BusinessExceptionFilter(),new SystemExceptionFilter());
+  app.useGlobalFilters(
+    new BusinessExceptionFilter(),
+    new SystemExceptionFilter(),
+    new CoordinatorRequestExceptionFilter
+    );
   await app.listen(7379,'0.0.0.0');
+
+
   //TODO remove
   var express = require('express');
   var uiApp = express();
