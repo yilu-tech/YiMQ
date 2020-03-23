@@ -22,6 +22,8 @@ module.exports = ()=>{
                 output: path.join(process.cwd(),'logs/output.log'),
                 error: path.join(process.cwd(),'logs/error.log'),
                 mergeLogs: true,
+                wait_ready: true,
+                listen_timeout: 100000
             });
             instances.forEach(element => {
                 let pm2_env = element.pm2_env;

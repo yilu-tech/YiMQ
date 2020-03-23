@@ -11,7 +11,7 @@ import { ValidationException } from './Exceptions/ValidationException';
 import { CoordinatorRequestExceptionFilter } from './ExceptionFilters/CoordinatorRequestExceptionFilter';
 const { UI } = require('bull-board');
 
-
+const port = 7379;
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule,new FastifyAdapter(),{
   });
@@ -27,7 +27,12 @@ async function bootstrap() {
     new SystemExceptionFilter(),
     new CoordinatorRequestExceptionFilter
     );
-  await app.listen(7379,'0.0.0.0');
+  await app.listen(port,'0.0.0.0');
+  
+  if(process.send){
+    process.send('ready');//pm2优雅启动
+    console.info(`YiMQ listening on port ${port}!`);
+  }
 
 
   //TODO remove
@@ -35,7 +40,8 @@ async function bootstrap() {
   var uiApp = express();
   uiApp.use('/',UI);
   uiApp.listen(7380, function () {
-    console.log('Ui app listening on port 3000!');
+    console.info('Ui app listening on port 7380!');
   });
+  
 }
 bootstrap();
