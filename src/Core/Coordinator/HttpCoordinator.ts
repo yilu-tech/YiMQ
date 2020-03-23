@@ -22,18 +22,25 @@ export class HttpCoordinator extends Coordinator{
                        
                 let message = {
                     message: error.message,
-                    data: null,
-                    job: null
-    
+                    job: {},
+                    actor_response: {}
                 }
                 if(job){
                     message.job = job.toJson();
                 }
-                Logger.error(message,error.stack,'HttpCoordinator.process');//TODO 移动到throw的前一行
+                
+
                 //统一格式化http request excepiton 记录到bull.job 的failedReason中
                 if(error instanceof HttpCoordinatorRequestException){
-                    message.data = error.data//TODO:: 规定客户端返回的格式
+                    message.actor_response = <HttpCoordinatorRequestException>error.getRespone();
                 }
+                
+                Logger.error({
+                    message: message.message,
+                    job: message.job,
+                    actor_response_message: message.actor_response['message'],
+                    tips: 'Details View UI Manager.'
+                },error.stack,'HttpCoordinator.process');
 
                 throw new Error(JSON.stringify(message));
             }
@@ -51,22 +58,12 @@ export class HttpCoordinator extends Coordinator{
                 action: action,
                 context: context
             };
-            Logger.debug(body,'CallActor')
             let result = await axios.post(this.actor.api,body,config);
+            body['result'] = result;
+            Logger.debug(body,'CallActor')
             return result.data;            
         } catch (error) {
-            let message = `${action}: <${this.actor.api}> ${error.message}`;
-            let data = {
-                api: this.actor.api,
-                context: context,
-                response: null
-            }
-            if(error.response){
-                data.response = error.response.data
-            }
-
-            throw new HttpCoordinatorRequestException(message,data);
-
+            throw new HttpCoordinatorRequestException(this,action,context,error);
         }
     }
 }

@@ -5,7 +5,7 @@ import { Actor } from '../Actor';
 export abstract class Coordinator{
     
     protected queue:bull.Queue;
-    constructor(protected actor:Actor,options:RedisOptions){
+    constructor(public actor:Actor,options:RedisOptions){
         this.queue = new bull(String(this.actor.id),{redis:options});
     }
 
