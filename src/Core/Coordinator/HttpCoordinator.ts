@@ -34,14 +34,14 @@ export class HttpCoordinator extends Coordinator{
                 if(error instanceof HttpCoordinatorRequestException){
                     message.actor_response = <HttpCoordinatorRequestException>error.getRespone();
                 }
-                
+
                 Logger.error({
                     message: message.message,
                     job: message.job,
                     actor_response_message: message.actor_response['message'],
                     tips: 'Details View UI Manager.'
                 },error.stack,'HttpCoordinator.process');
-
+            
                 throw new Error(JSON.stringify(message));
             }
         })
@@ -58,10 +58,10 @@ export class HttpCoordinator extends Coordinator{
                 action: action,
                 context: context
             };
-            let result = await axios.post(this.actor.api,body,config);
+            let result = (await axios.post(this.actor.api,body,config)).data;
             body['result'] = result;
             Logger.debug(body,'CallActor')
-            return result.data;            
+            return result;            
         } catch (error) {
             throw new HttpCoordinatorRequestException(this,action,context,error);
         }
