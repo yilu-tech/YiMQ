@@ -10,6 +10,7 @@ import { SubtaskModelClass } from "../../Models/SubtaskModel"
 import { TransactionMessageJob } from "../Job/TransactionMessageJob";
 import { XaSubtask } from "../Subtask/XaSubtask";
 import {JobStatus} from "../../Constants/JobConstants"
+import { BcstSubtask } from "../Subtask/BcstSubtask";
 export class TransactionMessage extends Message{
     public subtasks:Array<Subtask> = [];  //事物的子项目
     public pending_subtask_total:number;
@@ -90,20 +91,20 @@ export class TransactionMessage extends Message{
     async prepare(body){
         let data = {
             id:  this.id,
-            ec_subtasks : []
+            prepare_subtasks : []
         };
-        if(body.ec_subtasks && body.ec_subtasks.length > 0 ){
-            data.ec_subtasks = await this.prepareEcSubtasks(body.ec_subtasks);
+        if(body.prepare_subtasks && body.prepare_subtasks.length > 0 ){
+            data.prepare_subtasks = await this.prepareSubtasks(body.prepare_subtasks);
         }
         return data;   
     }
-    private async prepareEcSubtasks(ecSubtasksBody){
-        let ecSubtasksResult = [];
-        for (const ecSubtaskBody of ecSubtasksBody) {
-            let ecSubtask = await this.addSubtask(SubtaskType.EC,ecSubtaskBody.processor,ecSubtaskBody.data);
-            ecSubtasksResult.push(ecSubtask.toJson());
+    private async prepareSubtasks(prepareSubtasksBody){
+        let prepareSubtasksResult = [];
+        for (const subtaskBody of prepareSubtasksBody) {
+            let subtask = await this.addSubtask(subtaskBody.type,subtaskBody);
+            prepareSubtasksResult.push(subtask.toJson());
         }
-        return ecSubtasksResult;
+        return prepareSubtasksResult;
     }
     /**
      * 用于MessageManager get的时候重建信息
@@ -113,7 +114,7 @@ export class TransactionMessage extends Message{
         this.job = new TransactionMessageJob(this,jobContext);
         this.subtasks = await this.getAllSubtasks();
     }
-    async addSubtask(type,processorName,data){
+    async addSubtask(type,body){
         if(this.status != MessageStatus.PENDING){
             throw new BusinessException(`The status of this message is ${this.status} instead of ${MessageStatus.PENDING}`);
         }
@@ -124,10 +125,11 @@ export class TransactionMessage extends Message{
         subtaskModel.property('message_id',this.id);
         subtaskModel.property('type',type);
         subtaskModel.property('status',SubtaskStatus.PREPARING);
-        subtaskModel.property('data',data);
+        subtaskModel.property('data',body.data);
         subtaskModel.property('created_at',now);
         subtaskModel.property('updated_at',now);
-        subtaskModel.property('processor',processorName);
+        subtaskModel.property('processor',body.processor);
+        subtaskModel.property('topic',body.topic);
         await subtaskModel.save() 
         this.model.link(subtaskModel);
         await this.model.save()
@@ -170,6 +172,9 @@ export class TransactionMessage extends Message{
                 break;
             case SubtaskType.XA:
                 subtask = new XaSubtask(this,subtaskModel);
+                break;
+            case SubtaskType.BCST:
+                subtask = new BcstSubtask(this,subtaskModel);
                 break;
         
             default:

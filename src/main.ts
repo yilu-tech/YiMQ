@@ -13,7 +13,7 @@ const { UI } = require('bull-board');
 
 const port = 7379;
 async function bootstrap() {
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule,new FastifyAdapter(),{
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule,new FastifyAdapter({ logger: true }),{
   });
   app.useGlobalPipes(new ValidationPipe({
     transform:true,

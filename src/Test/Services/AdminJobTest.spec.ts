@@ -80,14 +80,16 @@ describe('Subtask', () => {
             });
             expect(message.status).toBe(MessageStatus.PENDING)
 
-            let ecSubtask:EcSubtask = await messageService.addSubtask(producerName,message.id,SubtaskType.EC,producerName,{
+            let ecSubtask:EcSubtask = await messageService.addSubtask(producerName,message.id,SubtaskType.EC,{
+                processor:'content@post.create',
                 title: 'new post'
             })
              
             mock.onPost(producer.api).reply(200,{
                 title: 'hello world'
             })
-            let tccsubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,producerName,{
+            let tccsubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                processor:'content@post.create',
                 title: 'new post'
             })
             
@@ -107,14 +109,16 @@ describe('Subtask', () => {
             });
             expect(message.status).toBe(MessageStatus.PENDING)
 
-            let ecSubtask:EcSubtask = await messageService.addSubtask(producerName,message.id,SubtaskType.EC,producerName,{
+            let ecSubtask:EcSubtask = await messageService.addSubtask(producerName,message.id,SubtaskType.EC,{
+                processor:'content@post.create',
                 title: 'new post'
             })
              
             mock.onPost(producer.api).reply(200,{
                 title: 'hello world'
             })
-            let tccsubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,producerName,{
+            let tccsubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                processor:'content@post.create',
                 title: 'new post'
             })
         });

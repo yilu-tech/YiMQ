@@ -40,13 +40,16 @@ export abstract class Subtask{
         this.updated_at = subtaskModel.property('updated_at');
         this.processor = subtaskModel.property('processor');
         this.message_id = subtaskModel.property('message_id');
-       
-        let [consumerName,consumerprocessorName] =this.processor.split('@');
-        this.consumer = this.message.producer.actorManager.get(consumerName);
-        if(!this.consumer){
-            throw new BusinessException(`Consumer <${consumerName}> not exists.`)
+
+        //TODO 是否要单独抽一个基类
+        if(this.processor){
+            let [consumerName,consumerprocessorName] =this.processor.split('@');
+            this.consumer = this.message.producer.actorManager.get(consumerName);
+            if(!this.consumer){
+                throw new BusinessException(`Consumer <${consumerName}> not exists.`)
+            }
+            this.consumerprocessorName = consumerprocessorName;
         }
-        this.consumerprocessorName = consumerprocessorName;
 
 
     }

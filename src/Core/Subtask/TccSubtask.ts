@@ -24,8 +24,9 @@ export class TccSubtask extends Subtask{
 
     async toDo(){
         let callContext = {
-            message_id: this.message.id,
             id: this.id,
+            type: this.type,
+            message_id: this.message.id,
             processor: this.processor
         }
         let result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CONFIRM,callContext);
@@ -35,8 +36,9 @@ export class TccSubtask extends Subtask{
     }
     async toCancel(){
         let callContext = {
-            message_id: this.message.id,
             id: this.id,
+            type: this.type,
+            message_id: this.message.id,
             processor: this.processor
         }
         let result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CANCEL,callContext);

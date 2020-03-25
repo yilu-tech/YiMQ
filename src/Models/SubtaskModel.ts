@@ -9,6 +9,7 @@ interface SubtaskProperties {
     status: SubtaskStatus;
     data: any;
     processor:string;
+    topic:string;
     prepareResult:string;
     updated_at: number;
     created_at: number;
@@ -44,6 +45,11 @@ export class SubtaskModelClass extends NohmModel<SubtaskProperties> {
         },
         processor: {
             type: 'string',
+            index: true,
+        },
+        topic: {
+            type: 'string',
+            index: true,
         },
         prepareResult: {
             type: 'json',

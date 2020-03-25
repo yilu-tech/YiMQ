@@ -86,7 +86,12 @@ describe('Subtask', () => {
             //创建EC
             let processorName = 'content@post.change';
 
-            let ecSubtask = await message.addSubtask(SubtaskType.EC,processorName,{'name':1});
+            let ecSubtask = await message.addSubtask(SubtaskType.EC,{
+                processor:processorName,
+                data:{
+                    'name':1
+                }
+            });
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
      
             let savedSubtask = updatedMessage.subtasks[0];
@@ -115,8 +120,11 @@ describe('Subtask', () => {
                 title: 'get new post'
             })
 
-            let tccsubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,producerName,{
-                title: 'new post'
+            let tccsubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                processor:'user@user.create',
+                data:{
+                    title: 'new post'
+                }
             }) 
 
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
@@ -141,8 +149,11 @@ describe('Subtask', () => {
             });
             expect(message.status).toBe(MessageStatus.PENDING)
 
-            let ecSubtask:EcSubtask = await messageService.addSubtask(producerName,message.id,SubtaskType.EC,producerName,{
-                title: 'new post'
+            let ecSubtask:EcSubtask = await messageService.addSubtask(producerName,message.id,SubtaskType.EC,{
+                processor:"content@post.create",
+                data:{
+                    title: 'new post'
+                }
             })
             let producer = actorManager.get(producerName); 
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
@@ -154,8 +165,11 @@ describe('Subtask', () => {
             mock.onPost(producer.api).reply(200,{
                 title: 'hello world'
             })
-            let tccsubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,producerName,{
-                title: 'new post'
+            let tccsubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                processor:"content@post.create",
+                data:{
+                    title: 'new post'
+                }
             })
 
             updatedMessage = await producer.messageManager.get(message.id);
@@ -178,12 +192,14 @@ describe('Subtask', () => {
             let processorName = 'content@post.create';
             let producer = actorManager.get(producerName); 
             let body = {
-                ec_subtasks:[
+                prepare_subtasks:[
                     {
+                        type:SubtaskType.EC,
                         processor:'user@update',
                         data:{'title':'test'}
                     },
                     {
+                        type:SubtaskType.EC,
                         processor:'user@update1',
                         data:{'title':'test1'}
                     }
@@ -192,8 +208,34 @@ describe('Subtask', () => {
             let prepareResult = await messageService.prepare(producerName,message.id,body);
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
             expect(updatedMessage.subtasks.length).toBe(2);
-            expect(updatedMessage.subtasks['0'].data).toMatchObject(body.ec_subtasks[0].data);
-            expect(updatedMessage.subtasks['1'].data).toMatchObject(body.ec_subtasks[1].data)
+            expect(updatedMessage.subtasks['0'].data).toMatchObject(body.prepare_subtasks[0].data);
+            expect(updatedMessage.subtasks['1'].data).toMatchObject(body.prepare_subtasks[1].data)
+        })
+
+        it('.add bcst by prepare', async () => {
+            message = await messageService.create(producerName,messageType,topic,{
+                delay:300,
+                attempts:5,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+            let processorName = 'content@post.create';
+            let producer = actorManager.get(producerName); 
+            let body = {
+                prepare_subtasks:[
+                    {
+                        type:'BCST',
+                        topic:'user.update',
+                        data:{'title':'test'}
+                    }
+                ]
+            }
+            let prepareResult = await messageService.prepare(producerName,message.id,body);
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            expect(updatedMessage.subtasks['0'].data).toMatchObject(body.prepare_subtasks[0].data);
         })
 
         it('.add tcc failed', async () => {
@@ -217,7 +259,8 @@ describe('Subtask', () => {
                 title: 'exists'
             })
             try {
-                let tccsubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,producerName,{
+                let tccsubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                    processor:'content@post.create',
                     data: 'new post'
                 })                
         } catch (error) {
@@ -259,8 +302,11 @@ describe('Subtask', () => {
             let prepareResult = {title: 'get update user'};
             mock.onPost(producer.api).reply(200,prepareResult)
             process.env.SUBTASK_JOB_DELAY = '2000';//延迟subtask的job执行，便于只测试message job
-            let ecSubtask:EcSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,producerName,{
-                title: 'new post'
+            let ecSubtask:EcSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,{
+                processor:"content@post.create",
+                data:{
+                    title: 'new post'
+                }
             })   
 
             //把message确认
@@ -308,15 +354,21 @@ describe('Subtask', () => {
             //mock添加tcc子任务时的远程调用
             let prepareResult = {title: 'get new user'};
             mock.onPost(producer.api).reply(200,prepareResult)
-            let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,producerName,{
-                title: 'new post'
+            let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                processor:"content@post.create",
+                data:{
+                    title: 'new post'
+                }
             })          
             expect(tccSubtask.toJson()['prepareResult'].title).toBe(prepareResult.title);
 
             prepareResult = {title: 'get update user'};
             mock.onPost(producer.api).reply(200,prepareResult)
-            let ecSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,producerName,{
-                title: 'new post'
+            let ecSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,{
+                processor:"content@post.create",
+                data:{
+                    title: 'new post'
+                }
             })   
 
             //把message确认
@@ -374,8 +426,11 @@ describe('Subtask', () => {
 
             let tccErrorMessage;
             try {
-                let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,producerName,{
-                    title: 'new post'
+                let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                    processor:"content@content.create",
+                    data:{
+                        title: 'new post'
+                    }
                 })  
             } catch (error) {
                 tccErrorMessage = error.message;
@@ -384,8 +439,11 @@ describe('Subtask', () => {
 
             let ECErrorMessage;
             try {
-                let ecSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,producerName,{
-                    title: 'new post'
+                let ecSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,{
+                    processor:"content@content.create",
+                    data:{
+                        title: 'new post'
+                    }
                 })   
             } catch (error) {
                 ECErrorMessage = error.message;
@@ -421,20 +479,26 @@ describe('Subtask', () => {
             expect(message.status).toBe(MessageStatus.PENDING)
         
             let producer = actorManager.get(producerName); 
-
+            process.env.SUBTASK_JOB_DELAY = '500';//加快二次尝试，防止测试超时
             //mock添加tcc子任务时的远程调用
             let prepareResult = {title: 'get new user'};
             mock.onPost(producer.api).reply(200,prepareResult)
-            let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,producerName,{
-                title: 'new post'
+            let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                processor:"content@post.create",
+                data:{
+                    title: 'new post'
+                }
             })          
             expect(tccSubtask.toJson()['prepareResult'].title).toBe(prepareResult.title);
 
             //mock添加ec子任务时的远程调用
             prepareResult = {title: 'get update user'};
             mock.onPost(producer.api).reply(200,prepareResult)
-            let ecSubtask:EcSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,producerName,{
-                title: 'new post'
+            let ecSubtask:EcSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,{
+                processor:"user@user.create",
+                data:{
+                    username: 'jack'
+                }
             })   
 
             //把message确认
@@ -466,7 +530,6 @@ describe('Subtask', () => {
             })
             //任务执行完毕
             producer.coordinator.getQueue().on('completed',async (job)=>{
-                console.debug('Job completed',job.id)
                 updatedMessage = await producer.messageManager.get(message.id);
                 if(message.job.id == job.id){
                     
@@ -509,8 +572,11 @@ describe('Subtask', () => {
             //mock添加tcc子任务时的远程调用
             let prepareResult = {title: 'get new user'};
             mock.onPost(producer.api).reply(200,prepareResult)
-            let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,producerName,{
-                title: 'new post'
+            let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                processor:"user@user.create",
+                data:{
+                    username: 'jack'
+                }
             })          
             expect(tccSubtask.toJson()['prepareResult'].title).toBe(prepareResult.title);
 
@@ -583,21 +649,27 @@ describe('Subtask', () => {
         
             let producer = actorManager.get(producerName); 
 
-            process.env.SUBTASK_JOB_DELAY = '100';//子任务延迟，否则会有一定几率比message的job先执行完毕
+            process.env.SUBTASK_JOB_DELAY = '200';//子任务延迟，否则会有一定几率比message的job先执行完毕
 
             //mock添加tcc子任务时的远程调用
             let prepareResult = {title: 'get new user'};
             mock.onPost(producer.api).reply(200,prepareResult)
-            let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,producerName,{
-                title: 'new post'
+            let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                processor:"user@user.create",
+                data:{
+                    username: 'jack'
+                }
             })          
             expect(tccSubtask.toJson()['prepareResult'].title).toBe(prepareResult.title);
 
             //mock添加ec子任务时的远程调用
             prepareResult = {title: 'get update user'};
             mock.onPost(producer.api).reply(200,prepareResult)
-            let ecSubtask:EcSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,producerName,{
-                title: 'new post'
+            let ecSubtask:EcSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,{
+                processor:"user@user.create",
+                data:{
+                    username: 'jack'
+                }
             })   
 
             //把message确认
@@ -681,8 +753,11 @@ describe('Subtask', () => {
 
 
             prepareResult = {title: 'get update user'};
-            let ecSubtask:EcSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,producerName,{
-                title: 'new post'
+            let ecSubtask:EcSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,{
+                processor:"user@user.create",
+                data:{
+                    username: 'jack'
+                }
             })   
 
             //把message取消
@@ -738,8 +813,11 @@ describe('Subtask', () => {
             //mock添加tcc子任务时的远程调用
             let prepareResult = {title: 'get new user'};
             mock.onPost(producer.api).reply(200,prepareResult)
-            let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,producerName,{
-                title: 'new post'
+            let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                processor:"user@user.create",
+                data:{
+                    username: 'jack'
+                }
             })          
             expect(tccSubtask.toJson()['prepareResult'].title).toBe(prepareResult.title);
 

@@ -33,8 +33,7 @@ export class MessagesController {
             addSubtaskDto.actor,
             addSubtaskDto.message_id,
             addSubtaskDto.type,
-            addSubtaskDto.processor,
-            addSubtaskDto.data
+            addSubtaskDto
             );
         return subtask.toJson();
     }
