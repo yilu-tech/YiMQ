@@ -88,10 +88,8 @@ export class JobManager{
                 //由于subtask的job不一定和它的subjob在同一个actor，也就不一定在同一个redis，所以直接通过id无法查找
                 //拿到job的producer
                 let producer = this.actor.actorManager.getById(jobContext.data.producer_id);
-                //通过producer获取到subtask的message
-                message = await producer.messageManager.get(jobContext.data.message_id);
-                //通过message拿到subtask
-                let subtask = (<TransactionMessage>message).getSubtask(jobContext.data.subtask_id);
+                let subtask = await producer.subtaskManager.get(jobContext.data.subtask_id);
+                
                 //生成subtask实例
                 job = new TransactionSubtaskJob(subtask,jobContext);
                 break;

@@ -118,27 +118,14 @@ export class TransactionMessage extends Message{
         if(this.status != MessageStatus.PENDING){
             throw new BusinessException(`The status of this message is ${this.status} instead of ${MessageStatus.PENDING}`);
         }
-        let now = new Date().getTime();
-
-        let subtaskModel = new this.producer.subtaskModel();
-        subtaskModel.id = String(await this.producer.actorManager.getSubtaskGlobalId());
-        subtaskModel.property('message_id',this.id);
-        subtaskModel.property('type',type);
-        subtaskModel.property('status',SubtaskStatus.PREPARING);
-        subtaskModel.property('data',body.data);
-        subtaskModel.property('created_at',now);
-        subtaskModel.property('updated_at',now);
-        subtaskModel.property('processor',body.processor);
-        subtaskModel.property('topic',body.topic);
-        await subtaskModel.save() 
-        this.model.link(subtaskModel);
+        let subtask = await this.producer.subtaskManager.addSubtask(this,type,body);
+        this.model.link(subtask.model);
         await this.model.save()
         await this.incrPendingSubtaskTotal();
-
-        let subtask = this.subtaskFactory(type,subtaskModel);
         this.subtasks.push(subtask);
         return subtask.prepare();
     }
+
     private async incrPendingSubtaskTotal(){
         return this.producer.redisClient.hincrby(this.getMessageHash(),'pending_subtask_total',1);
     }
@@ -151,36 +138,10 @@ export class TransactionMessage extends Message{
         let subtasks:Array<Subtask> = [];
         for(var i in subtaskModels){
             let subtaskModel = subtaskModels[i];
-            let subtask = this.subtaskFactory(subtaskModel.property('type'),subtaskModel);
+            let subtask = this.producer.subtaskManager.factory(this,subtaskModel);
             subtasks.push(subtask);
         }
         return subtasks;
-    }
-    public getSubtask(subtask_id):any{
-        return this.subtasks.find((subtask)=>{
-            return subtask.id == subtask_id
-        })
-    }
-    subtaskFactory(type,subtaskModel){
-        let subtask:any;
-        switch (type) {
-            case SubtaskType.EC:
-                subtask = new EcSubtask(this,subtaskModel);
-                break;
-            case SubtaskType.TCC:
-                subtask = new TccSubtask(this,subtaskModel);
-                break;
-            case SubtaskType.XA:
-                subtask = new XaSubtask(this,subtaskModel);
-                break;
-            case SubtaskType.BCST:
-                subtask = new BcstSubtask(this,subtaskModel);
-                break;
-        
-            default:
-                throw new Error('SubtaskType is not exists.');
-        }
-        return subtask;
     }
 
     private subtasksToJson(){

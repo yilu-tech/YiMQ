@@ -15,6 +15,7 @@ import { CoordinatorCallActorAction } from "../Constants/Coordinator";
 import {differenceBy} from 'lodash';
 import { ActorStatus } from "../Constants/ActorConstants";
 import { HttpCoordinatorRequestException } from "../Exceptions/HttpCoordinatorRequestException";
+import {SubtaskManager} from './SubtaskManager';
 
 export class Actor{
     public id:number;
@@ -35,6 +36,7 @@ export class Actor{
     public subtaskModel:IStaticMethods<SubtaskModelClass>
     public messageManager:MessageManager;
     public jobManager:JobManager;
+    public subtaskManager:SubtaskManager
 
     constructor(public actorManager:ActorManager,private redisManager:RedisManager){
 
@@ -46,6 +48,7 @@ export class Actor{
         this.initNohm();
         this.messageManager = new MessageManager(this);
         this.jobManager = new JobManager(this);
+        this.subtaskManager = new SubtaskManager(this);
         Logger.log(`Inited actor: ${this.name}.`,'bootstrap')
     }
     private initNohm(){
