@@ -3,10 +3,6 @@ import { NohmModel, TTypedDefinitions } from "nohm";
 import { RedisOptions } from "ioredis";
 
 
-export class BroadcastTopicRegister{
-    
-}
-
 interface ActorProperties {
     id:number
     name: string;
@@ -16,8 +12,6 @@ interface ActorProperties {
     protocol:string;
     redis:string;
     redisOptions: RedisOptions;
-    broadcastTopics: Array<string>;
-    broadcastTopicRegisters:Array<BroadcastTopicRegister>
 }
 
 export class ActorModelClass extends NohmModel<ActorProperties> {
@@ -52,12 +46,6 @@ export class ActorModelClass extends NohmModel<ActorProperties> {
             type: 'string'
         },
         redisOptions: {
-            type: 'json'
-        },
-        broadcastTopics: {
-            type: 'json'
-        },
-        broadcastTopicRegisters: {
             type: 'json'
         }
     };

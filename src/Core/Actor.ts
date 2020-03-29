@@ -1,6 +1,6 @@
 
 import { RedisManager } from "../Handlers/redis/RedisManager";
-import { NohmClass, IStaticMethods } from "nohm";
+import { NohmClass, IStaticMethods, timeProperty } from "nohm";
 import { Redis } from "ioredis";
 import { Logger } from "@nestjs/common";
 import { Coordinator } from "./Coordinator/Coordinator";
@@ -11,7 +11,10 @@ import { MessageManager } from "./MessageManager";
 import { JobManager } from "./JobManager";
 import { ActorManager } from "./ActorManager";
 import { SubtaskModelClass } from "../Models/SubtaskModel";
-
+import { CoordinatorCallActorAction } from "../Constants/Coordinator";
+import {differenceBy} from 'lodash';
+import { ActorStatus } from "../Constants/ActorConstants";
+import { HttpCoordinatorRequestException } from "../Exceptions/HttpCoordinatorRequestException";
 
 export class Actor{
     public id:number;
@@ -20,6 +23,7 @@ export class Actor{
     public api:string;
     public redis:string;
     public protocol:string;
+    public status:ActorStatus
 
     
 
@@ -38,8 +42,8 @@ export class Actor{
     public async init(){
         
         this.redisClient = await this.redisManager.client(this.redis);
-        this.initNohm();
         this.initCoordinator();
+        this.initNohm();
         this.messageManager = new MessageManager(this);
         this.jobManager = new JobManager(this);
         Logger.log(`Inited actor: ${this.name}.`,'bootstrap')
@@ -49,6 +53,56 @@ export class Actor{
         this.nohm.setClient(this.redisClient);
         this.messageModel = this.nohm.register(MessageModelClass)
         this.subtaskModel = this.nohm.register(SubtaskModelClass)
+    }
+
+
+    public async loadRemoteConfigToDB(){
+        try {
+            let result = await this.coordinator.callActor(this,CoordinatorCallActorAction.GET_CONFIG);
+            await this.saveListener(result['listeners']);   
+        } catch (error) {
+            if(error instanceof HttpCoordinatorRequestException){
+                Logger.error(error.message,null,'Actor loadRemoteConfigToDB')
+            }
+        }
+        //TODO processor记录到db
+
+    }
+    private async saveListener(listenerOptions){
+        let listenerModels = await this.actorManager.masterModels.ListenerModel.findAndLoad({
+            actor_id:this.id
+        });
+
+        let listeners = listenerModels.map((item)=>{
+            return item.allProperties();
+        })
+        let removeListeners = differenceBy(listeners, listenerOptions, 'processor');
+
+        for (const item of removeListeners) {
+            await this.actorManager.masterModels.ListenerModel.remove(item.id);
+            Logger.log(item,'Actor_Listener_Remove');
+        }
+
+
+        for (const item of listenerOptions) {
+            let listenerModel;
+
+            listenerModel = (await this.actorManager.masterModels.ListenerModel.findAndLoad({
+                processor: item.processor
+            }))[0];
+
+            if(listenerModel){
+                Logger.log(item,'Actor_Listener_Update');
+            }else{
+                listenerModel = new this.actorManager.masterModels.ListenerModel();
+                Logger.log(item,'Actor_Listener_Add');
+            }
+            
+            listenerModel.property('topic',item.topic);
+            listenerModel.property('processor',item.processor);
+            listenerModel.property('actor_id',this.id);
+            await listenerModel.save() 
+        }
     }
 
     private initCoordinator(){

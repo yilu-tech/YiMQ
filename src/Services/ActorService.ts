@@ -42,8 +42,6 @@ export class ActorService{
         actor.property('protocol',data.protocol);
         actor.property('redis',data.redis);
         actor.property('redisOptions',this.config.system.redis[data.redis]);
-        actor.property('broadcastTopics',data.broadcastTopics);
-        actor.property('broadcastTopicRegisters',data.broadcastTopicRegisters);
         try {
             await  actor.save();   
         } catch (error) {

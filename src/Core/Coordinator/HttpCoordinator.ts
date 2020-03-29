@@ -47,7 +47,7 @@ export class HttpCoordinator extends Coordinator{
         })
     };
 
-    public async callActor(producer:Actor,action:CoordinatorCallActorAction,context) {
+    public async callActor(producer:Actor,action:CoordinatorCallActorAction,context={}) {
         try {
             let config = {
                 headers:{

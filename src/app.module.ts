@@ -26,6 +26,7 @@ export const ActorManagerBootstrap = {
   provide: 'ActorManagerBootstrap',
   useFactory: async(actorManager:ActorManager)=>{
     await actorManager.initActors();
+    await actorManager.loadActorsRemoteConfig();
     await actorManager.bootstrapActorsCoordinatorprocessor();
 
     //TODO 自己开发ui后移除

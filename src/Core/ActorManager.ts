@@ -5,7 +5,7 @@ import { ActorService } from '../Services/ActorService';
 import { Actor } from './Actor';
 import { Config } from '../Config';
 import { RedisManager } from '../Handlers/redis/RedisManager';
-import { of } from 'rxjs';
+import { MasterModels } from '../Models/MasterModels';
 
 
 @Injectable()
@@ -20,7 +20,7 @@ export class ActorManager{
      * @param config 
      * @param redisManager 
      */
-    constructor(private actorService:ActorService,private config:Config,private redisManager:RedisManager){
+    constructor(private actorService:ActorService,private config:Config,private redisManager:RedisManager,public masterModels:MasterModels){
 
     }
 
@@ -36,6 +36,15 @@ export class ActorManager{
         }
         //todo::通过masterRedis对比，取出配置文件不存在的actor也进行初始化，用于后续手动操作
         Logger.log('Inited actors.','Bootstrap')
+    }
+
+
+    public async loadActorsRemoteConfig(){
+        for(let [id,actor] of this.actors){
+            await actor.loadRemoteConfigToDB();
+        }
+        //todo::通过masterRedis对比，取出配置文件不存在的actor也进行初始化，用于后续手动操作
+        Logger.log('Load actors remote config.','Bootstrap')
     }
     public async closeActors(){
         for(let [id,actor] of this.actors){
