@@ -73,8 +73,8 @@ export class ActorManager{
         let masterRedisClient = await this.redisManager.client();
         return masterRedisClient.incr('global:ids:message');
     }
-    public async getSubtaskGlobalId(){
+    public async getSubtaskGlobalId():Promise<string>{
         let masterRedisClient = await this.redisManager.client();
-        return masterRedisClient.incr('global:ids:subtask');
+        return String(await masterRedisClient.incr('global:ids:subtask'));
     }
 }

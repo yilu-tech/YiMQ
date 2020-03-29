@@ -1,4 +1,5 @@
 
 export enum ActorStatus{
-    ACTIVE = 1
+    ACTIVE = 'ACTIVE',
+    INACTIVE = 'INACTIVE'
 }

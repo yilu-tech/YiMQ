@@ -88,11 +88,12 @@ export class Actor{
             let listenerModel;
 
             listenerModel = (await this.actorManager.masterModels.ListenerModel.findAndLoad({
-                processor: item.processor
+                actor_id:this.id,
+                processor: item.processor,
             }))[0];
 
             if(listenerModel){
-                Logger.log(item,'Actor_Listener_Update');
+                Logger.log(listenerModel.allProperties(),'Actor_Listener_Update');
             }else{
                 listenerModel = new this.actorManager.masterModels.ListenerModel();
                 Logger.log(item,'Actor_Listener_Add');

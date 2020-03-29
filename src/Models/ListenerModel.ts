@@ -27,7 +27,6 @@ export class ListenerModelClass extends NohmModel<ListenerProperties> {
         processor: {
             type: 'string',
             index: true,
-            unique: true,
             validations: ['notEmpty'],
         }
     };

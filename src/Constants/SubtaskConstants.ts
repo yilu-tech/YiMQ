@@ -3,7 +3,8 @@ export enum SubtaskType{
     EC = 'EC',
     TCC = 'TCC',
     XA = "XA",
-    BCST = "BCST"
+    BCST = "BCST",
+    LSTR = "LSTR"
 }
 
 
