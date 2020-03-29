@@ -3,13 +3,15 @@ import { NohmModel, TTypedDefinitions } from "nohm";
 import { SubtaskType, SubtaskStatus } from "../Constants/SubtaskConstants";
 
 interface SubtaskProperties {
-    message_id: Number;
+    parent_id: Number;
     job_id: Number;
     type:SubtaskType;
     status: SubtaskStatus;
     data: any;
+    consumer_id:number;
     processor:string;
     topic:string;
+    context:string;
     prepareResult:string;
     updated_at: number;
     created_at: number;
@@ -20,7 +22,7 @@ export class SubtaskModelClass extends NohmModel<SubtaskProperties> {
     public static modelName = 'subtask';
     // public static idGenerator = 'increment';
     protected static definitions: TTypedDefinitions<SubtaskProperties> = {
-        message_id: {
+        parent_id: {
             type: 'integer',
             index:true,
             validations: ['notEmpty']
@@ -43,6 +45,10 @@ export class SubtaskModelClass extends NohmModel<SubtaskProperties> {
         data: {
             type: 'json',
         },
+        consumer_id:{
+            type:'integer',
+            index:true
+        },
         processor: {
             type: 'string',
             index: true,
@@ -52,6 +58,9 @@ export class SubtaskModelClass extends NohmModel<SubtaskProperties> {
             index: true,
         },
         prepareResult: {
+            type: 'json',
+        },
+        context: {
             type: 'json',
         },
         updated_at: {

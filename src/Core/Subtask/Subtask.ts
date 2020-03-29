@@ -9,6 +9,7 @@ import * as bull from 'bull';
 import { BusinessException } from "../../Exceptions/BusinessException";
 import { TransactionMessage } from "../Messages/TransactionMessage";
 import { MessageStatus } from "../../Constants/MessageConstants";
+import { TransactionSubtaskJob } from "../Job/TransactionSubtaskJob";
 export abstract class Subtask{
     id:Number;
     job_id:number;
@@ -18,9 +19,10 @@ export abstract class Subtask{
     created_at:Number;
     updated_at:Number;
     processor:string;
-    message_id:string;
+    parent_id:string;
 
     consumer:Actor;
+    consumer_id:number;
     consumerprocessorName:string;
 
 
@@ -30,7 +32,6 @@ export abstract class Subtask{
     constructor(message:TransactionMessage,subtaskModel){
         this.model = subtaskModel;
         this.message = message;
-
         this.id = subtaskModel.id;
         this.job_id = subtaskModel.property('job_id');
         this.type = subtaskModel.property('type');
@@ -38,18 +39,11 @@ export abstract class Subtask{
         this.data = subtaskModel.property('data');
         this.created_at = subtaskModel.property('created_at');
         this.updated_at = subtaskModel.property('updated_at');
-        this.processor = subtaskModel.property('processor');
-        this.message_id = subtaskModel.property('message_id');
+        this.parent_id = subtaskModel.property('parent_id');
 
-        //TODO 是否要单独抽一个基类
-        if(this.processor){
-            let [consumerName,consumerprocessorName] =this.processor.split('@');
-            this.consumer = this.message.producer.actorManager.get(consumerName);
-            if(!this.consumer){
-                throw new BusinessException(`Consumer <${consumerName}> not exists.`)
-            }
-            this.consumerprocessorName = consumerprocessorName;
-        }
+        this.consumer_id = subtaskModel.property('consumer_id');
+        this.processor = subtaskModel.property('processor');
+        this.consumer = this.message.producer.actorManager.getById(this.consumer_id)
 
 
     }
@@ -57,8 +51,16 @@ export abstract class Subtask{
     abstract async prepare();
 
 
+    public async restore(){
+        if(this.job_id > -1){
+            let jobContext = await this.consumer.coordinator.getJob(this.job_id);
+            this.job = new TransactionSubtaskJob(this,jobContext);
+        }
+    }
+
+
  
-    async setStatusAddJobFor(status:SubtaskStatus){
+    async setStatusAddJobFor(status:SubtaskStatus.DOING|SubtaskStatus.CANCELLING){
         this.status = status;
         let jobOptions:bull.JobOptions = {
             jobId: await this.message.producer.actorManager.getJobGlobalId()
@@ -78,6 +80,11 @@ export abstract class Subtask{
     setStatus(status:SubtaskStatus){
         this.status = status;
         this.model.property('status',this.status);
+        return this;
+    }
+    setProperty(name,value){
+        this[name] = value;
+        this.model.property(name,value);
         return this;
     }
     public getDbHash(){

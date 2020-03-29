@@ -114,10 +114,36 @@ export class TransactionMessage extends Message{
         this.job = new TransactionMessageJob(this,jobContext);
         this.subtasks = await this.getAllSubtasks();
     }
+
+    public async getAllSubtasks():Promise<Array<Subtask>>{
+        let subtaskIds = await this.model.getAll(SubtaskModelClass.modelName)
+        let subtaskModels = await this.producer.subtaskModel.loadMany(subtaskIds)
+        let subtasks:Array<Subtask> = [];
+        for(var i in subtaskModels){
+            let subtaskModel = subtaskModels[i];
+            let subtask:Subtask = this.producer.subtaskManager.factory(this,subtaskModel);
+            await subtask.restore()
+            subtasks.push(subtask);
+        }
+        return subtasks;
+    }
+
     async addSubtask(type,body){
         if(this.status != MessageStatus.PENDING){
             throw new BusinessException(`The status of this message is ${this.status} instead of ${MessageStatus.PENDING}`);
         }
+        body.subtask_id = await this.producer.actorManager.getSubtaskGlobalId();
+        
+        if(type == SubtaskType.BCST){
+            body.consumer_id = this.producer.id
+            body.processor = null; 
+        }else{
+            let {consumer,consumerProcessorName} = this.producer.subtaskManager.getConsumerAndProcessor(body.processor);
+            body.consumer_id = consumer.id;
+            body.processor = consumerProcessorName;
+        }
+        
+
         let subtask = await this.producer.subtaskManager.addSubtask(this,type,body);
         this.model.link(subtask.model);
         await this.model.save()
@@ -131,17 +157,6 @@ export class TransactionMessage extends Message{
     }
     public getMessageHash(){
         return `${this.model['nohmClass'].prefix.hash}${this.model.modelName}:${this.id}`;
-    }
-    public async getAllSubtasks():Promise<Array<Subtask>>{
-        let subtaskIds = await this.model.getAll(SubtaskModelClass.modelName)
-        let subtaskModels = await this.producer.subtaskModel.loadMany(subtaskIds)
-        let subtasks:Array<Subtask> = [];
-        for(var i in subtaskModels){
-            let subtaskModel = subtaskModels[i];
-            let subtask = this.producer.subtaskManager.factory(this,subtaskModel);
-            subtasks.push(subtask);
-        }
-        return subtasks;
     }
 
     private subtasksToJson(){

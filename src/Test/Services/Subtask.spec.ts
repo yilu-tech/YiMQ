@@ -96,7 +96,6 @@ describe('Subtask', () => {
      
             let savedSubtask = updatedMessage.subtasks[0];
             expect(savedSubtask.id).toBe(ecSubtask.id);
-            expect(savedSubtask.processor).toBe(processorName);
             expect(savedSubtask.status).toBe(SubtaskStatus.PREPARED);
         });
 
@@ -222,7 +221,6 @@ describe('Subtask', () => {
                 }
             });
             expect(message.status).toBe(MessageStatus.PENDING)
-            let processorName = 'content@post.create';
             let producer = actorManager.get(producerName); 
             let body = {
                 prepare_subtasks:[
