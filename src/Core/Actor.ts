@@ -22,6 +22,7 @@ export class Actor{
     public name:string;
     public key:string;
     public api:string;
+    public headers:object;
     public redis:string;
     public protocol:string;
     public status:ActorStatus

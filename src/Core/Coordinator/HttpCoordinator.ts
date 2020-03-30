@@ -48,22 +48,26 @@ export class HttpCoordinator extends Coordinator{
     };
 
     public async callActor(producer:Actor,action:CoordinatorCallActorAction,context={}) {
-        try {
-            let config = {
-                headers:{
-                    'content-type':'application/json'
-                }
+        let config = {
+            headers:{
+                'content-type':'application/json',
+                ...this.actor.headers
             }
-            let body = {
-                action: action,
-                context: context
-            };
-            Logger.debug(body,'CallActor_BEFORE')
+        }
+        let body = {
+            action: action,
+            api: this.actor.api,
+            request_config: config,
+            context: context
+        };
+
+        try {
             let result = (await axios.post(this.actor.api,body,config)).data;
-            body['result'] = result;
-            Logger.debug(body,'CallActor_AFTER')
+            body['response'] = result;
+            Logger.debug(body,'CallActor')
             return result;            
         } catch (error) {
+            Logger.debug(body,'CallActor_Error')
             throw new HttpCoordinatorRequestException(this,action,context,error);
         }
     }

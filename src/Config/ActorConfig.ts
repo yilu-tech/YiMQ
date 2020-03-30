@@ -5,6 +5,7 @@ export interface ActorConfig{
     name:string;
     key:string;
     api:string;
+    headers:object;
     redis:string;
     topic:Array<string>;
     consumeTopics:Map<string,ConsumeTopic>

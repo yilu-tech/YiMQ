@@ -20,7 +20,7 @@ export class ActorManager{
      * @param config 
      * @param redisManager 
      */
-    constructor(private actorService:ActorService,private config:Config,private redisManager:RedisManager,public masterModels:MasterModels){
+    constructor(private actorService:ActorService,public config:Config,private redisManager:RedisManager,public masterModels:MasterModels){
 
     }
 
