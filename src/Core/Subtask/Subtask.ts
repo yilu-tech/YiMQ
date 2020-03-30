@@ -66,8 +66,9 @@ export abstract class Subtask{
             jobId: await this.message.producer.actorManager.getJobGlobalId()
         }
         await this.setJobId(jobOptions.jobId).save();//先保存job_id占位
+        await this.setStatus(status).save();//先添加job有可能会导致job开始执行，subtask的状态还未修改，导致出错
         this.job = await this.consumer.jobManager.add(this,JobType.TRANSACTION_SUBTASK,jobOptions)
-        await this.setStatus(status).save();
+
     }
     
     abstract async toDo();
