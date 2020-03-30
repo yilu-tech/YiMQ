@@ -58,9 +58,10 @@ export class HttpCoordinator extends Coordinator{
                 action: action,
                 context: context
             };
+            Logger.debug(body,'CallActor_BEFORE')
             let result = (await axios.post(this.actor.api,body,config)).data;
             body['result'] = result;
-            Logger.debug(body,'CallActor')
+            Logger.debug(body,'CallActor_AFTER')
             return result;            
         } catch (error) {
             throw new HttpCoordinatorRequestException(this,action,context,error);

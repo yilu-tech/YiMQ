@@ -13,8 +13,15 @@ export class TccSubtask extends Subtask{
     }
     
     async prepare() {
+        let callContext = {
+            id: this.id,
+            type: this.type,
+            message_id: this.message.id,
+            processor: this.processor,
+            data: this.data,
+        }
 
-        let prepareResult = (await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.TRY,this.toJson())); 
+        let prepareResult = (await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.TRY,callContext)); 
         await this.setPrepareResult(prepareResult)
         .setStatus(SubtaskStatus.PREPARED)
         .save()

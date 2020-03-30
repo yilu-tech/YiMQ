@@ -26,12 +26,19 @@ export class TransactionSubtaskJob extends Job{
                 break;
             case SubtaskStatus.PREPARING:
                 throw new SystemException('SubtaskStatus is PENDING');
+            case SubtaskStatus.PREPARED:
+                throw new SystemException('SubtaskStatus is PREPARED');
             case SubtaskStatus.DONE:
                 throw new SystemException('SubtaskStatus is DONE');
-                break;
             default:
-                throw new SystemException('SubtaskStatus is not exists.');
+                throw new SystemException(`SubtaskStatus <${this.subtask.status}> is not exists.`);
         }
         return result;
+    }
+
+    public toJson(full=false){
+        let json = super.toJson(full);
+        delete json['subtask'];
+        return json;
     }
 }
