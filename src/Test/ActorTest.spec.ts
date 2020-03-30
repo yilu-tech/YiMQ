@@ -1,14 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Config } from '../Config';
-import { MasterNohm } from '../Bootstrap/MasterNohm';
 import { ActorService } from '../Services/ActorService';
 import { RedisManager } from '../Handlers/redis/RedisManager';
 import { join } from 'path';
-import { modelsInjects} from '../app.module';
 import { ActorManager } from '../Core/ActorManager';
-import { services } from '../Services';
+
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
+import { MasterModels } from '../Models/MasterModels';
+import { MasterNohm } from '../Bootstrap';
+import { services } from '../app.module';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('Subtask', () => {
@@ -27,7 +28,7 @@ describe('Subtask', () => {
             Config,
             RedisManager,
             MasterNohm,
-            ...modelsInjects,
+            MasterModels,
             ActorManager,
             ...services,
         ],

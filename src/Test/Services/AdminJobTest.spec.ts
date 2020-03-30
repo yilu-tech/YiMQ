@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Config } from '../../Config';
-import { MasterNohm } from '../../Bootstrap/MasterNohm';
+import { MasterNohm } from '../../Bootstrap';
 import { ActorService } from '../../Services/ActorService';
 import { RedisManager } from '../../Handlers/redis/RedisManager';
 import { join } from 'path';
-import { modelsInjects} from '../../app.module';
+
 import { ActorManager } from '../../Core/ActorManager';
-import { services } from '../../Services';
+import { services } from '../../app.module';
 import { MessageService } from '../../Services/MessageService';
 import { MessageType, MessageStatus } from '../../Constants/MessageConstants';
 import axios from 'axios';
@@ -16,6 +16,7 @@ import { SubtaskType, SubtaskStatus } from '../../Constants/SubtaskConstants';
 import { EcSubtask } from '../../Core/Subtask/EcSubtask';
 import { TccSubtask } from '../../Core/Subtask/TccSubtask';
 import { JobService } from '../../Services/JobService';
+import { MasterModels } from '../../Models/MasterModels';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('Subtask', () => {
@@ -36,7 +37,7 @@ describe('Subtask', () => {
             Config,
             RedisManager,
             MasterNohm,
-            ...modelsInjects,
+            MasterModels,
             ActorManager,
             ...services,
         ],

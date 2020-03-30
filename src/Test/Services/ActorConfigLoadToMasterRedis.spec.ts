@@ -1,11 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Config } from '../../Config';
-import { MasterNohm } from '../../Bootstrap/MasterNohm';
+
 import { ActorService } from '../../Services/ActorService';
 import { RedisManager } from '../../Handlers/redis/RedisManager';
 import { MasterModels } from '../../Models/MasterModels';
 import { join } from 'path';
 import { RedisClient } from '../../Handlers/redis/RedisClient';
+import { MasterNohm } from '../../Bootstrap';
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('ActorConfigLoadToMasterRedis.spec', () => {
     let actorService:ActorService;

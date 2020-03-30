@@ -23,7 +23,7 @@ export class JobManager{
         let jobContext;
         let data;
         let defaultOptions:bull.JobOptions = {
-            attempts:2,
+            attempts:3,
             backoff:{
                 type:'exponential',
                 delay: 5000  // delay*1  delay*3 delay*7 delay*15     delay*(times*2+1) times开始于0

@@ -1,12 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Config } from '../../Config';
-import { MasterNohm } from '../../Bootstrap/MasterNohm';
+
 import { ActorService } from '../../Services/ActorService';
 import { RedisManager } from '../../Handlers/redis/RedisManager';
 import { join } from 'path';
-import { modelsInjects} from '../../app.module';
+
 import { ActorManager } from '../../Core/ActorManager';
-import { services } from '../../Services';
 import { MessageService } from '../../Services/MessageService';
 import { MessageType, MessageStatus } from '../../Constants/MessageConstants';
 import axios from 'axios';
@@ -15,6 +14,9 @@ import { TransactionMessage } from '../../Core/Messages/TransactionMessage';
 import { SubtaskType, SubtaskStatus } from '../../Constants/SubtaskConstants';
 import { EcSubtask } from '../../Core/Subtask/EcSubtask';
 import { TccSubtask } from '../../Core/Subtask/TccSubtask';
+import { MasterModels } from '../../Models/MasterModels';
+import { services } from '../../app.module';
+import { MasterNohm } from '../../Bootstrap';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('Subtask', () => {
@@ -33,8 +35,8 @@ describe('Subtask', () => {
         providers: [
             Config,
             RedisManager,
+            MasterModels,
             MasterNohm,
-            ...modelsInjects,
             ActorManager,
             ...services,
         ],
@@ -603,7 +605,7 @@ describe('Subtask', () => {
             
             //任务执行完毕
             producer.coordinator.getQueue().on('completed',async (job)=>{
-                // console.debug('Job completed',job.id)
+                console.debug('Job completed',job.id)
 
 
                 if(message.job.id == job.id){

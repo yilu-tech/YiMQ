@@ -1,43 +1,26 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { Config } from './Config';
 import { RedisManager } from './Handlers/redis/RedisManager';
-import { services } from './Services';
 
 import { MasterModels } from './Models/MasterModels';
-import { MasterNohm } from './Bootstrap/MasterNohm';
-import { ConfigToMasterRedis } from './Bootstrap/ConfigToMasterRedis';
+import { MasterNohm, ActorManagerBootstrap } from './Bootstrap';
+import { ConfigToMasterRedis } from './Bootstrap';
 import { ActorManager } from './Core/ActorManager';
 import { MessagesController } from './Controllers/MessageController';
 import { IndexController } from './Controllers/IndexController';
 import { AdminController } from './Controllers/AdminController';
+import { SwitchMiddleware } from './Middlewares/SwitchMiddleware';
+import { Application } from './Application';
+import { ActorService } from './Services/ActorService';
+import { MessageService } from './Services/MessageService';
+import { JobService } from './Services/JobService';
 
-const { setQueues } = require('bull-board')
 
-
-
-
-
-
-export const modelsInjects=[
-  MasterModels
-]
-
-export const ActorManagerBootstrap = {
-  provide: 'ActorManagerBootstrap',
-  useFactory: async(actorManager:ActorManager)=>{
-    await actorManager.initActors();
-    await actorManager.loadActorsRemoteConfig();
-    await actorManager.bootstrapActorsCoordinatorprocessor();
-
-    //TODO 自己开发ui后移除
-    let queues = [];
-    actorManager.actors.forEach((actor)=>{
-        queues.push(actor.coordinator.getQueue());
-    })
-    setQueues(queues);
-  },
-  inject:[ActorManager]
-}
+export const services = [
+  ActorService,
+  MessageService,
+  JobService
+] 
 
 
 
@@ -47,22 +30,24 @@ export const ActorManagerBootstrap = {
     MessagesController,
     IndexController,
     AdminController
-    // AppController,
-    // TransactionController,
-    // JobController,
-    // CoordinatorController,
-    // ...adminControllers
   ],
   providers: [
-    // AppService,
+    Application,
     Config,
     RedisManager,
     MasterNohm,
     ConfigToMasterRedis,
-    ...modelsInjects,
+    MasterModels,
     ActorManager,
     ActorManagerBootstrap,
-    ...services,
+    ...services
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer){
+    consumer
+    .apply(SwitchMiddleware)
+    .forRoutes('*')
+  
+  }
+}
