@@ -23,7 +23,7 @@ export class TransactionMessage extends Message{
 
 
     async toDoing():Promise<Message>{
-        
+        //没有子任务直接完成message
         if(this.pending_subtask_total == 0){
             await this.setStatus(MessageStatus.DONE).save();
             return this;
@@ -31,7 +31,7 @@ export class TransactionMessage extends Message{
         //并行执行
         //TODO 增加防重复执行，导致重复给subtask添加任务,其中一个创建失败，再次尝试的时候，要避免已经成功的重复创建
         await Promise.all(this.subtasks.map((subtask)=>{
-            return subtask.setStatusAddJobFor(SubtaskStatus.DOING)
+            return subtask.confirm()
         }))
 
         await this.setStatus(MessageStatus.DOING).save();
@@ -47,7 +47,7 @@ export class TransactionMessage extends Message{
         }
 
         await Promise.all(this.subtasks.map((subtask)=>{
-            return subtask.setStatusAddJobFor(SubtaskStatus.CANCELLING)
+            return subtask.cancel()
         }))
         await this.setStatus(MessageStatus.CANCELLING).save();
         return this;

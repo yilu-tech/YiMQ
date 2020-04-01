@@ -57,8 +57,8 @@ export abstract class Message{
     }
 
     setStatus(status:MessageStatus){
+        this.model.property('status',status);
         this.status = status;
-        this.model.property('status',this.status);
         return this;
     }
     async save(){

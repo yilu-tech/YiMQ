@@ -544,6 +544,15 @@ describe('Subtask', () => {
 
                 if(updatedMessage.pending_subtask_total == 0){
                     expect(updatedMessage.status).toBe(MessageStatus.DONE)
+                    let messageIds = await producer.messageModel.find({
+                        status: MessageStatus.DONE
+                    })
+                    expect(messageIds.length).toBe(1);
+                    let subtaskIds = await producer.subtaskModel.find({
+                        status: SubtaskStatus.DONE
+                    })
+                    expect(subtaskIds.length).toBe(2);
+                    console.log('--->',messageIds,subtaskIds)
                     done()
                 }
             })
@@ -682,7 +691,11 @@ describe('Subtask', () => {
                 console.log(err)
             })
             
-            mock.onPost(producer.api).reply(200,{message:'subtask process succeed'})
+            let doneCont = 0;
+            mock.onPost(producer.api).reply(async()=>{
+                await timeout(10);//延迟tcc事务的cancel,否则由于处理太快单元测试会done两次
+                return [200,{message:'subtask process succeed'}];
+            })
             //任务开始执行
             producer.coordinator.getQueue().on('active',async (job)=>{
                 // console.debug('Job active',job.id)
@@ -724,6 +737,16 @@ describe('Subtask', () => {
                 if(updatedMessage.pending_subtask_total == 0){
 
                     expect(updatedMessage.status).toBe(MessageStatus.CANCELED)
+
+                    let messageIds = await producer.messageModel.find({
+                        status: MessageStatus.CANCELED
+                    })
+                    expect(messageIds.length).toBe(1);
+                    let subtaskIds = await producer.subtaskModel.find({
+                        status: SubtaskStatus.CANCELED
+                    })
+                    expect(subtaskIds.length).toBe(2);
+                    expect(++doneCont).toBe(1);
                     done()
                 }
             })

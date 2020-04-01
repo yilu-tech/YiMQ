@@ -58,9 +58,14 @@ export abstract class Subtask{
         }
     }
 
-
+    public async confirm(){
+        await this.setStatusAddJobFor(SubtaskStatus.DOING);
+    }
+    public async cancel(){
+        await this.setStatusAddJobFor(SubtaskStatus.CANCELLING)
+    }
  
-    async setStatusAddJobFor(status:SubtaskStatus.DOING|SubtaskStatus.CANCELLING){
+    private async setStatusAddJobFor(status:SubtaskStatus.DOING|SubtaskStatus.CANCELLING){
         this.status = status;
         let jobOptions:bull.JobOptions = {
             jobId: await this.message.producer.actorManager.getJobGlobalId()
@@ -89,29 +94,27 @@ export abstract class Subtask{
         return this;
     }
     public getDbHash(){
+        console.log(this.model['nohmClass'].prefix)
         return `${this.model['nohmClass'].prefix.hash}${this.model.modelName}:${this.id}`;
     }
     public async completeAndSetMeesageStatusByScript(status,messageStatus:MessageStatus){
         try {
-            return await this.message.producer.redisClient['subtaskCompleteAndSetMessageStatus'](this.getDbHash(),this.message.getMessageHash(),status,messageStatus);    
+            return await this.message.producer.redisClient['subtaskCompleteAndSetMessageStatus'](this.id,this.message.id,status,messageStatus);    
         } catch (error) {
             console.error(error)
             throw error;
         }   
     }
     public async completeAndSetMeesageStatus(status,messageStatus){
-        let [subtaskStatus,
-            currentMessageStatus,
+        let [subtaskUpdatedStatus,
+            messageCurrentStatus,
             pendingSubtaskTotal,
-            updatedMessageStatus
+            messageUpdatedStatus
         ] = await this.completeAndSetMeesageStatusByScript(status,messageStatus);
-        /**
-         * 这里先通过script修改了数据库，保证一致性，然后又用norm操作一次，更新索引
-         */
-        await this.setStatus(status).save()
-        if(pendingSubtaskTotal == 0){
-            await this.message.setStatus(messageStatus);
-        }
+        
+        //修改instance中的值,但是不save,防止其他地方用到
+        this.setStatus(subtaskUpdatedStatus); 
+        this.message.setStatus(messageUpdatedStatus);
         return pendingSubtaskTotal;
     }
     async save(){
