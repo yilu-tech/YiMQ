@@ -20,25 +20,50 @@ export abstract class Subtask{
     message:TransactionMessage;
     model:SubtaskModelClass
     job:Job;
-    constructor(message:TransactionMessage,subtaskModel){
-        this.model = subtaskModel;
+    constructor(message:TransactionMessage){
+        
         this.message = message;
+    }
+    protected async initProperties(subtaskModel){
+        this.model = subtaskModel;
         this.id = subtaskModel.id;
         this.job_id = subtaskModel.property('job_id');
-        this.type = subtaskModel.property('type');
+        // this.type = subtaskModel.property('type');
         this.status = subtaskModel.property('status');
         this.data = subtaskModel.property('data');
         this.created_at = subtaskModel.property('created_at');
         this.updated_at = subtaskModel.property('updated_at');
         this.parent_id = subtaskModel.property('parent_id');
-
-
-
     }
-    abstract async restore();
+    public async createSubtaskModel(body){
+        let now = new Date().getTime();
+        
+        let subtaskModel = new this.message.producer.subtaskModel();
+        subtaskModel.id = body.subtask_id; 
+
+        subtaskModel.property('parent_id',this.message.id);//rename parent_id
+
+        subtaskModel.property('type',this.type);
+        subtaskModel.property('status',SubtaskStatus.PREPARING);
+        subtaskModel.property('data',body.data);
+        subtaskModel.property('created_at',now);
+        subtaskModel.property('updated_at',now);
+        return subtaskModel;
+    }
+
+    public async create(body){
+        let subtaskModel  = await this.createSubtaskModel(body);
+        await subtaskModel.save() 
+        await this.initProperties(subtaskModel)
+    }
+    async restore(subtaskModel){
+        await this.initProperties(subtaskModel);
+    };
     abstract async prepare();
     abstract async confirm();
     abstract async cancel();
+    abstract async toDo();
+    abstract async toCancel();
 
     setJobId(jobId){
         this.job_id = jobId;

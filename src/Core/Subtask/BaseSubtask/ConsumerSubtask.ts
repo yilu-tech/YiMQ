@@ -11,14 +11,27 @@ export abstract class ConsumerSubtask extends Subtask{
     consumer_id:number;
     consumerprocessorName:string;
 
-    constructor(message:TransactionMessage,subtaskModel){
-        super(message,subtaskModel);
+    constructor(message:TransactionMessage){
+        super(message);
+    }
+
+    public async createSubtaskModel(body){
+        let subtaskModel = await super.createSubtaskModel(body);
+        subtaskModel.property('consumer_id',body.consumer_id);
+        subtaskModel.property('processor',body.processor);
+        return subtaskModel;
+    }
+
+    async initProperties(subtaskModel){     
+        await super.initProperties(subtaskModel);
         this.consumer_id = subtaskModel.property('consumer_id');
         this.processor = subtaskModel.property('processor');
         this.consumer = this.message.producer.actorManager.getById(this.consumer_id)
+       
     }
 
-    public async restore(){
+    public async restore(subtaskModel){
+        await super.restore(subtaskModel);
         if(this.job_id > -1){
             let jobContext = await this.consumer.coordinator.getJob(this.job_id);
             this.job = new TransactionSubtaskJob(this,jobContext);

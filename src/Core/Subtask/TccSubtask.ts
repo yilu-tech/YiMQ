@@ -1,13 +1,18 @@
 
 import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
-import { SubtaskStatus } from '../../Constants/SubtaskConstants';
+import { SubtaskStatus, SubtaskType } from '../../Constants/SubtaskConstants';
 import { TransactionMessage } from '../Messages/TransactionMessage';
 import { MessageStatus } from '../../Constants/MessageConstants';
 import { ConsumerSubtask } from './BaseSubtask/ConsumerSubtask';
 export class TccSubtask extends ConsumerSubtask{
+    public type:SubtaskType = SubtaskType.TCC;
     public prepareResult;
-    constructor(message:TransactionMessage,subtaskModel){
-        super(message,subtaskModel);
+    constructor(message:TransactionMessage){
+        super(message);
+    }
+
+    async initProperties(subtaskModel){
+        await super.initProperties(subtaskModel);
         this.prepareResult = subtaskModel.property('prepareResult');
     }
     

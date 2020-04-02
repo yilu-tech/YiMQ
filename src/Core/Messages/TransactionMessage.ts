@@ -119,8 +119,8 @@ export class TransactionMessage extends Message{
         let subtasks:Array<Subtask> = [];
         for(var i in subtaskModels){
             let subtaskModel = subtaskModels[i];
-            let subtask:Subtask = this.producer.subtaskManager.factory(this,subtaskModel);
-            await subtask.restore()
+            let subtask:Subtask = this.producer.subtaskManager.factory(this,subtaskModel.property('type'));//TODO use sutaskmanager methdo
+            await subtask.restore(subtaskModel)
             subtasks.push(subtask);
         }
         return subtasks;

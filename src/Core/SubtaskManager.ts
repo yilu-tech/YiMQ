@@ -8,6 +8,7 @@ import { BcstSubtask } from "./Subtask/BcstSubtask";
 import { LstrSubtask } from "./Subtask/LstrSubtask";
 import { BusinessException } from "../Exceptions/BusinessException";
 import { Subtask } from "./Subtask/BaseSubtask/Subtask";
+import { ConsumerSubtask } from "./Subtask/BaseSubtask/ConsumerSubtask";
 export class SubtaskManager{
     constructor(private actor:Actor){
 
@@ -15,24 +16,9 @@ export class SubtaskManager{
 
     async addSubtask(from:any,type,body):Promise<Subtask>{
 
-        let now = new Date().getTime();
-
-        let subtaskModel = new this.actor.subtaskModel();
-        subtaskModel.id = body.subtask_id; 
-
-        subtaskModel.property('parent_id',from.id);//rename parent_id
-
-        subtaskModel.property('type',type);
-        subtaskModel.property('status',SubtaskStatus.PREPARING);
-        subtaskModel.property('data',body.data);
-        subtaskModel.property('created_at',now);
-        subtaskModel.property('updated_at',now);
-        subtaskModel.property('consumer_id',body.consumer_id);
-        subtaskModel.property('processor',body.processor);
-    
-        await subtaskModel.save() 
-
-        return this.factory(from,subtaskModel);
+        let subtask =  this.factory(from,type);
+        await subtask.create(body);
+        return subtask;
     }
 
     async get(subtask_id):Promise<any>{
@@ -45,37 +31,37 @@ export class SubtaskManager{
             from = await this.actor.messageManager.get(subtaskModel.property('parent_id'));
         }
         
-        let subtask:Subtask =  this.factory(from,subtaskModel);
-        await subtask.restore();
+        let subtask:Subtask =  this.factory(from,subtaskModel.property('type'));
+        await subtask.restore(subtaskModel);
         return subtask;
 
     }
     async getByFrom(from,subtask_id){
         let subtaskModel = await this.actor.subtaskModel.load(subtask_id);
-        let subtask:Subtask =  this.factory(from,subtaskModel);
-        await subtask.restore();
+        let subtask:Subtask =  this.factory(from,subtaskModel.property('type'));
+        await subtask.restore(subtaskModel);
         return subtask;
 
     }
 
 
-    factory(from,subtaskModel){
+    factory(from,type){
         let subtask:any;
-        switch (subtaskModel.property('type')) {
+        switch (type) {
             case SubtaskType.EC:
-                subtask = new EcSubtask(from,subtaskModel);
+                subtask = new EcSubtask(from);
                 break;
             case SubtaskType.TCC:
-                subtask = new TccSubtask(from,subtaskModel);
+                subtask = new TccSubtask(from);
                 break;
             case SubtaskType.XA:
-                subtask = new XaSubtask(from,subtaskModel);
+                subtask = new XaSubtask(from);
                 break;
             case SubtaskType.BCST:
-                subtask = new BcstSubtask(from,subtaskModel);
+                subtask = new BcstSubtask(from);
                 break;
             case SubtaskType.LSTR:
-                subtask = new LstrSubtask(from,subtaskModel);
+                subtask = new LstrSubtask(from);
                 break;
         
             default:
