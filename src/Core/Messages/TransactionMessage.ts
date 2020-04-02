@@ -1,5 +1,5 @@
 import { Message ,MessageControlResult} from "./Message";
-import { MessageStatus } from "../../Constants/MessageConstants";
+import { MessageStatus,MessageType } from "../../Constants/MessageConstants";
 import { SubtaskType } from "../../Constants/SubtaskConstants";
 import { Subtask } from "../Subtask/BaseSubtask/Subtask";
 import { Actor } from "../Actor";
@@ -10,17 +10,16 @@ import { XaSubtask } from "../Subtask/XaSubtask";
 import {JobStatus} from "../../Constants/JobConstants"
 import { BcstSubtask } from "../Subtask/BcstSubtask";
 export class TransactionMessage extends Message{
-    public subtasks:Array<Subtask> = [];  //事物的子项目
-    public pending_subtask_total:number;
+    type = MessageType.TRANSACTION;
 
-    constructor(producer:Actor,messageModel){
-        super(producer,messageModel);
-        this.pending_subtask_total = messageModel.property('pending_subtask_total');
+
+    async createMessageModel(topic:string){
+        let messageModel = await super.createMessageModel(topic);
+        messageModel.property('status',MessageStatus.PENDING);
+        return messageModel;
     }
 
-
-
-    async toDoing():Promise<Message>{
+    async toDoing():Promise<any>{
         //没有子任务直接完成message
         if(this.pending_subtask_total == 0){
             await this.setStatus(MessageStatus.DONE).save();
@@ -107,7 +106,8 @@ export class TransactionMessage extends Message{
     /**
      * 用于MessageManager get的时候重建信息
      */
-    async restore(){
+    async restore(messageModel){
+        await super.restore(messageModel);
         let jobContext = await this.producer.coordinator.getJob(this.job_id);
         this.job = new TransactionMessageJob(this,jobContext);
         this.subtasks = await this.getAllSubtasks();
@@ -141,7 +141,7 @@ export class TransactionMessage extends Message{
             body.processor = consumerProcessorName;
         }
         
-
+        
         let subtask = await this.producer.subtaskManager.addSubtask(this,type,body);
         this.model.link(subtask.model);
         await this.model.save()

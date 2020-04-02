@@ -17,6 +17,7 @@ import { TccSubtask } from '../../Core/Subtask/TccSubtask';
 import { MasterModels } from '../../Models/MasterModels';
 import { services } from '../../app.module';
 import { MasterNohm } from '../../Bootstrap';
+import { BcstSubtask } from '../../Core/Subtask/BcstSubtask';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('Subtask', () => {
@@ -630,18 +631,29 @@ describe('Subtask', () => {
             let prepareResult = await messageService.prepare(producerName,message.id,body);
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
             expect(updatedMessage.subtasks['0'].data).toMatchObject(body.prepare_subtasks[0].data);
-
+            
               //任务执行完毕
               producer.coordinator.getQueue().on('completed',async (job)=>{
-                console.debug('Job completed',job.id)
+                console.debug('------->Job completed',job.id)
+                updatedMessage = await producer.messageManager.get(message.id);
+
+                let bcstSubtask:BcstSubtask = <BcstSubtask>updatedMessage.subtasks[0];
+                await bcstSubtask.loadBroadcastMessage();
 
 
                 if(message.job.id == job.id){
-                    await timeout(2000)
-                    updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
+                    expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DOING);
+                    
+                }
+
+                if(bcstSubtask.broadcastMessage.job_id == job.id){
+                    expect(bcstSubtask.broadcastMessage.status).toBe(MessageStatus.DOING)
                     done()   
                 }
+                
+
+
             })
             await actorManager.bootstrapActorsCoordinatorprocessor();
              //把message确认

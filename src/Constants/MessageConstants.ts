@@ -1,6 +1,7 @@
 
 export enum MessageType{
     GENERAL = 'GENERAL',
+    BROADCAST = 'BROADCAST',
     TRANSACTION = 'TRANSACTION'
 }
 

@@ -6,6 +6,7 @@ import { Job } from "../Job/Job";
 import { JobType } from "../../Constants/JobConstants";
 import { MessageModelClass } from "../../Models/Message";
 import * as bull from 'bull';
+import { Subtask } from "../Subtask/BaseSubtask/Subtask";
 
 export abstract class Message{
     id:string;
@@ -20,8 +21,44 @@ export abstract class Message{
     public job:Job;
     public model:MessageModelClass
 
-    constructor(producer:Actor,messageModel){
+    public subtasks:Array<Subtask> = [];  //事物的子项目
+    public pending_subtask_total:number;
 
+    constructor(producer:Actor){
+
+        this.producer = producer;
+    }
+
+    async createMessageModel(topic:string){
+        let messageModel = new this.producer.messageModel();
+        
+        messageModel.id = String(await this.producer.actorManager.getMessageGlobalId());
+        messageModel.property('id',messageModel.id);
+        messageModel.property('actor_id',this.producer.id);
+        messageModel.property('topic',topic);
+        messageModel.property('type',this.type);
+        messageModel.property('status',MessageStatus.PENDING);
+        messageModel.property('created_at',new Date().getTime());
+        return messageModel;
+    }
+
+
+    /**
+     * 创建message对应的job
+     * @param options 
+     */
+    async create(topic:string, jobOptions:bull.JobOptions):Promise<any>{
+        let messageModel = await this.createMessageModel(topic);
+
+        jobOptions.jobId = await this.producer.actorManager.getJobGlobalId();
+        messageModel.property('job_id',jobOptions.jobId);//先保存job_id，如果先创建job再保存id可能产生，message未记录job_id的情况
+        await messageModel.save();
+        await this.initProperties(messageModel);
+        this.job = await this.producer.jobManager.add(this,JobType.TRANSACTION,jobOptions);//TODO JobType.TRANSACTION -> JobType.MESSAGE
+        return this;
+    };
+
+    async initProperties(messageModel){
         this.id = messageModel.id;
         this.actor_id = messageModel.property('actor_id');
         this.type = messageModel.property('type');
@@ -30,31 +67,18 @@ export abstract class Message{
         this.job_id = messageModel.property('job_id')
         this.updated_at = messageModel.property('updated_at');
         this.created_at = messageModel.property('created_at');
+        this.pending_subtask_total = messageModel.property('pending_subtask_total');
 
         this.model = messageModel;
-        this.producer = producer;
     }
-
-
-    /**
-     * 创建message对应的job
-     * @param options 
-     */
-    async create(jobOptions:bull.JobOptions):Promise<any>{
-        jobOptions.jobId = await this.producer.actorManager.getJobGlobalId();
-        await this.setJobId(jobOptions.jobId).save();//先保存job_id，如果先创建job再保存id可能产生，message未记录job_id的情况
-        this.job = await this.producer.jobManager.add(this,JobType.TRANSACTION,jobOptions);
-    };
 
  
 
-    async abstract restore();
+    async restore(messageModel){
+        await this.initProperties(messageModel);
+    };
 
-    private setJobId(jobId){
-        this.job_id = jobId;
-        this.model.property('job_id',this.job_id);
-        return this;
-    }
+    abstract async toDoing():Promise<Message>;
 
     setStatus(status:MessageStatus){
         this.model.property('status',status);

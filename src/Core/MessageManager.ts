@@ -6,25 +6,17 @@ import { BusinessException } from '../Exceptions/BusinessException';
 import { Actor } from './Actor';
 import * as bull from 'bull';
 import { SystemException } from '../Exceptions/SystemException';
+import { BroadcastMessage } from './Messages/BroadcastMessage';
 export class MessageManager {
     constructor(private producer:Actor){
 
     }
 
     async create<P>(type:MessageType, topic:string,jobOptions:bull.JobOptions={}):Promise<P> {
-        let messageModel = new this.producer.messageModel();
+       
         
-        messageModel.id = String(await this.producer.actorManager.getMessageGlobalId());
-        messageModel.property('id',messageModel.id);
-        messageModel.property('actor_id',this.producer.id);
-        messageModel.property('topic',topic);
-        messageModel.property('type',type);
-        messageModel.property('status',MessageStatus.PENDING);
-        messageModel.property('created_at',new Date().getTime());
-        await messageModel.save();
-        
-        let message:any = this.messageFactory(type,this.producer,messageModel)
-        await (<Message>message).create(jobOptions);//创建job
+        let message:any = this.messageFactory(type,this.producer);
+        await (<Message>message).create(topic,jobOptions);//创建job
         return message;
     }
     async get(id):Promise<any>{
@@ -42,8 +34,8 @@ export class MessageManager {
         }
         
 
-        let message = this.messageFactory(messageModel.property('type'),this.producer,messageModel); 
-        await (<Message>message).restore();
+        let message = this.messageFactory(messageModel.property('type'),this.producer); 
+        await (<Message>message).restore(messageModel);
         return message;
     }
 
@@ -64,14 +56,17 @@ export class MessageManager {
         return message.addSubtask(type,body)
 
     }
-    private messageFactory(type,producer,messageModel):Message{
+    private messageFactory(type,producer):Message{
         let message;
         switch (type) {
             case MessageType.GENERAL:
-                message = new GeneralMessage(producer,messageModel);
+                message = new GeneralMessage(producer);
                 break;
             case MessageType.TRANSACTION:
-                message = new TransactionMessage(producer,messageModel);
+                message = new TransactionMessage(producer);
+                break;
+            case MessageType.BROADCAST:
+                message = new BroadcastMessage(producer);
                 break;
             default:
                 throw new BusinessException('MessageType is not exists.')
