@@ -1,9 +1,7 @@
 import { Message ,MessageControlResult} from "./Message";
 import { MessageStatus } from "../../Constants/MessageConstants";
-import { SubtaskType, SubtaskStatus } from "../../Constants/SubtaskConstants";
-import { EcSubtask } from "../Subtask/EcSubtask";
-import { TccSubtask } from "../Subtask/TccSubtask";
-import { Subtask } from "../Subtask/Subtask";
+import { SubtaskType } from "../../Constants/SubtaskConstants";
+import { Subtask } from "../Subtask/BaseSubtask/Subtask";
 import { Actor } from "../Actor";
 import { BusinessException } from "../../Exceptions/BusinessException";
 import { SubtaskModelClass } from "../../Models/SubtaskModel"

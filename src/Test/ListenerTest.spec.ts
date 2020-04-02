@@ -124,33 +124,34 @@ describe('Subtask', () => {
                 updatedMessage = await userProducer.messageManager.get(message.id);
                 bcstSubtask = await userProducer.subtaskManager.get(prepareResult['prepare_subtasks'][0].id);
 
-                if(updatedMessage.subtasks[0].job_id == job.id){
-                    expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DONE);
-                }
+                // if(updatedMessage.subtasks[0].job_id == job.id){
+                //     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DONE);
+                // }
 
-                if(bcstSubtask.listenerSubtasks.length > 0 && bcstSubtask.listenerSubtasks[0].job_id == job.id){
-                    console.log('userProducer',job.id)
-                    listenerDoneCount++
-                    if(listenerDoneCount == 2)done();
-                }
+                // if(bcstSubtask.listenerSubtasks.length > 0 && bcstSubtask.listenerSubtasks[0].job_id == job.id){
+                //     console.log('userProducer',job.id)
+                //     listenerDoneCount++
+                //     if(listenerDoneCount == 2)done();
+                // }
 
 
 
                 if(updatedMessage.pending_subtask_total == 0){
                     expect(updatedMessage.status).toBe(MessageStatus.DONE)
+                    done()
                 }
             })
 
-            contentProducer.coordinator.getQueue().on('completed',async (job)=>{
-                bcstSubtask = await userProducer.subtaskManager.get(prepareResult['prepare_subtasks'][0].id);
+            // contentProducer.coordinator.getQueue().on('completed',async (job)=>{
+            //     bcstSubtask = await userProducer.subtaskManager.get(prepareResult['prepare_subtasks'][0].id);
 
-                if(bcstSubtask.listenerSubtasks.length > 0 && bcstSubtask.listenerSubtasks[1].job_id == job.id){
-                    console.log('contentProducer',job.id)
-                    listenerDoneCount++
-                    if(listenerDoneCount == 2)done();
-                }
+            //     if(bcstSubtask.listenerSubtasks.length > 0 && bcstSubtask.listenerSubtasks[1].job_id == job.id){
+            //         console.log('contentProducer',job.id)
+            //         listenerDoneCount++
+            //         if(listenerDoneCount == 2)done();
+            //     }
 
-            })
+            // })
             await actorManager.bootstrapActorsCoordinatorprocessor();
 
 

@@ -1,10 +1,8 @@
 import { Job } from "./Job";
 import { TransactionMessage } from "../Messages/TransactionMessage";
-import { Subtask } from "../Subtask/Subtask";
-import { Message } from "../Messages/Message";
+import { Subtask } from "../Subtask/BaseSubtask/Subtask";
 import * as bull from 'bull';
 import { SubtaskStatus } from "../../Constants/SubtaskConstants";
-import { CoordinatorCallActorAction } from "../../Constants/Coordinator";
 import { SystemException } from "../../Exceptions/SystemException";
 export class TransactionSubtaskJob extends Job{
     public subtask_id:Number;

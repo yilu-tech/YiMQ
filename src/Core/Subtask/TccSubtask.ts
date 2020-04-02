@@ -1,11 +1,10 @@
-import {Subtask} from './Subtask';
+
 import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
 import { SubtaskStatus } from '../../Constants/SubtaskConstants';
-import { BusinessException } from '../../Exceptions/BusinessException';
 import { TransactionMessage } from '../Messages/TransactionMessage';
-import { SystemException } from '../../Exceptions/SystemException';
 import { MessageStatus } from '../../Constants/MessageConstants';
-export class TccSubtask extends Subtask{
+import { ConsumerSubtask } from './BaseSubtask/ConsumerSubtask';
+export class TccSubtask extends ConsumerSubtask{
     public prepareResult;
     constructor(message:TransactionMessage,subtaskModel){
         super(message,subtaskModel);

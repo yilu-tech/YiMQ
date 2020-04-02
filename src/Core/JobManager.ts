@@ -7,7 +7,7 @@ import { TransactionSubtaskJob } from "./Job/TransactionSubtaskJob";
 import { Message } from "./Messages/Message";
 import * as bull from 'bull';
 import { TransactionMessage } from "./Messages/TransactionMessage";
-import { Subtask } from "./Subtask/Subtask";
+import { Subtask } from "./Subtask/BaseSubtask/Subtask";
 export class JobManager{
     constructor(private actor:Actor){
     }

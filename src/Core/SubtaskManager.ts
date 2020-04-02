@@ -7,7 +7,7 @@ import { XaSubtask } from "./Subtask/XaSubtask";
 import { BcstSubtask } from "./Subtask/BcstSubtask";
 import { LstrSubtask } from "./Subtask/LstrSubtask";
 import { BusinessException } from "../Exceptions/BusinessException";
-import { Subtask } from "./Subtask/Subtask";
+import { Subtask } from "./Subtask/BaseSubtask/Subtask";
 export class SubtaskManager{
     constructor(private actor:Actor){
 
@@ -29,12 +29,7 @@ export class SubtaskManager{
         subtaskModel.property('updated_at',now);
         subtaskModel.property('consumer_id',body.consumer_id);
         subtaskModel.property('processor',body.processor);
-        
-
-        if(type == SubtaskType.BCST){
-            subtaskModel.property('topic',`${this.actor.name}@${body.topic}`);
-        }
-
+    
         await subtaskModel.save() 
 
         return this.factory(from,subtaskModel);

@@ -1,15 +1,8 @@
-import { SubtaskType, SubtaskStatus } from "../../Constants/SubtaskConstants";
-import { Message } from "../Messages/Message";
-import { Actor } from "../Actor";
-import { SubtaskModelClass } from "../../Models/SubtaskModel";
-import { Job } from "../Job/Job";
-import { JobType } from "../../Constants/JobConstants";
-import { CoordinatorCallActorAction } from "../../Constants/Coordinator";
-import * as bull from 'bull';
-import { BusinessException } from "../../Exceptions/BusinessException";
-import { TransactionMessage } from "../Messages/TransactionMessage";
-import { MessageStatus } from "../../Constants/MessageConstants";
-import { TransactionSubtaskJob } from "../Job/TransactionSubtaskJob";
+import { SubtaskType, SubtaskStatus } from "../../../Constants/SubtaskConstants";
+import { SubtaskModelClass } from "../../../Models/SubtaskModel";
+import { Job } from "../../Job/Job";
+import { TransactionMessage } from "../../Messages/TransactionMessage";
+import { MessageStatus } from "../../../Constants/MessageConstants";
 export abstract class Subtask{
     id:Number;
     job_id:number;
@@ -21,9 +14,7 @@ export abstract class Subtask{
     processor:string;
     parent_id:string;
 
-    consumer:Actor;
-    consumer_id:number;
-    consumerprocessorName:string;
+
 
 
     message:TransactionMessage;
@@ -41,43 +32,14 @@ export abstract class Subtask{
         this.updated_at = subtaskModel.property('updated_at');
         this.parent_id = subtaskModel.property('parent_id');
 
-        this.consumer_id = subtaskModel.property('consumer_id');
-        this.processor = subtaskModel.property('processor');
-        this.consumer = this.message.producer.actorManager.getById(this.consumer_id)
 
 
     }
-
+    abstract async restore();
     abstract async prepare();
+    abstract async confirm();
+    abstract async cancel();
 
-
-    public async restore(){
-        if(this.job_id > -1){
-            let jobContext = await this.consumer.coordinator.getJob(this.job_id);
-            this.job = new TransactionSubtaskJob(this,jobContext);
-        }
-    }
-
-    public async confirm(){
-        await this.setStatusAddJobFor(SubtaskStatus.DOING);
-    }
-    public async cancel(){
-        await this.setStatusAddJobFor(SubtaskStatus.CANCELLING)
-    }
- 
-    private async setStatusAddJobFor(status:SubtaskStatus.DOING|SubtaskStatus.CANCELLING){
-        this.status = status;
-        let jobOptions:bull.JobOptions = {
-            jobId: await this.message.producer.actorManager.getJobGlobalId()
-        }
-        await this.setJobId(jobOptions.jobId).save();//先保存job_id占位
-        await this.setStatus(status).save();//先添加job有可能会导致job开始执行，subtask的状态还未修改，导致出错
-        this.job = await this.consumer.jobManager.add(this,JobType.TRANSACTION_SUBTASK,jobOptions)
-
-    }
-    
-    abstract async toDo();
-    abstract async toCancel();
     setJobId(jobId){
         this.job_id = jobId;
         this.model.property('job_id',this.job_id);

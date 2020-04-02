@@ -1,9 +1,10 @@
-import {Subtask} from './Subtask';
+
 import { SubtaskStatus } from '../../Constants/SubtaskConstants';
 import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
 import { MessageStatus } from '../../Constants/MessageConstants';
+import { ConsumerSubtask } from './BaseSubtask/ConsumerSubtask';
 
-export class EcSubtask extends Subtask{
+export class EcSubtask extends ConsumerSubtask{
     async prepare() {
         await this.setStatus(SubtaskStatus.PREPARED).save();//最终一致由于不用try，直接进入准备成功状态
         return this;

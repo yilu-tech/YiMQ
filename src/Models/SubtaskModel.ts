@@ -10,7 +10,6 @@ interface SubtaskProperties {
     data: any;
     consumer_id:number;
     processor:string;
-    topic:string;
     context:string;
     prepareResult:string;
     updated_at: number;
@@ -50,10 +49,6 @@ export class SubtaskModelClass extends NohmModel<SubtaskProperties> {
             index:true
         },
         processor: {
-            type: 'string',
-            index: true,
-        },
-        topic: {
             type: 'string',
             index: true,
         },
