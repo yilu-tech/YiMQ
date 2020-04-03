@@ -1,7 +1,7 @@
 
 export enum JobType{
     MESSAGE = 'MESSAGE',
-    TRANSACTION_SUBTASK = 'TRANSACTION_SUBTASK'
+    SUBTASK = 'SUBTASK'
 }
 
 export enum JobStatus{

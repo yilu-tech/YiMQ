@@ -4,7 +4,7 @@ import { Subtask } from "../Subtask/BaseSubtask/Subtask";
 import * as bull from 'bull';
 import { SubtaskStatus } from "../../Constants/SubtaskConstants";
 import { SystemException } from "../../Exceptions/SystemException";
-export class TransactionSubtaskJob extends Job{
+export class SubtaskJob extends Job{
     public subtask_id:Number;
     public subtask:Subtask;
     constructor(subtask:Subtask,public readonly context:bull.Job){
