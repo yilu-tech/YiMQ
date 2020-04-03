@@ -2,7 +2,7 @@ import { Message, MessageControlResult } from "./Message";
 
 
 export class GeneralMessage extends Message{
-    restore() {
+    toDoing(): Promise<Message> {
         throw new Error("Method not implemented.");
     }
     statusToDoing(): Promise<Message> {

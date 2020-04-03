@@ -11,7 +11,7 @@ actors:
         name: content
         key: asdfasdfasdf
         protocol: http
-        api: 'user/yimq'
+        api: 'content/yimq'
         redis: db2
 
 

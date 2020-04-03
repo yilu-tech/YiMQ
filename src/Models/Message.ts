@@ -10,6 +10,7 @@ interface MessageProperties {
     pending_subtask_total: number;
     status: MessageStatus;
     job_id: number;
+    listeners:object;
     updated_at: number;
     created_at: number;
 
@@ -50,6 +51,9 @@ export class MessageModelClass extends NohmModel<MessageProperties> {
         job_id: {
             type: 'integer',
             index: true
+        },
+        listeners:{
+            type: 'json'
         },
         updated_at: {
             type: 'timestamp',

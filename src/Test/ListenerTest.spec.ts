@@ -117,41 +117,54 @@ describe('Subtask', () => {
             let prepareResult = await messageService.prepare(producerName,message.id,body);
             
             mock.onPost(userProducer.api).reply(200,{message:'subtask process succeed'})
-
+            mock.onPost(contentProducer.api).reply(200,{message:'subtask process succeed'})
             let bcstSubtask:BcstSubtask;
             let listenerDoneCount = 0;
+            function doneExpect(done,updatedMessage,broadcastMessage){
+                expect(broadcastMessage.status).toBe(MessageStatus.DONE)
+                expect(broadcastMessage.pending_subtask_total).toBe(0)
+                done();
+            }
             userProducer.coordinator.getQueue().on('completed',async (job)=>{
                 updatedMessage = await userProducer.messageManager.get(message.id);
-                bcstSubtask = await userProducer.subtaskManager.get(prepareResult['prepare_subtasks'][0].id);
+                let bcstSubtask:BcstSubtask = <BcstSubtask>updatedMessage.subtasks[0];
+                let broadcastMessage = (await bcstSubtask.loadBroadcastMessage()).broadcastMessage;
+                let listenerSubtasks = (await broadcastMessage.loadListenerSubtasks()).listenerSubtasks;
 
-                // if(updatedMessage.subtasks[0].job_id == job.id){
-                //     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DONE);
-                // }
+                if(message.job.id == job.id){
+                    expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
+                    expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DOING);
 
-                // if(bcstSubtask.listenerSubtasks.length > 0 && bcstSubtask.listenerSubtasks[0].job_id == job.id){
-                //     console.log('userProducer',job.id)
-                //     listenerDoneCount++
-                //     if(listenerDoneCount == 2)done();
-                // }
+                    //TODO 检查message的状态
+                    // expect(updatedMessage.status).toBe(MessageStatus.DONE)
+                    // expect(updatedMessage.pending_subtask_total).toBe(0)
+                    
+                }
 
+                if(broadcastMessage.job_id == job.id){
+                    expect(broadcastMessage.status).toBe(MessageStatus.DOING)  
+                }
 
-
-                if(updatedMessage.pending_subtask_total == 0){
-                    expect(updatedMessage.status).toBe(MessageStatus.DONE)
-                    done()
+                if(listenerSubtasks.length > 0 && listenerSubtasks[0].job_id == job.id){
+                    console.log('userProducer job_id',job.id)
+                    listenerDoneCount++
+                    if(listenerDoneCount == 2)doneExpect(done,updatedMessage,broadcastMessage);
                 }
             })
 
-            // contentProducer.coordinator.getQueue().on('completed',async (job)=>{
-            //     bcstSubtask = await userProducer.subtaskManager.get(prepareResult['prepare_subtasks'][0].id);
+            contentProducer.coordinator.getQueue().on('completed',async (job)=>{
+                updatedMessage = await userProducer.messageManager.get(message.id);
+                let bcstSubtask:BcstSubtask = <BcstSubtask>updatedMessage.subtasks[0];
+                let broadcastMessage = (await bcstSubtask.loadBroadcastMessage()).broadcastMessage;
+                let listenerSubtasks = (await broadcastMessage.loadListenerSubtasks()).listenerSubtasks;
 
-            //     if(bcstSubtask.listenerSubtasks.length > 0 && bcstSubtask.listenerSubtasks[1].job_id == job.id){
-            //         console.log('contentProducer',job.id)
-            //         listenerDoneCount++
-            //         if(listenerDoneCount == 2)done();
-            //     }
+                if(listenerSubtasks.length > 0 && listenerSubtasks[1].job_id == job.id){
+                    console.log('contentProducer',job.id)
+                    listenerDoneCount++
+                    if(listenerDoneCount == 2)doneExpect(done,updatedMessage,broadcastMessage);
+                }
 
-            // })
+            })
             await actorManager.bootstrapActorsCoordinatorprocessor();
 
 

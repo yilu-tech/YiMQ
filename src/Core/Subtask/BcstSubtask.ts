@@ -29,7 +29,7 @@ export class BcstSubtask extends Subtask{
         await super.restore(subtaskModel);
         this.context = subtaskModel.property('context');
     }
-    public async loadBroadcastMessage(){
+    public async loadBroadcastMessage():Promise<BcstSubtask>{
         this.broadcastMessage = await this.message.producer.messageManager.get(this.context.message_id);
         return this;
     }

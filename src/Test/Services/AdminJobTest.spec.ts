@@ -69,7 +69,7 @@ describe('Subtask', () => {
 
 
         it('.add ec tcc subtask1', async () => {
-
+            let contentActor = actorManager.get('content'); 
             let producer = actorManager.get(producerName);
             message = await messageService.create(producerName,messageType,topic,{
                 delay:300,
@@ -86,7 +86,7 @@ describe('Subtask', () => {
                 title: 'new post'
             })
              
-            mock.onPost(producer.api).reply(200,{
+            mock.onPost(contentActor.api).reply(200,{
                 title: 'hello world'
             })
             let tccsubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
@@ -100,6 +100,7 @@ describe('Subtask', () => {
         it('.add ec tcc subtask1', async () => {
 
             let producer = actorManager.get(producerName);
+            let contentActor = actorManager.get('content'); 
             message = await messageService.create(producerName,messageType,topic,{
                 delay:300,
                 attempts:5,
@@ -115,7 +116,7 @@ describe('Subtask', () => {
                 title: 'new post'
             })
              
-            mock.onPost(producer.api).reply(200,{
+            mock.onPost(contentActor.api).reply(200,{
                 title: 'hello world'
             })
             let tccsubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{

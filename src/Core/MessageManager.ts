@@ -40,7 +40,7 @@ export class MessageManager {
     }
 
     async confirm(id):Promise<MessageControlResult>{
-        let message:Message = await this.get(id);
+        let message = <TransactionMessage> await this.get(id);
         return message.confirm()
     }
     async prepare(id,data):Promise<any>{
@@ -48,7 +48,7 @@ export class MessageManager {
         return message.prepare(data)
     }
     async cancel(id):Promise<MessageControlResult>{
-        let message:Message = await this.get(id);
+        let message = <TransactionMessage> await this.get(id);
         return message.cancel()
     }
     async addSubtask(id,type,body){

@@ -25,11 +25,7 @@ export class SubtaskManager{
         let subtaskModel = await this.actor.subtaskModel.load(subtask_id);
         let from:any;
 
-        if(subtaskModel.property('type') == SubtaskType.LSTR){ //不够优雅
-            from  = await this.get(subtaskModel.property('parent_id'));
-        }else{
-            from = await this.actor.messageManager.get(subtaskModel.property('parent_id'));
-        }
+        from = await this.actor.messageManager.get(subtaskModel.property('parent_id'));
         
         let subtask:Subtask =  this.factory(from,subtaskModel.property('type'));
         await subtask.restore(subtaskModel);

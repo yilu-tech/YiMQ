@@ -150,9 +150,6 @@ export class TransactionMessage extends Message{
         return subtask.prepare();
     }
 
-    private async incrPendingSubtaskTotal(){
-        return this.producer.redisClient.hincrby(this.getMessageHash(),'pending_subtask_total',1);
-    }
     public getMessageHash(){
         return `${this.model['nohmClass'].prefix.hash}${this.model.modelName}:${this.id}`;
     }

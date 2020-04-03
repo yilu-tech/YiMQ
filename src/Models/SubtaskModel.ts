@@ -3,7 +3,7 @@ import { NohmModel, TTypedDefinitions } from "nohm";
 import { SubtaskType, SubtaskStatus } from "../Constants/SubtaskConstants";
 
 interface SubtaskProperties {
-    parent_id: Number;
+    parent_id: Number; //TODO 还原为message_id
     job_id: Number;
     type:SubtaskType;
     status: SubtaskStatus;

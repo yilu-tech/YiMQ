@@ -80,6 +80,19 @@ export abstract class Message{
 
     abstract async toDoing():Promise<Message>;
 
+    protected async incrPendingSubtaskTotal(){
+        return this.producer.redisClient.hincrby(this.getMessageHash(),'pending_subtask_total',1);
+    }
+    public getMessageHash(){
+        return `${this.model['nohmClass'].prefix.hash}${this.model.modelName}:${this.id}`;
+    }
+
+    setProperty(name,value){
+        this[name] = value;
+        this.model.property(name,value);
+        return this;
+    }
+
     setStatus(status:MessageStatus){
         this.model.property('status',status);
         this.status = status;
@@ -91,10 +104,6 @@ export abstract class Message{
     async getStatus(){
         return this.status;
     }
-
-    abstract async confirm():Promise<MessageControlResult>;
-
-    abstract async cancel():Promise<MessageControlResult>
 
      /**
      * 整理数据
