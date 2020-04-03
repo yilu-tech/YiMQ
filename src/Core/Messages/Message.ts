@@ -4,7 +4,7 @@ import { MessageStatus, MessageType } from "../../Constants/MessageConstants";
 import { Logger } from "@nestjs/common";
 import { Job } from "../Job/Job";
 import { JobType } from "../../Constants/JobConstants";
-import { MessageModelClass } from "../../Models/Message";
+import { MessageModelClass } from "../../Models/MessageModel";
 import * as bull from 'bull';
 import { Subtask } from "../Subtask/BaseSubtask/Subtask";
 

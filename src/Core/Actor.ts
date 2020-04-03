@@ -6,7 +6,7 @@ import { Logger } from "@nestjs/common";
 import { Coordinator } from "./Coordinator/Coordinator";
 import { HttpCoordinator } from "./Coordinator/HttpCoordinator";
 import { GrpcCoordinator } from "./Coordinator/GrpcCoordinator";
-import { MessageModelClass } from "../Models/Message";
+import { MessageModelClass } from "../Models/MessageModel";
 import { MessageManager } from "./MessageManager";
 import { JobManager } from "./JobManager";
 import { ActorManager } from "./ActorManager";
