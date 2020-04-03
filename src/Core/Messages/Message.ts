@@ -54,7 +54,7 @@ export abstract class Message{
         messageModel.property('job_id',jobOptions.jobId);//先保存job_id，如果先创建job再保存id可能产生，message未记录job_id的情况
         await messageModel.save();
         await this.initProperties(messageModel);
-        this.job = await this.producer.jobManager.add(this,JobType.TRANSACTION,jobOptions);//TODO JobType.TRANSACTION -> JobType.MESSAGE
+        this.job = await this.producer.jobManager.add(this,JobType.MESSAGE,jobOptions);//TODO JobType.TRANSACTION -> JobType.MESSAGE
         return this;
     };
 

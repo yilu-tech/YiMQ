@@ -2,7 +2,7 @@ import { Actor } from "./Actor";
 import { Job } from "./Job/Job";
 import { JobType } from "../Constants/JobConstants";
 import { GeneralJob } from "./Job/GeneralJob";
-import { TransactionMessageJob } from "./Job/TransactionMessageJob";
+import { MessageJob } from "./Job/MessageJob";
 import { TransactionSubtaskJob } from "./Job/TransactionSubtaskJob";
 import { Message } from "./Messages/Message";
 import * as bull from 'bull';
@@ -31,16 +31,7 @@ export class JobManager{
         };
         jobOptions = Object.assign(defaultOptions,jobOptions);
         switch (type) {
-            case JobType.GENERAL:              
-                message = <Message>from;
-                data = {
-                    message_id: message.id,
-                    type: type,
-                };
-                jobContext = await this.actor.coordinator.add(message.topic,data,jobOptions);
-                job = new GeneralJob(jobContext);
-                break;
-            case JobType.TRANSACTION:
+            case JobType.MESSAGE:
                 message = <TransactionMessage>from;
                 data = {
                     message_id: message.id,
@@ -49,7 +40,7 @@ export class JobManager{
                 let defaultDelay = 2000;
                 jobOptions.delay = jobOptions.delay > defaultDelay ? jobOptions.delay : Number(process.env.TRANSACATION_MESSAGE_JOB_DELAY) || defaultDelay;
                 jobContext = await this.actor.coordinator.add(message.topic,data,jobOptions);
-                job = new TransactionMessageJob(message,jobContext);
+                job = new MessageJob(message,jobContext);
                 break;
             case JobType.TRANSACTION_SUBTASK:
                 let subtask = <Subtask>from;
@@ -77,12 +68,9 @@ export class JobManager{
         let job:Job;
         let message;
         switch (jobContext.data.type) {
-            case JobType.GENERAL:
-                job = new GeneralJob(jobContext);
-                break;
-            case JobType.TRANSACTION:
+            case JobType.MESSAGE:
                 message = await this.actor.messageManager.get(jobContext.data.message_id);
-                job = new TransactionMessageJob(message,jobContext);
+                job = new MessageJob(message,jobContext);
                 break;
             case JobType.TRANSACTION_SUBTASK:
                 //由于subtask的job不一定和它的subjob在同一个actor，也就不一定在同一个redis，所以直接通过id无法查找

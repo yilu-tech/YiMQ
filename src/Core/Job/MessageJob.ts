@@ -4,7 +4,6 @@ import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
 import { TransactionMessage } from "../Messages/TransactionMessage";
 import * as bull from 'bull';
 import { SystemException } from "../../Exceptions/SystemException";
-import { BusinessException } from "../../Exceptions/BusinessException";
 export class MessageJob extends Job{
     public message_id:number | string;
     public message:TransactionMessage;//TransactionMessage ---> Message

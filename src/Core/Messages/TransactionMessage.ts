@@ -5,7 +5,7 @@ import { Subtask } from "../Subtask/BaseSubtask/Subtask";
 import { Actor } from "../Actor";
 import { BusinessException } from "../../Exceptions/BusinessException";
 import { SubtaskModelClass } from "../../Models/SubtaskModel"
-import { TransactionMessageJob } from "../Job/TransactionMessageJob";
+import { MessageJob } from "../Job/MessageJob";
 import { XaSubtask } from "../Subtask/XaSubtask";
 import {JobStatus} from "../../Constants/JobConstants"
 import { BcstSubtask } from "../Subtask/BcstSubtask";
@@ -109,7 +109,7 @@ export class TransactionMessage extends Message{
     async restore(messageModel){
         await super.restore(messageModel);
         let jobContext = await this.producer.coordinator.getJob(this.job_id);
-        this.job = new TransactionMessageJob(this,jobContext);
+        this.job = new MessageJob(this,jobContext);
         this.subtasks = await this.getAllSubtasks();
     }
 
