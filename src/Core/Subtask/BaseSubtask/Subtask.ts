@@ -3,6 +3,7 @@ import { SubtaskModelClass } from "../../../Models/SubtaskModel";
 import { Job } from "../../Job/Job";
 import { TransactionMessage } from "../../Messages/TransactionMessage";
 import { MessageStatus } from "../../../Constants/MessageConstants";
+import { Logger } from "@nestjs/common";
 export abstract class Subtask{
     id:Number;
     job_id:number;
@@ -85,19 +86,16 @@ export abstract class Subtask{
         return `${this.model['nohmClass'].prefix.hash}${this.model.modelName}:${this.id}`;
     }
     public async completeAndSetMeesageStatusByScript(status,messageStatus:MessageStatus){
-        try {
-            return await this.message.producer.redisClient['subtaskCompleteAndSetMessageStatus'](this.id,this.message.id,status,messageStatus);    
-        } catch (error) {
-            console.error(error)
-            throw error;
-        }   
+        return this.message.producer.redisClient['subtaskCompleteAndSetMessageStatus'](this.id,this.message.id,status,messageStatus);    
     }
     public async completeAndSetMeesageStatus(status,messageStatus){
-        let [subtaskUpdatedStatus,
-            messageCurrentStatus,
-            pendingSubtaskTotal,
-            messageUpdatedStatus
-        ] = await this.completeAndSetMeesageStatusByScript(status,messageStatus);
+
+            var [subtaskUpdatedStatus,
+                messageCurrentStatus,
+                pendingSubtaskTotal,
+                messageUpdatedStatus,
+            ] = await this.completeAndSetMeesageStatusByScript(status,messageStatus);    
+  
         
         //修改instance中的值,但是不save,防止其他地方用到
         this.setStatus(subtaskUpdatedStatus); 

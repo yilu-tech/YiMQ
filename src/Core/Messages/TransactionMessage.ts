@@ -14,9 +14,9 @@ export class TransactionMessage extends Message{
 
 
     async createMessageModel(topic:string){
-        let messageModel = await super.createMessageModel(topic);
-        messageModel.property('status',MessageStatus.PENDING);
-        return messageModel;
+        await super.createMessageModel(topic);
+        this.model.property('status',MessageStatus.PENDING);
+        return this;
     }
 
     async toDoing():Promise<any>{

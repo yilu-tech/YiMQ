@@ -118,11 +118,16 @@ describe('Subtask', () => {
             
             mock.onPost(userProducer.api).reply(200,{message:'subtask process succeed'})
             mock.onPost(contentProducer.api).reply(200,{message:'subtask process succeed'})
-            let bcstSubtask:BcstSubtask;
+            
+
             let listenerDoneCount = 0;
             function doneExpect(done,updatedMessage,broadcastMessage){
                 expect(broadcastMessage.status).toBe(MessageStatus.DONE)
                 expect(broadcastMessage.pending_subtask_total).toBe(0)
+                //检查message的状态
+                expect(updatedMessage.status).toBe(MessageStatus.DONE)
+                expect(updatedMessage.pending_subtask_total).toBe(0)
+                    
                 done();
             }
             userProducer.coordinator.getQueue().on('completed',async (job)=>{
@@ -134,11 +139,6 @@ describe('Subtask', () => {
                 if(message.job.id == job.id){
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
                     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DOING);
-
-                    //TODO 检查message的状态
-                    // expect(updatedMessage.status).toBe(MessageStatus.DONE)
-                    // expect(updatedMessage.pending_subtask_total).toBe(0)
-                    
                 }
 
                 if(broadcastMessage.job_id == job.id){

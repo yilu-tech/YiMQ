@@ -7,14 +7,19 @@ import { SubtaskModelClass } from "../../Models/SubtaskModel";
 
 
 export class BroadcastMessage extends Message{
-    type = MessageType.BROADCAST;
+    public type = MessageType.BROADCAST;
+    public context:object = {};
     public listenerSubtasks:Array<LstrSubtask>;
 
     async createMessageModel(topic:string){
-        let messageModel = await super.createMessageModel(topic);
-        //TODO 创建lstr子任务
-        messageModel.property('status',MessageStatus.DOING);//等待最后一个子任务完成时来标记message为done状态
-        return messageModel;
+        await super.createMessageModel(topic);
+        this.model.property('status',MessageStatus.DOING);//等待最后一个子任务完成时来标记message为done状态
+        return this;
+    }
+
+    setContext(context){
+        this.context = context;
+        this.model.property('context',context);
     }
 
     async toDoing() {
@@ -47,9 +52,6 @@ export class BroadcastMessage extends Message{
             await this.addListenerSubtask(context)
             await this.incrPendingSubtaskTotal();
         }
-        // let ids = await this.model.getAll(SubtaskModelClass.modelName);
-        
-        // Logger.debug(ids,'BcstSubtask Create Listener')
     }
 
     async addListenerSubtask(context){

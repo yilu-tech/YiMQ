@@ -249,6 +249,54 @@ describe('Subtask', () => {
             }
         });
 
+        it('.add bcst by prepare', async (done) => {
+            message = await messageService.create(producerName,messageType,topic,{
+                delay:300,
+                attempts:5,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+            let producer = actorManager.get(producerName); 
+            let body = {
+                prepare_subtasks:[
+                    {
+                        type:'BCST',
+                        topic:'user.update',
+                        data:{'title':'test'}
+                    }
+                ]
+            }
+            let prepareResult = await messageService.prepare(producerName,message.id,body);
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            expect(updatedMessage.subtasks['0'].data).toMatchObject(body.prepare_subtasks[0].data);
+            
+              //任务执行完毕
+              producer.coordinator.getQueue().on('completed',async (job)=>{
+                updatedMessage = await producer.messageManager.get(message.id);
+
+                let bcstSubtask:BcstSubtask = <BcstSubtask>updatedMessage.subtasks[0];
+                await bcstSubtask.loadBroadcastMessage();
+
+
+                if(message.job.id == job.id){
+                    expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
+                    expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DOING);
+                    
+                }
+
+                if(bcstSubtask.broadcastMessage.job_id == job.id){
+                    expect(bcstSubtask.broadcastMessage.status).toBe(MessageStatus.DOING)
+                    done()   
+                }
+            })
+            await actorManager.bootstrapActorsCoordinatorprocessor();
+             //把message确认
+            await messageService.confirm(producerName,message.id);
+        })
+
     });
 
     describe('.doning:', async () => {
@@ -609,54 +657,6 @@ describe('Subtask', () => {
             })
             await actorManager.bootstrapActorsCoordinatorprocessor();
         });
-
-        it('.add bcst by prepare', async (done) => {
-            message = await messageService.create(producerName,messageType,topic,{
-                delay:300,
-                attempts:5,
-                backoff:{
-                    type:'exponential',
-                    delay: 100  
-                }
-            });
-            expect(message.status).toBe(MessageStatus.PENDING)
-            let producer = actorManager.get(producerName); 
-            let body = {
-                prepare_subtasks:[
-                    {
-                        type:'BCST',
-                        topic:'user.update',
-                        data:{'title':'test'}
-                    }
-                ]
-            }
-            let prepareResult = await messageService.prepare(producerName,message.id,body);
-            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
-            expect(updatedMessage.subtasks['0'].data).toMatchObject(body.prepare_subtasks[0].data);
-            
-              //任务执行完毕
-              producer.coordinator.getQueue().on('completed',async (job)=>{
-                updatedMessage = await producer.messageManager.get(message.id);
-
-                let bcstSubtask:BcstSubtask = <BcstSubtask>updatedMessage.subtasks[0];
-                await bcstSubtask.loadBroadcastMessage();
-
-
-                if(message.job.id == job.id){
-                    expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
-                    expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DOING);
-                    
-                }
-
-                if(bcstSubtask.broadcastMessage.job_id == job.id){
-                    expect(bcstSubtask.broadcastMessage.status).toBe(MessageStatus.DOING)
-                    done()   
-                }
-            })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
-             //把message确认
-            await messageService.confirm(producerName,message.id);
-        })
 
     });
 

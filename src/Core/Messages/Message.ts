@@ -30,16 +30,16 @@ export abstract class Message{
     }
 
     async createMessageModel(topic:string){
-        let messageModel = new this.producer.messageModel();
+        this.model = new this.producer.messageModel();
         
-        messageModel.id = String(await this.producer.actorManager.getMessageGlobalId());
-        messageModel.property('id',messageModel.id);
-        messageModel.property('actor_id',this.producer.id);
-        messageModel.property('topic',topic);
-        messageModel.property('type',this.type);
-        messageModel.property('status',MessageStatus.PENDING);
-        messageModel.property('created_at',new Date().getTime());
-        return messageModel;
+        this.model.id = String(await this.producer.actorManager.getMessageGlobalId());
+        this.model.property('id',this.model.id);
+        this.model.property('actor_id',this.producer.id);
+        this.model.property('topic',topic);
+        this.model.property('type',this.type);
+        this.model.property('status',MessageStatus.PENDING);
+        this.model.property('created_at',new Date().getTime());
+        return this;
     }
 
 
@@ -48,34 +48,33 @@ export abstract class Message{
      * @param options 
      */
     async create(topic:string, jobOptions:bull.JobOptions):Promise<any>{
-        let messageModel = await this.createMessageModel(topic);
-
         jobOptions.jobId = await this.producer.actorManager.getJobGlobalId();
-        messageModel.property('job_id',jobOptions.jobId);//先保存job_id，如果先创建job再保存id可能产生，message未记录job_id的情况
-        await messageModel.save();
-        await this.initProperties(messageModel);
+        this.model.property('job_id',jobOptions.jobId);//先保存job_id，如果先创建job再保存id可能产生，message未记录job_id的情况
+        await this.model.save();
+        await this.initProperties();
         this.job = await this.producer.jobManager.add(this,JobType.MESSAGE,jobOptions);//TODO JobType.TRANSACTION -> JobType.MESSAGE
         return this;
     };
 
-    async initProperties(messageModel){
-        this.id = messageModel.id;
-        this.actor_id = messageModel.property('actor_id');
-        this.type = messageModel.property('type');
-        this.topic = messageModel.property('topic');
-        this.status = messageModel.property('status');
-        this.job_id = messageModel.property('job_id')
-        this.updated_at = messageModel.property('updated_at');
-        this.created_at = messageModel.property('created_at');
-        this.pending_subtask_total = messageModel.property('pending_subtask_total');
+    async initProperties(){
+        this.id = this.model.id;
+        this.actor_id = this.model.property('actor_id');
+        this.type = <MessageType>this.model.property('type');
+        this.topic = this.model.property('topic');
+        this.status = this.model.property('status');
+        this.job_id = this.model.property('job_id')
+        this.updated_at = this.model.property('updated_at');
+        this.created_at = this.model.property('created_at');
+        this.pending_subtask_total = this.model.property('pending_subtask_total');
 
-        this.model = messageModel;
+
     }
 
  
 
     async restore(messageModel){
-        await this.initProperties(messageModel);
+        this.model = messageModel;
+        await this.initProperties();
     };
 
     abstract async toDoing():Promise<Message>;
