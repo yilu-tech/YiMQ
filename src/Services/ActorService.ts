@@ -17,39 +17,7 @@ export class ActorService{
 
     }
 
-    public async loadConfigFileToMasterRedis(){
-        Logger.log('Load actors to master redis.','Bootstrap');
-
-        let actorsConfig = this.config.actors;
-
-        for(let [index, actorConfig]  of actorsConfig){
-            await this.create(actorConfig);
-        }
-        Logger.log('Loaded actors to master redis.','Bootstrap');
-        return true;
-    }
-
-    public async create(data):Promise<any>{
-        let actor = new this.masterModels.ActorModel();
-        actor.id = data.id;
-        actor.property('id',actor.id);
-        actor.property('name',data.name);
-
-        actor.property('key',data.key);
-
-        actor.property('api',data.api);
-        actor.property('status',ActorStatus.ACTIVE);
-        actor.property('protocol',data.protocol);
-        actor.property('redis',data.redis);
-        actor.property('redisOptions',this.config.system.redis[data.redis]);
-        try {
-            await  actor.save();   
-        } catch (error) {
-            throw new UnprocessableEntityException(error.message,error.errors)
-        }
-        return actor.allProperties();
-
-    }
+  
     public async get(id){
         let model = await this.getModel(id);
         return model.allProperties();

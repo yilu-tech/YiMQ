@@ -46,12 +46,11 @@ describe('BroadcastMessage', () => {
         redisManager = app.get<RedisManager>(RedisManager);
 
         await redisManager.flushAllDb();
-        actorService = app.get<ActorService>(ActorService);
-        await actorService.loadConfigFileToMasterRedis();
 
         config = app.get<Config>(Config);
         messageService = app.get<MessageService>(MessageService);
         actorManager = app.get<ActorManager>(ActorManager);
+        await actorManager.saveConfigFileToMasterRedis()
         
         await actorManager.initActors();
     });
@@ -77,7 +76,7 @@ describe('BroadcastMessage', () => {
             let updatedMessage:BroadcastMessage;
 
 
-            mock.onPost(config.actors.get(1).api).replyOnce(200,{
+            mock.onPost(userProducer.api).replyOnce(200,{
                 "listeners": [{
                     "processor": "Tests\\Services\\ContentUpdateListener",
                     "topic": "content@post.update",
@@ -89,7 +88,7 @@ describe('BroadcastMessage', () => {
                     "condition": null
                 }]
             })
-            mock.onPost(config.actors.get(2).api).replyOnce(200,{
+            mock.onPost(contentProducer.api).replyOnce(200,{
                 "listeners": []
             })
  
@@ -136,7 +135,7 @@ describe('BroadcastMessage', () => {
             let userProducer = actorManager.get(producerName);
             let contentProducer = actorManager.get('content');
             let updatedMessage:TransactionMessage;
-            mock.onPost(config.actors.get(1).api).replyOnce(200,{
+            mock.onPost(userProducer.api).replyOnce(200,{
                 "listeners": [{
                     "processor": "Tests\\Services\\ContentUpdateListener",
                     "topic": "content@post.update",
@@ -149,7 +148,7 @@ describe('BroadcastMessage', () => {
                 }
             ]
             })
-            mock.onPost(config.actors.get(2).api).replyOnce(200,{
+            mock.onPost(contentProducer.api).replyOnce(200,{
                 "listeners": [{
                     "processor": "Tests\\Services\\UserUpdateListener",
                     "topic": "user@user.update",

@@ -5,15 +5,6 @@ import { RedisManager } from "./Handlers/redis/RedisManager"
 import { ActorManager } from "./Core/ActorManager";
 const { setQueues } = require('bull-board')
 
-export const ConfigToMasterRedis = {
-    provide: 'configToMasterRedis',
-    useFactory: async (actorService:ActorService) => {
-        await actorService.loadConfigFileToMasterRedis();
-    },
-    inject:[ActorService]
-}
-
-
 
 
 
@@ -31,9 +22,11 @@ export const MasterNohm = {
   inject:[RedisManager]
 }
 
+
 export const ActorManagerBootstrap = {
   provide: 'ActorManagerBootstrap',
   useFactory: async(actorManager:ActorManager)=>{
+    await actorManager.saveConfigFileToMasterRedis()
     await actorManager.initActors();
     await actorManager.loadActorsRemoteConfig();
     await actorManager.bootstrapActorsCoordinatorprocessor();

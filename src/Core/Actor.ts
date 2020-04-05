@@ -16,6 +16,7 @@ import {differenceBy} from 'lodash';
 import { ActorStatus } from "../Constants/ActorConstants";
 import { HttpCoordinatorRequestException } from "../Exceptions/HttpCoordinatorRequestException";
 import {SubtaskManager} from './SubtaskManager';
+import { ActorModelClass } from "../Models/ActorModel";
 
 export class Actor{
     public id:number;
@@ -38,18 +39,30 @@ export class Actor{
     public messageManager:MessageManager;
     public jobManager:JobManager;
     public subtaskManager:SubtaskManager
+    private model:ActorModelClass
 
     constructor(public actorManager:ActorManager,private redisManager:RedisManager){
 
     }
+    setModel(actorModel){
+        this.id = actorModel.property('id');
+        this.name = actorModel.property('name');
+        this.key = actorModel.property('key');
+        this.api = actorModel.property('api');
+        // this.headers = actorModel.property('headers'); //TODO add headers
+        this.redis = actorModel.property('redis');
+        this.protocol = actorModel.property('protocol');
+        this.status = <ActorStatus>actorModel.property('status');
+        this.model = actorModel;
+    }
     public async init(){
         
         this.redisClient = await this.redisManager.client(this.redis);
-        this.initCoordinator();
-        this.initNohm();
         this.messageManager = new MessageManager(this);
         this.jobManager = new JobManager(this);
         this.subtaskManager = new SubtaskManager(this);
+        this.initCoordinator();
+        this.initNohm();
         Logger.log(`Inited actor: ${this.name}.`,'bootstrap')
     }
     private initNohm(){
@@ -70,8 +83,8 @@ export class Actor{
             }
         }
         //TODO processor记录到db
-
     }
+    
     private async saveListener(listenerOptions){
         let listenerModels = await this.actorManager.masterModels.ListenerModel.findAndLoad({
             actor_id:this.id

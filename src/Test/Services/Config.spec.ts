@@ -22,6 +22,6 @@ describe('ActorConfigLoadToMasterRedis.spec', () => {
 
 
     it('Load config and base check.', async () => {
-        expect(config.actors.get(1).name).toBe('user');
+        expect(config.actors[0].name).toBe('user');
     });
 });

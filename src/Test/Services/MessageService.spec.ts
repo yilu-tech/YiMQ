@@ -41,11 +41,13 @@ describe('MessageService', () => {
         redisManager = app.get<RedisManager>(RedisManager);
         await redisManager.flushAllDb();
         actorService = app.get<ActorService>(ActorService);
-        await actorService.loadConfigFileToMasterRedis();
+
+        
 
         config = app.get<Config>(Config);
         messageService = app.get<MessageService>(MessageService);
         actorManager = app.get<ActorManager>(ActorManager);
+        await actorManager.saveConfigFileToMasterRedis()
         
         await actorManager.initActors();
     });

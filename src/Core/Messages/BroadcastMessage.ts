@@ -64,7 +64,7 @@ export class BroadcastMessage extends Message{
         }
         let subtask = <LstrSubtask>(await this.producer.subtaskManager.addSubtask(this,SubtaskType.LSTR,body))
 
-        this.model.link(subtask.model);
+        this.model.link(subtask.model); //TODO 取消link，直接用context里面的关联
         await this.model.save()
       
 
@@ -74,7 +74,7 @@ export class BroadcastMessage extends Message{
 
 
     public async loadListenerSubtasks(){
-        let subtaskIds = await this.model.getAll(SubtaskModelClass.modelName)
+        let subtaskIds = await this.model.getAll(SubtaskModelClass.modelName) //TODO 取消link，直接用context里面的关联
 
         let subtasks:Array<LstrSubtask> = [];
         for(var subtask_id of subtaskIds){

@@ -5,6 +5,7 @@ export interface ActorConfig{
     name:string;
     key:string;
     api:string;
+    protocol:string;
     headers:object;
     redis:string;
     topic:Array<string>;

@@ -6,9 +6,9 @@ import { RedisOptions } from "ioredis";
 interface ActorProperties {
     id:number
     name: string;
-    key: number;
+    key: string;
     api: string;
-    status: number;
+    status: string;
     protocol:string;
     redis:string;
     redisOptions: RedisOptions;
@@ -37,7 +37,7 @@ export class ActorModelClass extends NohmModel<ActorProperties> {
             validations: ['notEmpty'],
         },
         status: {
-            type: 'integer'
+            type: 'string'
         },
         protocol: {
             type: 'string'

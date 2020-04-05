@@ -37,10 +37,11 @@ describe('Subtask', () => {
 
         await redisManager.flushAllDb();
         actorService = app.get<ActorService>(ActorService);
-        await actorService.loadConfigFileToMasterRedis();
 
         config = app.get<Config>(Config);
         actorManager = app.get<ActorManager>(ActorManager);
+        await actorManager.saveConfigFileToMasterRedis()
+        
         
         
     });
@@ -60,14 +61,14 @@ describe('Subtask', () => {
             await actorManager.initActors();
 
             
-            mock.onPost(config.actors.get(1).api).replyOnce(200,{
+            mock.onPost(actorManager.get('user').api).replyOnce(200,{
                 "listeners": [{
                     "processor": "Tests\\Services\\ContentUpdateListener",
                     "topic": "content@post.update",
                     "condition": null
                 }]
             })
-            mock.onPost(config.actors.get(2).api).replyOnce(200,{
+            mock.onPost(actorManager.get('content').api).replyOnce(200,{
                 "listeners": [{
                     "processor": "Tests\\Services\\UserUpdateListener",
                     "topic": "user@user.update",
@@ -81,7 +82,7 @@ describe('Subtask', () => {
             expect(listenerModels.length).toBe(2);//确认添加成功
 
             let newTopic = 'content@post.update_new';
-            mock.onPost(config.actors.get(1).api).replyOnce(200,{
+            mock.onPost(actorManager.get('user').api).replyOnce(200,{
                 "listeners": [{
                     "processor": "Tests\\Services\\ContentUpdateListener",
                     "topic": newTopic,
@@ -93,7 +94,7 @@ describe('Subtask', () => {
                     "condition": null
                 }]
             })
-            mock.onPost(config.actors.get(2).api).replyOnce(200,{
+            mock.onPost(actorManager.get('content').api).replyOnce(200,{
                 "listeners": []
             })
             await actorManager.loadActorsRemoteConfig()
