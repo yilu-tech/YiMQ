@@ -38,7 +38,7 @@ export class ActorManager{
             this.actorsName.set(actor.name,actor);
         }
         //todo::通过masterRedis对比，取出配置文件不存在的actor也进行初始化，用于后续手动操作
-        Logger.log('Inited actors.','Bootstrap')
+        Logger.log('Inited actors.','ActorManager')
     }
 
     public async shutdown(){
@@ -56,7 +56,7 @@ export class ActorManager{
             
         }
         //todo::通过masterRedis对比，取出配置文件不存在的actor也进行初始化，用于后续手动操作
-        Logger.log('Load actors remote config.','Bootstrap')
+        Logger.log('Load actors remote config.','ActorManager')
     }
     public async closeActors(){
         for(let [id,actor] of this.actors){
@@ -99,7 +99,7 @@ export class ActorManager{
 
 
     public async saveConfigFileToMasterRedis(){
-        Logger.log('Load actors to master redis.','Bootstrap');
+        Logger.log('Load actors to master redis.','ActorManager');
         let actorsConfig = this.config.actors;
 
         let actorModels = await this.getAllActorModels();
@@ -116,7 +116,7 @@ export class ActorManager{
         for (const removeActorModel of removeActorModels) {
             removeActorModel.property('status',ActorStatus.REMOVED)
             await removeActorModel.save()
-            Logger.warn(removeActorModel.allProperties(),'Actor_Remove');
+            Logger.warn(removeActorModel.allProperties(),'ActorManager Actor_Remove');
         }
 
         
@@ -128,7 +128,7 @@ export class ActorManager{
             }))[0]
             
             if(actorModel){
-                Logger.log(actorModel.allProperties(),'Actor_Update');
+                Logger.log(actorModel.allProperties(),'ActorManager Actor_Update');
             }else{
                 actorModel = new this.masterModels.ActorModel();
                 Logger.log(actorConfig,'Actor_Add');
@@ -146,7 +146,7 @@ export class ActorManager{
             actorModel.property('redisOptions',this.config.system.redis[actorConfig.redis]);
             await  actorModel.save(); 
         }
-        Logger.log('Loaded actors to master redis.','Bootstrap');
+        Logger.log('Loaded actors to master redis.','ActorManager');
         return true;
     }
 

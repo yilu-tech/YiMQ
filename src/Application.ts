@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { MasterModels } from './Models/MasterModels';
 import { ActorManager } from './Core/ActorManager';
+import { RedisManager } from './Handlers/redis/RedisManager';
 const { setQueues } = require('bull-board')
 @Injectable()
 export class Application {
-    constructor(public masterModels:MasterModels, public actorManager:ActorManager){
+    constructor(public redisManager:RedisManager, public masterModels:MasterModels, public actorManager:ActorManager){
 
     }
 
@@ -35,8 +36,13 @@ export class Application {
     }
 
     async shutdown(){
-        await this.masterModels.shutdown();
         await this.actorManager.shutdown();
+        Logger.log('ActorManager shutdown','Application');
+        await this.masterModels.shutdown();
+        Logger.log('MasterModels shutdown','Application');
+        await this.redisManager.shutdown();
+        Logger.log('RedisManager shutdown','Application');
+        
     }
     
     async setUiQueue(){//TODO 自己开发ui后移除

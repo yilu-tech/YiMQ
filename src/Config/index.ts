@@ -36,14 +36,14 @@ export class Config {
         
     async loadConfig(){
         try {
-            this.system = this.load_system_config();
+            this.load_system_config();
             this.event.emit(ConfigEvents.SYSTEM_CONFIG_LOAD);
         } catch (error) {
             Logger.error(error,'Config');
         }
         
         try {
-            this.actors = this.load_actors_config();
+            this.load_actors_config();
             this.event.emit(ConfigEvents.ACTORS_CONFIG_LOAD);
         } catch (error) {
             Logger.error(error,'Config');
@@ -56,7 +56,7 @@ export class Config {
     }
 
     load_system_config(){
-        return new SystemConfig(this.readConfig(this.paths.system_config));
+        this.system = new SystemConfig(this.readConfig(this.paths.system_config));
     }
 
     load_actors_config(){
@@ -65,7 +65,7 @@ export class Config {
         fileContent.actors.forEach((actorConfig)=>{
             actors.push(actorConfig)
         })
-        return actors;
+        this.actors = actors;
     }
     
 

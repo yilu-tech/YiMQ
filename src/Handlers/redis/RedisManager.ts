@@ -10,7 +10,7 @@ const timeout = ms => new Promise(res => setTimeout(res, ms))
 
 @Injectable()
 export class RedisManager {
-    private clients:Object = {};
+    private clients:Object = {}; //TODO 改为用map存
 
     constructor(private config:Config){
     }
@@ -49,7 +49,13 @@ export class RedisManager {
             delete this.clients[name];
         }
     }
-    public async quitAllDb(){
+    public async closeAll(){
+        for (const key in this.clients) {
+            await timeout(1);
+            await this.close(key);
+        }
+    }
+    public async quitAllDb(){ //TODO remove to use closeAll
         await timeout(1);
         for (const key in this.clients) {
            let redisClient:RedisClient =  this.clients[key];
@@ -57,6 +63,10 @@ export class RedisManager {
                 await redisClient.quit();
             }
         }
+    }
+
+    async shutdown(){
+        await this.closeAll();
     }
 
     public async flushAllDb(){

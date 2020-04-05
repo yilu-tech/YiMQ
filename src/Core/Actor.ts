@@ -63,7 +63,7 @@ export class Actor{
         this.subtaskManager = new SubtaskManager(this);
         this.initCoordinator();
         this.initNohm();
-        Logger.log(`Inited actor: ${this.name}.`,'bootstrap')
+        Logger.log(`Inited actor: ${this.name}.`,'Actor')
     }
     private initNohm(){
         this.nohm = new NohmClass({});
