@@ -14,11 +14,11 @@ import MockAdapter from 'axios-mock-adapter';
 import { TransactionMessage } from '../Core/Messages/TransactionMessage';
 import { SubtaskType, SubtaskStatus } from '../Constants/SubtaskConstants';
 import { BcstSubtask } from '../Core/Subtask/BcstSubtask';
-import { MasterNohm } from '../Bootstrap';
 import { MasterModels } from '../Models/MasterModels';
 import { services } from '../app.module';
 import { async } from 'rxjs/internal/scheduler/async';
 import { BroadcastMessage } from '../Core/Messages/BroadcastMessage';
+import { Application } from '../Application';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('BroadcastMessage', () => {
@@ -27,6 +27,7 @@ describe('BroadcastMessage', () => {
     let redisManager:RedisManager;
     let messageService:MessageService;
     let actorManager:ActorManager;
+    let application:Application
 
 
     beforeEach(async () => {
@@ -37,22 +38,27 @@ describe('BroadcastMessage', () => {
         providers: [
             Config,
             RedisManager,
-            MasterNohm,
             MasterModels,
+            Application,
             ActorManager,
             ...services,
         ],
         }).compile();
+        config = app.get<Config>(Config);
+        await config.loadConfig();
+
         redisManager = app.get<RedisManager>(RedisManager);
+        await redisManager.flushAllDb();
+
+        application = app.get<Application>(Application);
+        await application.baseBootstrap()
 
         await redisManager.flushAllDb();
 
         config = app.get<Config>(Config);
         messageService = app.get<MessageService>(MessageService);
         actorManager = app.get<ActorManager>(ActorManager);
-        await actorManager.saveConfigFileToMasterRedis()
         
-        await actorManager.initActors();
     });
 
     afterEach(async()=>{

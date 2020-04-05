@@ -6,7 +6,6 @@ import { RedisManager } from '../../Handlers/redis/RedisManager';
 import { MasterModels } from '../../Models/MasterModels';
 import { join } from 'path';
 import { RedisClient } from '../../Handlers/redis/RedisClient';
-import { MasterNohm } from '../../Bootstrap';
 import { ActorManager } from '../../Core/ActorManager';
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('ActorConfigLoadToMasterRedis.spec', () => {
@@ -23,14 +22,19 @@ describe('ActorConfigLoadToMasterRedis.spec', () => {
         providers: [
             Config,
             RedisManager,
-            MasterNohm,
             MasterModels,
             ActorService,
             ActorManager,
         ],
         }).compile();
-        actorService = app.get<ActorService>(ActorService);
         config = app.get<Config>(Config);
+        await config.loadConfig()
+        let masterModels = app.get<MasterModels>(MasterModels);
+        await masterModels.register()
+        actorService = app.get<ActorService>(ActorService);
+
+        
+        
         redisManager = app.get<RedisManager>(RedisManager);
         actorManager = app.get<ActorManager>(ActorManager);
         redisClient = await redisManager.client();

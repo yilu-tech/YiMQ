@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Config } from '../../Config';
 import { join } from 'path';
 const timeout = ms => new Promise(res => setTimeout(res, ms))
-describe('ActorConfigLoadToMasterRedis.spec', () => {
+describe('Config', () => {
 
     let config:Config;
 
@@ -22,6 +22,7 @@ describe('ActorConfigLoadToMasterRedis.spec', () => {
 
 
     it('Load config and base check.', async () => {
+        await config.loadConfig();
         expect(config.actors[0].name).toBe('user');
     });
 });

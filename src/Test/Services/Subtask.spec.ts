@@ -16,8 +16,8 @@ import { EcSubtask } from '../../Core/Subtask/EcSubtask';
 import { TccSubtask } from '../../Core/Subtask/TccSubtask';
 import { MasterModels } from '../../Models/MasterModels';
 import { services } from '../../app.module';
-import { MasterNohm } from '../../Bootstrap';
 import { BcstSubtask } from '../../Core/Subtask/BcstSubtask';
+import { Application } from '../../Application';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('Subtask', () => {
@@ -26,6 +26,7 @@ describe('Subtask', () => {
     let redisManager:RedisManager;
     let messageService:MessageService;
     let actorManager:ActorManager;
+    let application:Application
 
 
     beforeEach(async () => {
@@ -37,27 +38,30 @@ describe('Subtask', () => {
             Config,
             RedisManager,
             MasterModels,
-            MasterNohm,
             ActorManager,
+            Application,
             ...services,
         ],
         }).compile();
-        redisManager = app.get<RedisManager>(RedisManager);
-
-        await redisManager.flushAllDb();
-        actorService = app.get<ActorService>(ActorService);
-
+        
         config = app.get<Config>(Config);
+        await config.loadConfig();
+
+        redisManager = app.get<RedisManager>(RedisManager);
+        await redisManager.flushAllDb();
+
+        application = app.get<Application>(Application);
+        await application.baseBootstrap()
+
+        actorService = app.get<ActorService>(ActorService);
         messageService = app.get<MessageService>(MessageService);
         actorManager = app.get<ActorManager>(ActorManager);
-        await actorManager.saveConfigFileToMasterRedis()
-        
-        await actorManager.initActors();
     });
 
     afterEach(async()=>{
-        await redisManager.quitAllDb();
+        
         await actorManager.closeActors();
+        await redisManager.quitAllDb();
     })
     
 

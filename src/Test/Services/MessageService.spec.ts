@@ -14,7 +14,7 @@ import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
 import {JobStatus} from '../../Constants/JobConstants'
 import { TransactionMessage } from '../../Core/Messages/TransactionMessage';
-import { MasterNohm } from '../../Bootstrap';
+import { Application } from '../../Application';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('MessageService', () => {
@@ -23,6 +23,7 @@ describe('MessageService', () => {
     let redisManager:RedisManager;
     let messageService:MessageService;
     let actorManager:ActorManager;
+    let application:Application
 
     beforeEach(async () => {
         process.env.CONFIG_DIR_PATH = join(__dirname,'../','config');
@@ -32,29 +33,33 @@ describe('MessageService', () => {
         providers: [
             Config,
             RedisManager,
-            MasterNohm,
             MasterModels,
             ActorManager,
+            Application,
             ...services,
         ],
         }).compile();
+        config = app.get<Config>(Config);
+        await config.loadConfig();
+
         redisManager = app.get<RedisManager>(RedisManager);
         await redisManager.flushAllDb();
+
+        application = app.get<Application>(Application);
+        await application.baseBootstrap()
+
+
         actorService = app.get<ActorService>(ActorService);
 
         
-
-        config = app.get<Config>(Config);
         messageService = app.get<MessageService>(MessageService);
         actorManager = app.get<ActorManager>(ActorManager);
-        await actorManager.saveConfigFileToMasterRedis()
-        
-        await actorManager.initActors();
     });
 
     afterEach(async()=>{
-        await redisManager.quitAllDb();
+    
         await actorManager.closeActors();
+        await redisManager.quitAllDb();
     })
     
 

@@ -8,7 +8,6 @@ import { ActorManager } from '../Core/ActorManager';
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
 import { MasterModels } from '../Models/MasterModels';
-import { MasterNohm } from '../Bootstrap';
 import { services } from '../app.module';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
@@ -27,18 +26,22 @@ describe('Subtask', () => {
         providers: [
             Config,
             RedisManager,
-            MasterNohm,
             MasterModels,
             ActorManager,
             ...services,
         ],
         }).compile();
+        config = app.get<Config>(Config);
+        await config.loadConfig()
         redisManager = app.get<RedisManager>(RedisManager);
+
+        let masterModels = app.get<MasterModels>(MasterModels);
+        await masterModels.register()
 
         await redisManager.flushAllDb();
         actorService = app.get<ActorService>(ActorService);
 
-        config = app.get<Config>(Config);
+        
         actorManager = app.get<ActorManager>(ActorManager);
         await actorManager.saveConfigFileToMasterRedis()
         

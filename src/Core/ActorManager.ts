@@ -41,6 +41,12 @@ export class ActorManager{
         Logger.log('Inited actors.','Bootstrap')
     }
 
+    public async shutdown(){
+        await this.closeActors();
+        this.actors = new Map();
+        this.actorsName = new Map();
+    }
+
 
     public async loadActorsRemoteConfig(){
         for(let [id,actor] of this.actors){

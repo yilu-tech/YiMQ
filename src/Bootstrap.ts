@@ -1,43 +1,23 @@
-
-import { ActorService } from "./Services/ActorService";
-import  {NohmClass} from 'nohm';
-import { RedisManager } from "./Handlers/redis/RedisManager"
-import { ActorManager } from "./Core/ActorManager";
-const { setQueues } = require('bull-board')
+import { Config, ConfigEvents } from "./Config";
+import { Application } from "./Application";
 
 
+export const Bootstrap = {
+  provide: 'Bootstrap',
+  useFactory: async(config:Config,application:Application)=>{
 
-
-/**
- * 配置masterNohm注入redis client
- */
-export const MasterNohm = {
-  provide: 'masterNohm',
-  useFactory: async (redisManager:RedisManager) => {
-    let redisClient = await redisManager.client();
-    const defaultNohm = new NohmClass({})
-    defaultNohm.setClient(redisClient);
-    return defaultNohm;
-  },
-  inject:[RedisManager]
-}
-
-
-export const ActorManagerBootstrap = {
-  provide: 'ActorManagerBootstrap',
-  useFactory: async(actorManager:ActorManager)=>{
-    await actorManager.saveConfigFileToMasterRedis()
-    await actorManager.initActors();
-    await actorManager.loadActorsRemoteConfig();
-    await actorManager.bootstrapActorsCoordinatorprocessor();
-
-    //TODO 自己开发ui后移除
-    let queues = [];
-    actorManager.actors.forEach((actor)=>{
-        queues.push(actor.coordinator.getQueue());
+    
+    config.event.on(ConfigEvents.CONFIG_LOAD,async ()=>{
+      await application.bootstrap()
     })
-    setQueues(queues);
-  },
-  inject:[ActorManager]
-}
+    config.event.on(ConfigEvents.CONFIG_RELOAD,async ()=>{
+      await application.shutdown()
+      await application.bootstrap()
+      
+    })
 
+    await config.loadConfig()
+    await config.setWatch();
+  },
+  inject:[Config,Application]
+}

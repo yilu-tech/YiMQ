@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Config } from '../../Config';
-import { MasterNohm } from '../../Bootstrap';
 import { ActorService } from '../../Services/ActorService';
 import { RedisManager } from '../../Handlers/redis/RedisManager';
 import { join } from 'path';
@@ -17,6 +16,7 @@ import { EcSubtask } from '../../Core/Subtask/EcSubtask';
 import { TccSubtask } from '../../Core/Subtask/TccSubtask';
 import { JobService } from '../../Services/JobService';
 import { MasterModels } from '../../Models/MasterModels';
+import { Application } from '../../Application';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('Subtask', () => {
@@ -36,15 +36,22 @@ describe('Subtask', () => {
         providers: [
             Config,
             RedisManager,
-            MasterNohm,
             MasterModels,
             ActorManager,
+            Application,
             ...services,
         ],
         }).compile();
-        redisManager = app.get<RedisManager>(RedisManager);
+        config = app.get<Config>(Config);
+        await config.loadConfig();
 
+        redisManager = app.get<RedisManager>(RedisManager);
         await redisManager.flushAllDb();
+
+        let application = app.get<Application>(Application);
+        await application.baseBootstrap()
+
+
         actorService = app.get<ActorService>(ActorService);
 
 
@@ -52,9 +59,7 @@ describe('Subtask', () => {
         messageService = app.get<MessageService>(MessageService);
         jobService = app.get<JobService>(JobService);
         actorManager = app.get<ActorManager>(ActorManager);
-        await actorManager.saveConfigFileToMasterRedis()
         
-        await actorManager.initActors();
     });
 
     afterAll(async()=>{

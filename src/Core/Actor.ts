@@ -141,9 +141,9 @@ export class Actor{
 
     public async close(){
         await this.coordinator.close();
-        if(this.redisClient.status == 'ready'){//已经被单独关闭的情况下，避免发生错误(主要发生在单元测试中)
-            await this.redisClient.quit();
-        }
+        // if(this.redisClient.status == 'ready'){//已经被单独关闭的情况下，避免发生错误(主要发生在单元测试中)
+        //     await this.redisClient.quit();
+        // }
         
     }
 
