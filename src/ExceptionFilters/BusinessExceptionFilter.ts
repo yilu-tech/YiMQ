@@ -1,7 +1,7 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpStatus, Logger } from '@nestjs/common';
+import { ExceptionFilter, Catch, ArgumentsHost, HttpStatus } from '@nestjs/common';
 
 import { BusinessException } from '../Exceptions/BusinessException';
-
+import { Logger} from '../Handlers/Logger';
 @Catch(BusinessException)
 export class BusinessExceptionFilter implements ExceptionFilter {
   catch(exception: BusinessException, host: ArgumentsHost) {

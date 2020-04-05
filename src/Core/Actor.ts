@@ -1,8 +1,8 @@
 
 import { RedisManager } from "../Handlers/redis/RedisManager";
-import { NohmClass, IStaticMethods, timeProperty } from "nohm";
+import { NohmClass, IStaticMethods } from "nohm";
 import { Redis } from "ioredis";
-import { Logger } from "@nestjs/common";
+import { Logger} from '../Handlers/Logger';
 import { Coordinator } from "./Coordinator/Coordinator";
 import { HttpCoordinator } from "./Coordinator/HttpCoordinator";
 import { GrpcCoordinator } from "./Coordinator/GrpcCoordinator";
@@ -79,7 +79,7 @@ export class Actor{
             await this.saveListener(result['listeners']);   
         } catch (error) {
             if(error instanceof HttpCoordinatorRequestException){
-                Logger.error(error.message,null,'Actor loadRemoteConfigToDB')
+                Logger.error(`${error.message}: ${error.response.message} `,null,`Actor <${this.name}> loadRemoteConfig`)
             }
         }
         //TODO processor记录到db

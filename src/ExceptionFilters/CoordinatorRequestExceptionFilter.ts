@@ -1,6 +1,6 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpStatus, Logger } from '@nestjs/common';
+import { ExceptionFilter, Catch, ArgumentsHost, HttpStatus } from '@nestjs/common';
 import { CoordinatorRequestException } from '../Exceptions/HttpCoordinatorRequestException';
-
+import { Logger} from '../Handlers/Logger';
 
 
 @Catch(CoordinatorRequestException)

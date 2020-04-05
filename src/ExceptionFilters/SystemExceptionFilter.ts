@@ -1,5 +1,5 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpStatus, Logger } from '@nestjs/common';
-
+import { ExceptionFilter, Catch, ArgumentsHost, HttpStatus } from '@nestjs/common';
+import { Logger} from '../Handlers/Logger';
 import { SystemException } from '../Exceptions/SystemException';
 
 @Catch(SystemException)

@@ -3,7 +3,6 @@ import { SubtaskModelClass } from "../../../Models/SubtaskModel";
 import { Job } from "../../Job/Job";
 import { TransactionMessage } from "../../Messages/TransactionMessage";
 import { MessageStatus } from "../../../Constants/MessageConstants";
-import { Logger } from "@nestjs/common";
 export abstract class Subtask{
     id:Number;
     job_id:number;

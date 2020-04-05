@@ -4,7 +4,7 @@ import { Config } from "../../Config";
 import * as Ioredis from 'ioredis'
 import { RedisClient } from "./RedisClient";
 import { BusinessException } from "../../Exceptions/BusinessException";
-import {Logger } from '@nestjs/common';
+import { Logger} from '../../Handlers/Logger';
 import { redisCustomCommand } from "./RedisCustomCommand";
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 

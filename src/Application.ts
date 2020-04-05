@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { Logger} from './Handlers/Logger';
 import { MasterModels } from './Models/MasterModels';
 import { ActorManager } from './Core/ActorManager';
 import { RedisManager } from './Handlers/redis/RedisManager';

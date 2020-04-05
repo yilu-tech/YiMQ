@@ -1,7 +1,7 @@
 
 import { Coordinator } from './Coordinator';
 import * as bull from 'bull';
-import {Logger } from '@nestjs/common';
+import { Logger} from '../../Handlers/Logger';
 import axios from 'axios';
 import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
 import { Actor } from '../Actor';

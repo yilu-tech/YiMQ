@@ -1,13 +1,12 @@
 
 
-import { Injectable, Logger, Inject, UnprocessableEntityException } from '@nestjs/common';
-import { ActorService } from '../Services/ActorService';
+import { Injectable } from '@nestjs/common';
 import { Actor } from './Actor';
 import { Config } from '../Config';
 import { RedisManager } from '../Handlers/redis/RedisManager';
 import { MasterModels } from '../Models/MasterModels';
 import { ActorStatus } from '../Constants/ActorConstants';
-import {differenceBy} from 'lodash';
+import { Logger} from '../Handlers/Logger';
 
 @Injectable()
 export class ActorManager{
@@ -128,10 +127,10 @@ export class ActorManager{
             }))[0]
             
             if(actorModel){
-                Logger.log(actorModel.allProperties(),'ActorManager Actor_Update');
+                Logger.debug(actorModel.allProperties(),'ActorManager Actor_Update');
             }else{
                 actorModel = new this.masterModels.ActorModel();
-                Logger.log(actorConfig,'Actor_Add');
+                Logger.debug(actorConfig,'Actor_Add');
             }
             actorModel.id = actorConfig.id;
             actorModel.property('id',actorConfig.id);

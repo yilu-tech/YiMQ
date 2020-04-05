@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { SystemConfig } from './SystemConfig.';
 import {safeLoad} from 'js-yaml';
 import { readFileSync,readdirSync } from "fs";
@@ -7,6 +7,7 @@ import { ActorConfig } from "./ActorConfig";
 import { get } from 'lodash';
 import { EventEmitter } from "events";
 const chokidar = require('chokidar');
+import { Logger} from '../Handlers/Logger';
 
 process.env.CONFIG_DIR_PATH = process.env.CONFIG_DIR_PATH || join(process.cwd(),'config');
 

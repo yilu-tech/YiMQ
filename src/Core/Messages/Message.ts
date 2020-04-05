@@ -1,7 +1,6 @@
 import { ActorManager } from "../ActorManager";
 import { Actor } from "../Actor";
 import { MessageStatus, MessageType } from "../../Constants/MessageConstants";
-import { Logger } from "@nestjs/common";
 import { Job } from "../Job/Job";
 import { JobType } from "../../Constants/JobConstants";
 import { MessageModelClass } from "../../Models/MessageModel";

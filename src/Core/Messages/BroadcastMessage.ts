@@ -2,7 +2,6 @@ import { Message } from "./Message";
 import { MessageStatus,MessageType } from "../../Constants/MessageConstants";
 import { LstrSubtask } from "../Subtask/LstrSubtask";
 import { SubtaskType } from "../../Constants/SubtaskConstants";
-import { Logger } from "@nestjs/common";
 import { SubtaskModelClass } from "../../Models/SubtaskModel";
 
 

@@ -9,12 +9,17 @@ import { ValidationPipe } from '@nestjs/common';
 import { SystemExceptionFilter } from './ExceptionFilters/SystemExceptionFilter';
 import { ValidationException } from './Exceptions/ValidationException';
 import { CoordinatorRequestExceptionFilter } from './ExceptionFilters/CoordinatorRequestExceptionFilter';
+
 const { UI } = require('bull-board');
 
 const port = 7379;
 async function bootstrap() {
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule,new FastifyAdapter({ logger: true }),{
-  });
+  const app = await NestFactory.create<NestFastifyApplication>(
+    AppModule,
+    new FastifyAdapter({ logger: true }),{
+      
+    });
+
   app.useGlobalPipes(new ValidationPipe({
     transform:true,
     exceptionFactory:(errors)=>{
