@@ -10,6 +10,7 @@ interface ActorProperties {
     api: string;
     status: string;
     protocol:string;
+    options:string;
     redis:string;
     redisOptions: RedisOptions;
 }
@@ -41,6 +42,9 @@ export class ActorModelClass extends NohmModel<ActorProperties> {
         },
         protocol: {
             type: 'string'
+        },
+        options: {
+            type: 'json'
         },
         redis: {
             type: 'string'

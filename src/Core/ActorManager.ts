@@ -146,6 +146,7 @@ export class ActorManager{
             actorModel.property('api',actorConfig.api);
             actorModel.property('status',ActorStatus.ACTIVE);
             actorModel.property('protocol',actorConfig.protocol);
+            actorModel.property('options',actorConfig.options);
             actorModel.property('redis',actorConfig.redis);
             actorModel.property('redisOptions',this.config.system.redis[actorConfig.redis]);
             await  actorModel.save(); 

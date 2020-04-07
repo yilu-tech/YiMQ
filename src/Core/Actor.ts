@@ -18,13 +18,14 @@ import { HttpCoordinatorRequestException } from "../Exceptions/HttpCoordinatorRe
 import {SubtaskManager} from './SubtaskManager';
 import { ActorModelClass } from "../Models/ActorModel";
 import { SystemException } from "../Exceptions/SystemException";
+import { ActorOptions } from "../Config/ActorConfig";
 
 export class Actor{
     public id:number;
     public name:string;
     public key:string;
     public api:string;
-    public headers:object;
+    public options:ActorOptions;
     public redis:string;
     public protocol:string;
     public status:ActorStatus
@@ -50,7 +51,7 @@ export class Actor{
         this.name = actorModel.property('name');
         this.key = actorModel.property('key');
         this.api = actorModel.property('api');
-        // this.headers = actorModel.property('headers'); //TODO add headers
+        this.options = actorModel.property('options'); //TODO add headers
         this.redis = actorModel.property('redis');
         this.protocol = actorModel.property('protocol');
         this.status = <ActorStatus>actorModel.property('status');

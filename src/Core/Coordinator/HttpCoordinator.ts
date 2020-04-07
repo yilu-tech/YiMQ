@@ -51,7 +51,7 @@ export class HttpCoordinator extends Coordinator{
         let config = {
             headers:{
                 'content-type':'application/json',
-                ...this.actor.headers
+                ...this.actor.options.headers
             }
         }
         let body = {
