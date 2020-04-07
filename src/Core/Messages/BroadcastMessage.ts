@@ -10,8 +10,8 @@ export class BroadcastMessage extends Message{
     public context:object = {};
     public listenerSubtasks:Array<LstrSubtask>;
 
-    async createMessageModel(topic:string){
-        await super.createMessageModel(topic);
+    async createMessageModel(topic:string,data){
+        await super.createMessageModel(topic,data);
         this.model.property('status',MessageStatus.DOING);//等待最后一个子任务完成时来标记message为done状态
         return this;
     }

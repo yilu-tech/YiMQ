@@ -12,11 +12,11 @@ export class MessageManager {
 
     }
 
-    async create(type:MessageType, topic:string,jobOptions:bull.JobOptions={}):Promise<any> {
+    async create(type:MessageType, topic:string,data,jobOptions:bull.JobOptions={}):Promise<any> {
        
         
         let message:Message = this.messageFactory(type,this.producer);
-        await message.createMessageModel(topic);
+        await message.createMessageModel(topic,data);
         await (<Message>message).create(topic,jobOptions);//创建job
         return message;
     }

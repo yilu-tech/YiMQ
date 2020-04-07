@@ -72,7 +72,7 @@ describe('MessageService', () => {
 
         it('.after confirm', async (done) => {
 
-            message = await messageService.create(producerName,messageType,topic,{
+            message = await messageService.create(producerName,messageType,topic,{},{
                 delay:8000, //设置超过5秒，检查confirm后是否立即执行job
                 attempts:5,
                 backoff:{
@@ -100,7 +100,7 @@ describe('MessageService', () => {
 
         it('.remote status pending after done', async (done) => {
             process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
-            message = await messageService.create(producerName,messageType,topic,{
+            message = await messageService.create(producerName,messageType,topic,{},{
                 delay:50,
                 attempts:5,
                 backoff:{
@@ -154,7 +154,7 @@ describe('MessageService', () => {
             let topic = 'posts_create';
             let message:Message;
             process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
-            message = await messageService.create(producerName,messageType,topic,{
+            message = await messageService.create(producerName,messageType,topic,{},{
                 attempts:5,
                 backoff:{
                     type:'exponential',
@@ -193,7 +193,7 @@ describe('MessageService', () => {
             let topic = 'user_create';
             let message:Message;
            
-            message = await messageService.create(producerName,messageType,topic,{
+            message = await messageService.create(producerName,messageType,topic,{},{
                 delay:8000,
                 attempts:5,
                 backoff:{
@@ -220,7 +220,7 @@ describe('MessageService', () => {
 
         it('.timeout check cancel', async (done) => {
             process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
-            message = await messageService.create(producerName,messageType,topic,{
+            message = await messageService.create(producerName,messageType,topic,{},{
                 attempts:5,
                 backoff:{
                     type:'exponential',
@@ -250,7 +250,7 @@ describe('MessageService', () => {
             let topic = 'user_create';
             let message:Message;
            
-            message = await messageService.create(producerName,messageType,topic,{
+            message = await messageService.create(producerName,messageType,topic,{},{
                 delay:1000, //设置超过5秒，检查confirm后是否立即执行job
                 attempts:5,
                 backoff:{

@@ -77,7 +77,7 @@ describe('Subtask', () => {
         it('.add ec tcc subtask1', async () => {
             let contentActor = actorManager.get('content'); 
             let producer = actorManager.get(producerName);
-            message = await messageService.create(producerName,messageType,topic,{
+            message = await messageService.create(producerName,messageType,topic,{},{
                 delay:300,
                 attempts:5,
                 backoff:{
@@ -107,7 +107,7 @@ describe('Subtask', () => {
 
             let producer = actorManager.get(producerName);
             let contentActor = actorManager.get('content'); 
-            message = await messageService.create(producerName,messageType,topic,{
+            message = await messageService.create(producerName,messageType,topic,{},{
                 delay:300,
                 attempts:5,
                 backoff:{

@@ -13,8 +13,8 @@ export class TransactionMessage extends Message{
     type = MessageType.TRANSACTION;
 
 
-    async createMessageModel(topic:string){
-        await super.createMessageModel(topic);
+    async createMessageModel(topic:string,data){
+        await super.createMessageModel(topic,data);
         this.model.property('status',MessageStatus.PENDING);
         return this;
     }

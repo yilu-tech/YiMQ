@@ -13,6 +13,7 @@ export abstract class Message{
     topic: string;
     full_topic:string;
     status: MessageStatus;
+    data:any;
     job_id: number;
     updated_at: Number;
     created_at: Number;
@@ -29,7 +30,7 @@ export abstract class Message{
         this.producer = producer;
     }
 
-    async createMessageModel(topic:string){
+    async createMessageModel(topic,data){
         this.model = new this.producer.messageModel();
         
         this.model.id = String(await this.producer.actorManager.getMessageGlobalId());
@@ -38,6 +39,10 @@ export abstract class Message{
         this.model.property('topic',topic);
         this.model.property('type',this.type);
         this.model.property('status',MessageStatus.PENDING);
+        if(data){
+            this.model.property('data',data)
+        }
+        
         this.model.property('created_at',new Date().getTime());
         return this;
     }
@@ -63,6 +68,7 @@ export abstract class Message{
         this.topic = this.model.property('topic');
         this.full_topic = `${this.producer.name}@${this.topic}`;
         this.status = this.model.property('status');
+        this.data = this.model.property('data');
         this.job_id = this.model.property('job_id')
         this.updated_at = this.model.property('updated_at');
         this.created_at = this.model.property('created_at');

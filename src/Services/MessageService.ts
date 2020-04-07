@@ -13,13 +13,13 @@ export class MessageService {
     constructor(private actorManger:ActorManager){
 
     }
-    async create<P>(producerName:string,type:MessageType, topic:string,jobOptions?:bull.JobOptions):Promise<P> {
+    async create<P>(producerName:string,type:MessageType, topic:string,data,jobOptions?:bull.JobOptions):Promise<P> {
         let message:any;
         let producer = this.actorManger.get(producerName);
         if(!producer){
             throw new SystemException(`Producer <${producerName}> not exists.`)
         }
-        message =  await producer.messageManager.create(type,topic,jobOptions);
+        message =  await producer.messageManager.create(type,topic,data,jobOptions);
         return message;
     }
     async confirm(producerName:string,messageId):Promise<MessageControlResult>{

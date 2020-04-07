@@ -43,7 +43,7 @@ export class BcstSubtask extends Subtask{
     async confirm(){
         // this.broadcastMessage = await this.message.producer.messageManager.create(MessageType.BROADCAST,this.context.topic);
         this.broadcastMessage = new BroadcastMessage(this.message.producer);
-        await this.broadcastMessage.createMessageModel(this.context.topic);
+        await this.broadcastMessage.createMessageModel(this.context.topic,this.data);
         await this.broadcastMessage.setContext({bcst_subtask_id: this.id})
         await this.broadcastMessage.create(this.context.topic,{});//创建job
 
