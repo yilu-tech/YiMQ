@@ -11,6 +11,7 @@ export abstract class Message{
     id:string;
     actor_id:number;
     topic: string;
+    full_topic:string;
     status: MessageStatus;
     job_id: number;
     updated_at: Number;
@@ -60,6 +61,7 @@ export abstract class Message{
         this.actor_id = this.model.property('actor_id');
         this.type = <MessageType>this.model.property('type');
         this.topic = this.model.property('topic');
+        this.full_topic = `${this.producer.name}@${this.topic}`;
         this.status = this.model.property('status');
         this.job_id = this.model.property('job_id')
         this.updated_at = this.model.property('updated_at');

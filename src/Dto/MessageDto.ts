@@ -10,7 +10,7 @@ export class CreateMessageDto{
     topic:string;
 
     @IsDefined()
-    @IsIn([MessageType.GENERAL,MessageType.TRANSACTION])
+    @IsIn([MessageType.GENERAL,MessageType.TRANSACTION,MessageType.BROADCAST])
     type:MessageType;
 
     @IsInt()

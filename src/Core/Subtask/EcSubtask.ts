@@ -19,6 +19,7 @@ export class EcSubtask extends ConsumerSubtask{
         let callContext = {
             id: this.id,
             message_id: this.message.id,
+            topic: this.message.full_topic,
             type: this.type,
             processor: this.processor,
             data:this.data

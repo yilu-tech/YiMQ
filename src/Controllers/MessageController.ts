@@ -1,5 +1,5 @@
 import { Controller, Post, Body } from '@nestjs/common';
-import { CreateMessageDto, AddSubtaskDto } from '../Dto/TransactionDto';
+import { CreateMessageDto, AddSubtaskDto } from '../Dto/MessageDto';
 
 import { MessageService } from '../Services/MessageService';
 import { TransactionMessage } from '../Core/Messages/TransactionMessage';
