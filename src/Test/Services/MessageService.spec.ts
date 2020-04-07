@@ -64,7 +64,7 @@ describe('MessageService', () => {
     
 
 
-    describe('.confirm', async () => {
+    describe('.confirm', () => {
         let producerName = 'user';
         let messageType = MessageType.TRANSACTION;
         let topic = 'goods_create';
@@ -181,7 +181,7 @@ describe('MessageService', () => {
 
     })
 
-    describe('.cancel', async () => {
+    describe('.cancel', () => {
         let producerName = 'user';
         let messageType = MessageType.TRANSACTION;
         let topic = 'goods_create';

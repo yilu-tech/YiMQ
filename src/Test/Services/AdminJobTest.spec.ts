@@ -67,7 +67,7 @@ describe('Subtask', () => {
         await actorManager.closeActors();
     })
 
-    describe('.create:', async () => {
+    describe('.create:', () => {
         let producerName = 'user';
         let messageType = MessageType.TRANSACTION;
         let topic = 'subtask_test';

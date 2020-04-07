@@ -58,7 +58,7 @@ describe('Subtask', () => {
   
 
 
-    describe('.client config', async () => {
+    describe('.client config', () => {
 
         it('.listeners to db', async () => {
             await actorManager.initActors();

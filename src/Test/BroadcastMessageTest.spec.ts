@@ -70,7 +70,7 @@ describe('BroadcastMessage', () => {
   
 
 
-    describe('.create:', async () => {
+    describe('.create:',() => {
 
 
         it('.add by broadcast message',async (done)=>{

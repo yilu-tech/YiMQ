@@ -68,7 +68,7 @@ describe('Subtask', () => {
   
 
 
-    describe('.create:', async () => {
+    describe('.create:', () => {
         let producerName = 'user';
         let messageType = MessageType.TRANSACTION;
         let topic = 'subtask_test';
@@ -303,7 +303,7 @@ describe('Subtask', () => {
 
     });
 
-    describe('.doning:', async () => {
+    describe('.doning:', () => {
 
         //TODO 建立不同的配置文件隔离producer否则并行测试可能会发生冲突
         let producerName = 'user';
@@ -485,7 +485,7 @@ describe('Subtask', () => {
     });
 
 
-    describe('.done:', async () => {
+    describe('.done:', () => {
 
         let producerName = 'user';
         let messageType = MessageType.TRANSACTION;
@@ -665,7 +665,7 @@ describe('Subtask', () => {
     });
 
 
-    describe('.canceled:', async () => {
+    describe('.canceled:', () => {
 
         let producerName = 'user';
         let messageType = MessageType.TRANSACTION;
