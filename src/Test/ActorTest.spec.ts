@@ -60,19 +60,21 @@ describe('Subtask', () => {
 
     describe('.client config', () => {
 
-        it('.listeners to db', async () => {
+        it('.broadcast_listeners to db', async () => {
             await actorManager.initActors();
 
             
             mock.onPost(actorManager.get('user').api).replyOnce(200,{
-                "listeners": [{
+                'actor_name':'user',
+                "broadcast_listeners": [{
                     "processor": "Tests\\Services\\ContentUpdateListener",
                     "topic": "content@post.update",
                     "condition": null
                 }]
             })
             mock.onPost(actorManager.get('content').api).replyOnce(200,{
-                "listeners": [{
+                'actor_name':'content',
+                "broadcast_listeners": [{
                     "processor": "Tests\\Services\\UserUpdateListener",
                     "topic": "user@user.update",
                     "condition": null
@@ -86,7 +88,8 @@ describe('Subtask', () => {
 
             let newTopic = 'content@post.update_new';
             mock.onPost(actorManager.get('user').api).replyOnce(200,{
-                "listeners": [{
+                'actor_name':'user',
+                "broadcast_listeners": [{
                     "processor": "Tests\\Services\\ContentUpdateListener",
                     "topic": newTopic,
                     "condition": null
@@ -98,7 +101,8 @@ describe('Subtask', () => {
                 }]
             })
             mock.onPost(actorManager.get('content').api).replyOnce(200,{
-                "listeners": []
+                'actor_name':'content',
+                "broadcast_listeners": []
             })
             await actorManager.loadActorsRemoteConfig()
             let userListeners = await actorManager.masterModels.ListenerModel.findAndLoad({'actor_id':actorManager.get('user').id});

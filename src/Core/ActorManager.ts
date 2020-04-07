@@ -72,7 +72,12 @@ export class ActorManager{
 
     public async bootstrapActorsCoordinatorprocessor(){
         for(let [id,actor] of this.actors){
-            actor.coordinator.processBootstrap();
+            if(actor.status == ActorStatus.ACTIVE){
+                actor.coordinator.processBootstrap();
+                Logger.log(`bootstrap`,`ActorManager <${actor.name}> coordinator`)
+            }else{
+                Logger.error(`Can not bootstrap, Actor status is ${actor.status}`,null,`ActorManager <${actor.name}> coordinator`)
+            }
         }
     }
 

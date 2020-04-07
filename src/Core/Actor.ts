@@ -17,6 +17,7 @@ import { ActorStatus } from "../Constants/ActorConstants";
 import { HttpCoordinatorRequestException } from "../Exceptions/HttpCoordinatorRequestException";
 import {SubtaskManager} from './SubtaskManager';
 import { ActorModelClass } from "../Models/ActorModel";
+import { SystemException } from "../Exceptions/SystemException";
 
 export class Actor{
     public id:number;
@@ -76,11 +77,16 @@ export class Actor{
     public async loadRemoteConfigToDB(){
         try {
             let result = await this.coordinator.callActor(this,CoordinatorCallActorAction.GET_CONFIG);
-            await this.saveListener(result['listeners']);   
+            if(result.actor_name != this.name){
+                throw new SystemException(`Remote config actor_name is <${result.actor_name}>`);
+            }
+            await this.saveListener(result['broadcast_listeners']);   
         } catch (error) {
             if(error instanceof HttpCoordinatorRequestException){
                 Logger.error(`${error.message}: ${error.response.message} `,null,`Actor <${this.name}> loadRemoteConfig`)
             }
+            Logger.error(`${error.message}`,null,`Actor <${this.name}> loadRemoteConfig`)
+            this.status = ActorStatus.INACTIVE;
         }
         //TODO processor记录到db
     }
@@ -110,7 +116,7 @@ export class Actor{
             }))[0];
 
             if(listenerModel){
-                Logger.log(listenerModel.allProperties(),'Actor_Listener_Update');
+                Logger.log(`${item.processor}`,`Actor_Listener_Update <${this.name}>`);
             }else{
                 listenerModel = new this.actorManager.masterModels.ListenerModel();
                 Logger.log(item,'Actor_Listener_Add');

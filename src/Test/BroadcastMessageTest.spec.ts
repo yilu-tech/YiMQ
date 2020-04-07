@@ -83,7 +83,8 @@ describe('BroadcastMessage', () => {
 
 
             mock.onPost(userProducer.api).replyOnce(200,{
-                "listeners": [{
+                "actor_name": 'user',
+                "broadcast_listeners": [{
                     "processor": "Tests\\Services\\ContentUpdateListener",
                     "topic": "content@post.update",
                     "condition": null
@@ -95,7 +96,8 @@ describe('BroadcastMessage', () => {
                 }]
             })
             mock.onPost(contentProducer.api).replyOnce(200,{
-                "listeners": []
+                "actor_name": 'content',
+                "broadcast_listeners": []
             })
  
             await actorManager.loadActorsRemoteConfig()
@@ -142,7 +144,8 @@ describe('BroadcastMessage', () => {
             let contentProducer = actorManager.get('content');
             let updatedMessage:TransactionMessage;
             mock.onPost(userProducer.api).replyOnce(200,{
-                "listeners": [{
+                "actor_name": 'user',
+                "broadcast_listeners": [{
                     "processor": "Tests\\Services\\ContentUpdateListener",
                     "topic": "content@post.update",
                     "condition": null
@@ -155,7 +158,8 @@ describe('BroadcastMessage', () => {
             ]
             })
             mock.onPost(contentProducer.api).replyOnce(200,{
-                "listeners": [{
+                "actor_name": 'content',
+                "broadcast_listeners": [{
                     "processor": "Tests\\Services\\UserUpdateListener",
                     "topic": "user@user.update",
                     "condition": null
