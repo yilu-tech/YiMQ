@@ -22,6 +22,9 @@ export class RedisManager {
         if(this.clients[name]){
             return this.clients[name];
         }
+        let opionts = {
+            ...this.getClientOptions(name)
+        }
         let client = new Ioredis(this.getClientOptions(name));
         redisCustomCommand(client);
 
@@ -30,7 +33,12 @@ export class RedisManager {
                 this.clients[name]  = client;
                 res(client);
             })
-            //todo:: client.on error rej error
+            client.on('error', (error) => {
+                rej(error);    
+            });
+            client.on('end', () => {
+                Logger.log(`...is end.`,`RedisManager  <${name}>`);
+            });
         })
     }
 

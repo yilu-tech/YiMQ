@@ -23,6 +23,10 @@ export class MasterModels {
     public async shutdown(){
         if(this.masterNohm){
             this.masterNohm.closePubSub();
+            delete this.masterNohm.client;
+            this.masterNohm.logError = function(err){//TODO 待观察是否有用
+                console.error('MasterNohm---->',err)
+            }
         }
         
         delete this.ActorModel;

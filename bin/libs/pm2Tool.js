@@ -47,6 +47,26 @@ exports.delete = function(process){
     })
 };
 
+exports.list = function(process){
+    return new Promise((res,rej)=>{
+        pm2.list(process,(err,result)=>{
+            if(err) return rej(err);
+            res(result);
+        })
+    })
+};
+
+
+
+exports.sendDataToProcessId = function(packet){
+    return new Promise((res,rej)=>{
+        pm2.sendDataToProcessId(packet,(err,result)=>{
+            if(err) return rej(err);
+            res(result);
+        })
+    })
+};
+
 
 
 
