@@ -2,6 +2,9 @@ import { Message, MessageControlResult } from "./Message";
 
 
 export class GeneralMessage extends Message{
+    public async loadSubtasks() {
+        throw new Error("Method not implemented.");
+    }
     toDoing(): Promise<Message> {
         throw new Error("Method not implemented.");
     }

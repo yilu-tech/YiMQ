@@ -122,6 +122,7 @@ export class TransactionMessage extends Message{
             subtasks.push(subtask);
         }
         this.subtasks = subtasks;
+        return this;
         
     }
 

@@ -71,8 +71,7 @@ export class BroadcastMessage extends Message{
     }
 
 
-    public async loadListenerSubtasks(){
-
+    public async loadSubtasks() {
         let subtaskIds = this.subtask_contexts.map((item)=>{
             return item.subtask_id;
         })
@@ -84,6 +83,4 @@ export class BroadcastMessage extends Message{
         this.subtasks = subtasks;
         return this;
     }
-
-
 }

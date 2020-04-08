@@ -117,7 +117,7 @@ describe('BroadcastMessage', () => {
                 updatedMessage = await userProducer.messageManager.get(message.id);
 
 
-                let subtasks = (await updatedMessage.loadListenerSubtasks()).subtasks;
+                let subtasks = (await updatedMessage.loadSubtasks()).subtasks;
 
                 if(message.job.id == job.id){
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
@@ -205,7 +205,7 @@ describe('BroadcastMessage', () => {
                 await updatedMessage.loadSubtasks();
                 let bcstSubtask:BcstSubtask = <BcstSubtask>updatedMessage.subtasks[0];
                 let broadcastMessage = (await bcstSubtask.loadBroadcastMessage()).broadcastMessage;
-                let listenerSubtasks = (await broadcastMessage.loadListenerSubtasks()).subtasks;
+                let listenerSubtasks = (await broadcastMessage.loadSubtasks()).subtasks;
                 if(message.job.id == job.id){
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
                     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DOING);
@@ -227,7 +227,7 @@ describe('BroadcastMessage', () => {
                 await updatedMessage.loadSubtasks();
                 let bcstSubtask:BcstSubtask = <BcstSubtask>updatedMessage.subtasks[0];
                 let broadcastMessage = (await bcstSubtask.loadBroadcastMessage()).broadcastMessage;
-                let listenerSubtasks = (await broadcastMessage.loadListenerSubtasks()).subtasks;
+                let listenerSubtasks = (await broadcastMessage.loadSubtasks()).subtasks;
                 
                 if(listenerSubtasks.length > 0 && listenerSubtasks[1].job_id == job.id){
                     console.log('contentProducer',job.id)

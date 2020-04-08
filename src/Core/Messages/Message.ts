@@ -91,6 +91,8 @@ export abstract class Message{
         await this.initProperties();
     };
 
+    public abstract async loadSubtasks();
+
     abstract async toDoing():Promise<Message>;
 
     protected async incrPendingSubtaskTotal(){
