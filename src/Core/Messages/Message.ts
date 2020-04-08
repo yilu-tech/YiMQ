@@ -7,6 +7,12 @@ import { MessageModelClass } from "../../Models/MessageModel";
 import * as bull from 'bull';
 import { Subtask } from "../Subtask/BaseSubtask/Subtask";
 
+export interface SubtaskContext{
+    consumer_id:number
+    processor:string
+    subtask_id:number
+}
+
 export abstract class Message{
     id:string;
     actor_id:number;
@@ -21,7 +27,7 @@ export abstract class Message{
     public producer:Actor;
     public job:Job;
     public model:MessageModelClass
-
+    public subtask_contexts:Array<SubtaskContext>;
     public subtasks:Array<Subtask> = [];  //事物的子项目
     public pending_subtask_total:number;
 
@@ -73,6 +79,7 @@ export abstract class Message{
         this.updated_at = this.model.property('updated_at');
         this.created_at = this.model.property('created_at');
         this.pending_subtask_total = this.model.property('pending_subtask_total');
+        this.subtask_contexts = <Array<SubtaskContext>>this.model.property('subtask_contexts');
 
 
     }

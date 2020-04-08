@@ -117,13 +117,13 @@ describe('BroadcastMessage', () => {
                 updatedMessage = await userProducer.messageManager.get(message.id);
 
 
-                let listenerSubtasks = (await updatedMessage.loadListenerSubtasks()).listenerSubtasks;
+                let subtasks = (await updatedMessage.loadListenerSubtasks()).subtasks;
 
                 if(message.job.id == job.id){
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
                 }
        
-                if(listenerSubtasks[0].job_id == job.id){
+                if(subtasks[0].job_id == job.id){
                     expect(updatedMessage.status).toBe(MessageStatus.DONE)
                     expect(updatedMessage.pending_subtask_total).toBe(0)
                     done()
@@ -186,10 +186,9 @@ describe('BroadcastMessage', () => {
             }
             process.env.SUBTASK_JOB_DELAY = '100';
             let prepareResult = await messageService.prepare(producerName,message.id,body);
-            
             mock.onPost(userProducer.api).reply(200,{message:'subtask process succeed'})
             mock.onPost(contentProducer.api).reply(200,{message:'subtask process succeed'})
-            
+
 
             let listenerDoneCount = 0;
             function doneExpect(done,updatedMessage,broadcastMessage){
@@ -205,7 +204,7 @@ describe('BroadcastMessage', () => {
                 updatedMessage = await userProducer.messageManager.get(message.id);
                 let bcstSubtask:BcstSubtask = <BcstSubtask>updatedMessage.subtasks[0];
                 let broadcastMessage = (await bcstSubtask.loadBroadcastMessage()).broadcastMessage;
-                let listenerSubtasks = (await broadcastMessage.loadListenerSubtasks()).listenerSubtasks;
+                let listenerSubtasks = (await broadcastMessage.loadListenerSubtasks()).subtasks;
                 if(message.job.id == job.id){
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
                     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DOING);
@@ -226,7 +225,7 @@ describe('BroadcastMessage', () => {
                 updatedMessage = await userProducer.messageManager.get(message.id);
                 let bcstSubtask:BcstSubtask = <BcstSubtask>updatedMessage.subtasks[0];
                 let broadcastMessage = (await bcstSubtask.loadBroadcastMessage()).broadcastMessage;
-                let listenerSubtasks = (await broadcastMessage.loadListenerSubtasks()).listenerSubtasks;
+                let listenerSubtasks = (await broadcastMessage.loadListenerSubtasks()).subtasks;
                 
                 if(listenerSubtasks.length > 0 && listenerSubtasks[1].job_id == job.id){
                     console.log('contentProducer',job.id)

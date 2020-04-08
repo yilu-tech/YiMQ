@@ -8,7 +8,6 @@ import { SubtaskModelClass } from "../../Models/SubtaskModel";
 export class BroadcastMessage extends Message{
     public type = MessageType.BROADCAST;
     public context:object = {};
-    public listenerSubtasks:Array<LstrSubtask>;
 
     async createMessageModel(topic:string,data){
         await super.createMessageModel(topic,data);
@@ -16,27 +15,31 @@ export class BroadcastMessage extends Message{
         return this;
     }
 
+    /**
+     * 用于BcstSubtask设置上下文
+     * @param context { bcst_subtask_id: '1' }
+     */
     setContext(context){
         this.context = context;
         this.model.property('context',context);
     }
 
     async toDoing() {
-        let listenerContexts = await this.getListenerContexts()
-        await this.setProperty('listeners',listenerContexts).save();
-        await this.createListenerSubtasks(listenerContexts)
+        let listeners = await this.getListeners()
+        await this.setProperty('subtask_contexts',listeners).save();
+        await this.createListenerSubtasks(listeners)
         await this.setStatus(MessageStatus.DOING).save();
         return this;
     }
 
-    private async getListenerContexts(){
+    private async getListeners(){
         let listenerModels = await this.producer.actorManager.masterModels.ListenerModel.findAndLoad({
             topic: `${this.producer.name}@${this.topic}`
         })
         let listenerContexts = [];
         for (const listenerModel of listenerModels) {
             let context = {
-                actor_id: listenerModel.property('actor_id'),
+                consumer_id: listenerModel.property('actor_id'),
                 processor: listenerModel.property('processor'),
                 subtask_id: await this.producer.actorManager.getSubtaskGlobalId()//提前占用subtask_id
             }
@@ -45,42 +48,40 @@ export class BroadcastMessage extends Message{
         return listenerContexts;
     }
     
-    private async createListenerSubtasks(listenerContexts){
-        this.listenerSubtasks = [];
-        for (const context of listenerContexts) {
-            await this.addListenerSubtask(context)
+    private async createListenerSubtasks(listeners){
+        this.subtasks = [];
+        for (const listener of listeners) {
+            await this.addListenerSubtask(listener)
             await this.incrPendingSubtaskTotal();
         }
     }
 
-    async addListenerSubtask(context){
+    async addListenerSubtask(listener){
        
         let body = {
-            subtask_id: context.subtask_id,
-            consumer_id: context.actor_id,
-            processor: context.processor,
+            subtask_id: listener.subtask_id,
+            consumer_id: listener.consumer_id,
+            processor: listener.processor,
             data:{},
         }
-        let subtask = <LstrSubtask>(await this.producer.subtaskManager.addSubtask(this,SubtaskType.LSTR,body))
-
-        this.model.link(subtask.model); //TODO 取消link，直接用context里面的关联
-        await this.model.save()
-      
+        let subtask = <LstrSubtask>(await this.producer.subtaskManager.addSubtask(this,SubtaskType.LSTR,body))      
 
         await subtask.confirm();
-        this.listenerSubtasks.push(subtask);
+        this.subtasks.push(subtask);
     }
 
 
     public async loadListenerSubtasks(){
-        let subtaskIds = await this.model.getAll(SubtaskModelClass.modelName) //TODO 取消link，直接用context里面的关联
 
+        let subtaskIds = this.subtask_contexts.map((item)=>{
+            return item.subtask_id;
+        })
         let subtasks:Array<LstrSubtask> = [];
         for(var subtask_id of subtaskIds){
             let subtask:LstrSubtask = <LstrSubtask>(await this.producer.subtaskManager.getByFrom(this,subtask_id));
             subtasks.push(subtask);
         }
-        this.listenerSubtasks = subtasks;
+        this.subtasks = subtasks;
         return this;
     }
 

@@ -12,7 +12,7 @@ interface MessageProperties {
     pending_subtask_total: number;
     status: MessageStatus;
     job_id: number;
-    listeners:object;
+    subtask_contexts:object;//TODO change name to subtasks
     updated_at: number;
     created_at: number;
 
@@ -60,8 +60,9 @@ export class MessageModelClass extends NohmModel<MessageProperties> {
             type: 'integer',
             index: true
         },
-        listeners:{
-            type: 'json'
+        subtask_contexts:{
+            type: 'json',
+            defaultValue:[]
         },
         updated_at: {
             type: 'timestamp',
