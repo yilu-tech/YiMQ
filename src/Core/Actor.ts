@@ -83,10 +83,11 @@ export class Actor{
             }
             await this.saveListener(result['broadcast_listeners']);   
         } catch (error) {
+            let errorMessage = `${error.message}`;
             if(error instanceof HttpCoordinatorRequestException){
-                Logger.error(`${error.message}: ${error.response.message} `,null,`Actor <${this.name}> loadRemoteConfig`)
+                errorMessage = `${error.message}: ${error.response.message} `;
             }
-            Logger.error(`${error.message}`,null,`Actor <${this.name}> loadRemoteConfig`)
+            Logger.error(errorMessage,null,`Actor <${this.name}> loadRemoteConfig`)
             this.status = ActorStatus.INACTIVE;
         }
         //TODO processor记录到db
