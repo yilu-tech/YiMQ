@@ -202,6 +202,7 @@ describe('BroadcastMessage', () => {
             }
             userProducer.coordinator.getQueue().on('completed',async (job)=>{
                 updatedMessage = await userProducer.messageManager.get(message.id);
+                await updatedMessage.loadSubtasks();
                 let bcstSubtask:BcstSubtask = <BcstSubtask>updatedMessage.subtasks[0];
                 let broadcastMessage = (await bcstSubtask.loadBroadcastMessage()).broadcastMessage;
                 let listenerSubtasks = (await broadcastMessage.loadListenerSubtasks()).subtasks;
@@ -223,6 +224,7 @@ describe('BroadcastMessage', () => {
 
             contentProducer.coordinator.getQueue().on('completed',async (job)=>{
                 updatedMessage = await userProducer.messageManager.get(message.id);
+                await updatedMessage.loadSubtasks();
                 let bcstSubtask:BcstSubtask = <BcstSubtask>updatedMessage.subtasks[0];
                 let broadcastMessage = (await bcstSubtask.loadBroadcastMessage()).broadcastMessage;
                 let listenerSubtasks = (await broadcastMessage.loadListenerSubtasks()).subtasks;

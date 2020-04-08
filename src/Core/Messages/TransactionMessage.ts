@@ -2,13 +2,10 @@ import { Message ,MessageControlResult} from "./Message";
 import { MessageStatus,MessageType } from "../../Constants/MessageConstants";
 import { SubtaskType } from "../../Constants/SubtaskConstants";
 import { Subtask } from "../Subtask/BaseSubtask/Subtask";
-import { Actor } from "../Actor";
 import { BusinessException } from "../../Exceptions/BusinessException";
 import { SubtaskModelClass } from "../../Models/SubtaskModel"
 import { MessageJob } from "../Job/MessageJob";
-import { XaSubtask } from "../Subtask/XaSubtask";
 import {JobStatus} from "../../Constants/JobConstants"
-import { BcstSubtask } from "../Subtask/BcstSubtask";
 export class TransactionMessage extends Message{
     type = MessageType.TRANSACTION;
 
@@ -25,6 +22,7 @@ export class TransactionMessage extends Message{
             await this.setStatus(MessageStatus.DONE).save();
             return this;
         }
+        await this.loadSubtasks();
         //并行执行
         //TODO 增加防重复执行，导致重复给subtask添加任务,其中一个创建失败，再次尝试的时候，要避免已经成功的重复创建
         await Promise.all(this.subtasks.map((subtask)=>{
@@ -42,6 +40,7 @@ export class TransactionMessage extends Message{
             await this.setStatus(MessageStatus.CANCELED).save();
             return this;
         }
+        await this.loadSubtasks();
 
         await Promise.all(this.subtasks.map((subtask)=>{
             return subtask.cancel()
@@ -110,10 +109,9 @@ export class TransactionMessage extends Message{
         await super.restore(messageModel);
         let jobContext = await this.producer.coordinator.getJob(this.job_id);
         this.job = new MessageJob(this,jobContext);
-        this.subtasks = await this.getAllSubtasks();
     }
 
-    public async getAllSubtasks():Promise<Array<Subtask>>{
+    public async loadSubtasks(){
         let subtaskIds = await this.model.getAll(SubtaskModelClass.modelName)
         let subtaskModels = await this.producer.subtaskModel.loadMany(subtaskIds)
         let subtasks:Array<Subtask> = [];
@@ -123,7 +121,8 @@ export class TransactionMessage extends Message{
             await subtask.restore(subtaskModel)
             subtasks.push(subtask);
         }
-        return subtasks;
+        this.subtasks = subtasks;
+        
     }
 
     async addSubtask(type,body){
