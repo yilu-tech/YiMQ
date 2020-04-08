@@ -30,7 +30,7 @@ module.exports = async ()=>{
             let send  = await pm2Tool.sendDataToProcessId({
                 id   : instanceId,
                 topic: topic,
-                data: null,
+                data: {},
                 message_id:message_id
             });
             console.log(`Message ${message_id} send success ${send.success}`);

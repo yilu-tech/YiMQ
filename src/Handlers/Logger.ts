@@ -1,6 +1,6 @@
 import { Logger as BaseLogger} from '@nestjs/common';
 
-process.env.LOG_LEVEL = process.env.LOG_LEVEL || 'debug';
+process.env.LOG_LEVEL = process.env.LOG_LEVEL || 'log';
 const LOG_LEVELS = ['debug','log','warn','error']
 
 export class Logger extends BaseLogger {
