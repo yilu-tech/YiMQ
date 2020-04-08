@@ -16,7 +16,7 @@ interface ActorProperties {
 }
 
 export class ActorModelClass extends NohmModel<ActorProperties> {
-    public static modelName = 'Actor';
+    public static modelName = 'actor';
 
     protected static definitions: TTypedDefinitions<ActorProperties> = {
         id: {
