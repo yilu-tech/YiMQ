@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package yimq;
+
+service MessageService {
+  rpc Create (MessageCreateParams) returns (Message) {}
+}
+
+message MessageCreateParams {
+  string actor = 1;
+  string type = 2;
+  string topic = 3;
+}
+
+message Message{
+  int64 id = 1;
+}
+

@@ -9,11 +9,16 @@ import { ValidationPipe } from '@nestjs/common';
 import { SystemExceptionFilter } from './ExceptionFilters/SystemExceptionFilter';
 import { ValidationException } from './Exceptions/ValidationException';
 import { CoordinatorRequestExceptionFilter } from './ExceptionFilters/CoordinatorRequestExceptionFilter';
-
+import { join } from 'path';
+import { Transport } from '@nestjs/microservices/enums/transport.enum';
+import { async } from 'rxjs/internal/scheduler/async';
+import { createInterface } from 'readline';
 const { UI } = require('bull-board');
 
-const port = 7379;
+
+
 async function bootstrap() {
+  const port = 7379;
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({ logger: true }),{
@@ -31,7 +36,20 @@ async function bootstrap() {
     new BusinessExceptionFilter(),
     new SystemExceptionFilter(),
     new CoordinatorRequestExceptionFilter
-    );
+  );
+
+
+
+  
+  app.connectMicroservice({
+    transport: Transport.GRPC,
+    options: {
+      package: 'yimq',
+      protoPath: join(process.cwd(), 'protos/yimq.proto'),
+      url: `0.0.0.0:8379`,
+    },
+  })
+  await app.startAllMicroservicesAsync();
   await app.listen(port,'0.0.0.0');
   
   if(process.send){
@@ -49,4 +67,19 @@ async function bootstrap() {
   });
   
 }
-bootstrap();
+
+
+
+async function client(){
+  console.log('client');
+  // require('./Client')
+}
+if(process.env.mode == 'client'){
+  client()
+}else{
+  bootstrap();
+}
+
+
+
+

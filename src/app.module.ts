@@ -13,6 +13,7 @@ import { Application } from './Application';
 import { ActorService } from './Services/ActorService';
 import { MessageService } from './Services/MessageService';
 import { JobService } from './Services/JobService';
+import { GrpcController } from './Controllers/GrpcController';
 
 
 export const services = [
@@ -28,7 +29,8 @@ export const services = [
   controllers: [
     MessagesController,
     IndexController,
-    AdminController
+    AdminController,
+    GrpcController,
   ],
   providers: [
     Application,
