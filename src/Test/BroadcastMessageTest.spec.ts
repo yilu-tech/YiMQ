@@ -53,11 +53,11 @@ describe('BroadcastMessage', () => {
         application = app.get<Application>(Application);
         await application.baseBootstrap()
 
-        await redisManager.flushAllDb();
 
         config = app.get<Config>(Config);
         messageService = app.get<MessageService>(MessageService);
         actorManager = app.get<ActorManager>(ActorManager);
+        await actorManager.initActors()
         
     });
 

@@ -58,14 +58,13 @@ export class Actor{
         this.model = actorModel;
     }
     public async init(){
-        
+        Logger.log(`Init actor: ${this.name}.`,'Actor')
         this.redisClient = await this.redisManager.client(this.redis);
         this.messageManager = new MessageManager(this);
         this.jobManager = new JobManager(this);
         this.subtaskManager = new SubtaskManager(this);
         this.initCoordinator();
         this.initNohm();
-        Logger.log(`Inited actor: ${this.name}.`,'Actor')
     }
     private initNohm(){
         this.nohm = new NohmClass({});

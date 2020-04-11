@@ -34,12 +34,21 @@ export class RedisManager {
                 res(client);
             })
             client.on('error', (error) => {
-                rej(error);    
+                console.error(new Error(error));    
+                rej(new Error(error))
             });
             client.on('end', () => {
                 Logger.log(`...is end.`,`RedisManager  <${name}>`);
             });
         })
+    }
+
+    public getDefaultSubscribeClient(){//TODO 这里新添加的redis链接也需要管理起来，方便shutdown
+        let client = new Ioredis(this.getClientOptions());
+        client.on('error', (error) => {
+            console.error(new Error(error));    
+        });
+        return client;
     }
 
     public getClientOptions(name?){

@@ -56,6 +56,7 @@ describe('Subtask', () => {
         actorService = app.get<ActorService>(ActorService);
         messageService = app.get<MessageService>(MessageService);
         actorManager = app.get<ActorManager>(ActorManager);
+        await actorManager.initActors()
     });
 
     afterEach(async()=>{

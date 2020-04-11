@@ -54,6 +54,7 @@ describe('MessageService', () => {
         
         messageService = app.get<MessageService>(MessageService);
         actorManager = app.get<ActorManager>(ActorManager);
+        await actorManager.initActors()
     });
 
     afterEach(async()=>{

@@ -1,25 +1,23 @@
 import { Config, ConfigEvents } from "./Config";
 import { Application } from "./Application";
 import { Logger} from './Handlers/Logger';
+import { ActorManager } from "./Core/ActorManager";
 
 
 export const Bootstrap = {
   provide: 'Bootstrap',
-  useFactory: async(config:Config,application:Application)=>{
+  useFactory: async(config:Config,application:Application,actroManager:ActorManager)=>{
 
     
     config.event.on(ConfigEvents.CONFIG_LOAD,async ()=>{
-      Logger.log('........Application start........','Bootstrap');
+      Logger.log('........Application bootstrap........','Bootstrap');
       await application.bootstrap()
-      Logger.log('........Application started........','Bootstrap');
+      Logger.log('........Application is running........','Bootstrap');
     })
 
     config.event.on(ConfigEvents.CONFIG_RELOAD,async ()=>{
-      Logger.log('........Application restart........','Bootstrap');
-      await application.shutdown()
-      await application.bootstrap()
-      Logger.log('........Application restarted........','Bootstrap');
-      
+      await actroManager.saveConfigFileToMasterRedis();
+      await application.publishActorsConfigChange();
     })
 
 
@@ -29,7 +27,6 @@ export const Bootstrap = {
       if(packet.topic != topic)return;
       Logger.log('........Config update start........','Bootstrap');
       await config.reloadConfig('actors_config');
-      Logger.log('........Config update end........','Bootstrap');
       process.send({
         type : `process:${topic}`,
         message_id: packet.message_id,
@@ -43,5 +40,5 @@ export const Bootstrap = {
     await config.loadConfig()
     
   },
-  inject:[Config,Application]
+  inject:[Config,Application,ActorManager]
 }

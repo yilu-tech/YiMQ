@@ -39,7 +39,11 @@ export class ActorManager{
         //todo::通过masterRedis对比，取出配置文件不存在的actor也进行初始化，用于后续手动操作
         Logger.log('Inited actors.','ActorManager')
     }
-
+    public async bootstrap(){
+        await this.initActors();
+        await this.loadActorsRemoteConfig();  
+        await this.bootstrapActorsCoordinatorprocessor();
+    }
     public async shutdown(){
         await this.closeActors();
         this.actors = new Map();
@@ -54,8 +58,7 @@ export class ActorManager{
             }
             
         }
-        //todo::通过masterRedis对比，取出配置文件不存在的actor也进行初始化，用于后续手动操作
-        Logger.log('Load actors remote config.','ActorManager')
+        Logger.log('Loaded actors remote config.','ActorManager')
     }
     public async closeActors(){
         for(let [id,actor] of this.actors){
@@ -103,7 +106,7 @@ export class ActorManager{
 
 
     public async saveConfigFileToMasterRedis(){
-        Logger.log('Load actors to master redis.','ActorManager');
+        Logger.log('Save actors config to master redis.','ActorManager');
         let actorsConfig = this.config.actors;
 
         let actorModels = await this.getAllActorModels();
@@ -151,7 +154,6 @@ export class ActorManager{
             actorModel.property('redisOptions',this.config.system.redis[actorConfig.redis]);
             await  actorModel.save(); 
         }
-        Logger.log('Loaded actors to master redis.','ActorManager');
         return true;
     }
 
