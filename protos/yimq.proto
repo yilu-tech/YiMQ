@@ -1,18 +1,18 @@
 syntax = "proto3";
 
-package yimq;
+package YiMQ;
 
-service MessageService {
-  rpc Create (MessageCreateParams) returns (Message) {}
+service ServerService {
+  rpc CreateMessage (Request) returns (Response) {}
 }
 
-message MessageCreateParams {
+message Request {
   string actor = 1;
-  string type = 2;
-  string topic = 3;
+  string data = 2;
+
 }
 
-message Message{
-  int64 id = 1;
+message Response{
+  string data = 2;
 }
 

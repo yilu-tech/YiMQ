@@ -44,7 +44,7 @@ async function bootstrap() {
   app.connectMicroservice({
     transport: Transport.GRPC,
     options: {
-      package: 'yimq',
+      package: 'YiMQ',
       protoPath: join(process.cwd(), 'protos/yimq.proto'),
       url: `0.0.0.0:8379`,
     },
