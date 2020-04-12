@@ -39,8 +39,8 @@ export class HttpCoordinator extends Coordinator{
                     message: message.message,
                     job: message.job,
                     actor_response_message: message.actor_response['message'],
-                    tips: 'Details View UI Manager.'
-                },error.stack,'HttpCoordinator.process');
+                    tips: 'Error details View UI Manager.'
+                },undefined,`HttpCoordinator.${this.actor.name}.process`);
             
                 throw new Error(JSON.stringify(message));
             }
@@ -63,11 +63,10 @@ export class HttpCoordinator extends Coordinator{
 
         try {
             let result = (await axios.post(this.actor.api,body,config)).data;
-            body['response'] = result;
-            Logger.debug(body,'CallActor')
+            Logger.debug(Logger.message('call actor',{request:body,response:result}),'HttpCoordinator')
             return result;            
         } catch (error) {
-            Logger.debug(body,'CallActor_Error')
+            Logger.debug(Logger.message('call actor',{request:body}),'HttpCoordinator',{request:body})
             throw new HttpCoordinatorRequestException(this,action,context,error);
         }
     }

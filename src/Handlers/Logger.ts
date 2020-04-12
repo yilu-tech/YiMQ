@@ -1,30 +1,69 @@
 import { Logger as BaseLogger} from '@nestjs/common';
+import * as pino from "pino";
 
-process.env.LOG_LEVEL = process.env.LOG_LEVEL || 'log';
-const LOG_LEVELS = ['debug','log','warn','error']
-
-export class Logger extends BaseLogger {
-  static log(message: any, context?: string, isTimeDiffEnabled?: boolean) {
-    
-    this.checkLevel('log') && BaseLogger.log(message,context,isTimeDiffEnabled)
-  }
-  static debug(message: any, context?: string, isTimeDiffEnabled?: boolean){
-    this.checkLevel('debug') && BaseLogger.debug(message,context,isTimeDiffEnabled)
-  }
-  static warn(message: any, context?: string, isTimeDiffEnabled?: boolean){
-    this.checkLevel('warn') && BaseLogger.warn(message,context,isTimeDiffEnabled)
-  }
-  static error(message: any, trace?: string, context?: string, isTimeDiffEnabled?: boolean){
-    this.checkLevel('error') && BaseLogger.error(message,trace,context,isTimeDiffEnabled)
-  }
+process.env.LOG_LEVEL = process.env.LOG_LEVEL || 'info';
 
 
-  static checkLevel(level){
-      if(process.env.LOG_LEVEL == 'disable'){
-          return false;
-      }
-      let defaultLevel = LOG_LEVELS.indexOf(process.env.LOG_LEVEL);
-      let current_level = LOG_LEVELS.indexOf(level);
-      return current_level >= defaultLevel;
+
+const logger = pino({
+  level: process.env.LOG_LEVEL,
+  prettyPrint: {
+    colorize: true,
+    translateTime: 'SYS:mm-dd HH:MM:ss',
+    ignore: 'pid,hostname'
+  },
+})
+export class LoggerClass extends BaseLogger {
+  private logger = logger;
+  private contextName = 'context';
+  verbose(message: any, context?: string, ...args: any[]) {
+    if (context) {
+      this.logger.trace({ [this.contextName]: context }, message, ...args);
+    } else {
+      this.logger.trace(message, ...args);
+    }
   }
-} 
+
+  debug(message: any, context?: string, ...args: any[]) {
+    this.call('debug',message,context,args)
+  }
+
+  log(message: any, context?: string, ...args: any[]) {
+    this.call('debug',message,context,args)
+  }
+
+  warn(message: any, context?: string, ...args: any[]) {
+    this.call('debug',message,context,args)
+  }
+
+  error(message: any, trace?: string, context?: string, ...args: any[]) {
+    if(typeof message === "string"){
+      this.logger.error({ [this.contextName]: context,trace},message, ...args);
+    }
+    else if (typeof message === "object") {
+      this.logger.error({ [this.contextName]: context,trace,log_extension: message.extension }, message.message, ...args);
+    } else {
+      this.logger.error(message, ...args);
+    }
+  }
+
+  private call(method,message: any, context?: string, ...args: any[]) {
+    if(typeof message === "string"){
+      this.logger[method](message, ...args);
+    }
+    else if (typeof message === "object") {
+      this.logger[method]({ [this.contextName]: context,log_extension: message.extension }, message.message, ...args);
+    } else {
+      this.logger[method](message, ...args);
+    }
+  }
+  message(message,extension){
+    return {
+      message,
+      extension
+    }
+  }
+  
+}
+
+export const Logger = new LoggerClass();

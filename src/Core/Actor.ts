@@ -84,9 +84,9 @@ export class Actor{
         } catch (error) {
             let errorMessage = `${error.message}`;
             if(error instanceof HttpCoordinatorRequestException){
-                errorMessage = `${error.message}: ${error.response.message} `;
+                errorMessage = `${error.message} ${error.response.message||''} `;
             }
-            Logger.error(errorMessage,null,`Actor <${this.name}> loadRemoteConfig`)
+            Logger.error(errorMessage,undefined,`Actor <${this.name}>`)
             this.status = ActorStatus.INACTIVE;
         }
         //TODO processor记录到db

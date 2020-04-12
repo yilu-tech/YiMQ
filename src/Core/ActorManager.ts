@@ -77,9 +77,9 @@ export class ActorManager{
         for(let [id,actor] of this.actors){
             if(actor.status == ActorStatus.ACTIVE){
                 actor.coordinator.processBootstrap();
-                Logger.log(`bootstrap`,`ActorManager <${actor.name}> coordinator`)
+                Logger.log(`Coordinator bootstrap`,`ActorManager <${actor.name}>`)
             }else{
-                Logger.error(`Can not bootstrap, Actor status is ${actor.status}`,null,`ActorManager <${actor.name}> coordinator`)
+                Logger.error(`Coordinator can not bootstrap, Actor status is ${actor.status}`,undefined,`ActorManager <${actor.name}>`)
             }
         }
     }
@@ -135,7 +135,7 @@ export class ActorManager{
             }))[0]
             
             if(actorModel){
-                Logger.debug(actorModel.allProperties(),'ActorManager Actor_Update');
+                Logger.debug(Logger.message('Actor_Update',actorModel.allProperties()),'ActorManager');
             }else{
                 actorModel = new this.masterModels.ActorModel();
                 Logger.debug(actorConfig,'Actor_Add');
