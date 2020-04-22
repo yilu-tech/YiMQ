@@ -49,7 +49,7 @@ export class LoggerClass extends BaseLogger {
 
   private call(method,message: any, context?: string, ...args: any[]) {
     if(typeof message === "string"){
-      this.logger[method](message, ...args);
+      this.logger[method]({ [this.contextName]: context},message, ...args);
     }
     else if (typeof message === "object") {
       this.logger[method]({ [this.contextName]: context,log_extension: message.extension }, message.message, ...args);

@@ -1,4 +1,4 @@
-import { MessageType, MessageStatus } from '../Constants/MessageConstants';
+import { MessageType } from '../Constants/MessageConstants';
 import { Message, MessageControlResult } from './Messages/Message';
 import { GeneralMessage } from './Messages/GeneralMessage';
 import { TransactionMessage } from './Messages/TransactionMessage';
@@ -29,7 +29,7 @@ export class MessageManager {
             }
         }catch(error){
             if(error && error.message === 'not found'){
-                throw new BusinessException('Message not found');
+                throw new BusinessException(`Actor ${this.producer.name} Message ${id} not found`);
             }
             throw error;
         }

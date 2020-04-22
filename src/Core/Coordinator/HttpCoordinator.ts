@@ -13,7 +13,8 @@ export class HttpCoordinator extends Coordinator{
         this.queue.process('*',1000,async (jobContext:bull.Job)=>{
             let job:Job = null;
             try {
-                let debugMsg = `Process job: message-${jobContext.data.message_id} ${jobContext.data.type}`;
+                let debugMsg = `Process job: ${jobContext.data.type}`;
+                debugMsg += jobContext.data.message_id? ` message-${jobContext.data.message_id}`:'';
                 debugMsg += jobContext.data.subtask_id? ` subtask-${jobContext.data.subtask_id||''}` : '';
                 Logger.debug(debugMsg,'HttpCoordinator')
                 job = await this.actor.jobManager.restoreByContext(jobContext);
@@ -34,14 +35,12 @@ export class HttpCoordinator extends Coordinator{
                 if(error instanceof HttpCoordinatorRequestException){
                     message.actor_response = error.getRespone();
                 }
-
-                Logger.error({
-                    message: message.message,
+                let ext = {
                     job: message.job,
                     actor_response_message: message.actor_response['message'],
                     tips: 'Error details View UI Manager.'
-                },undefined,`HttpCoordinator.${this.actor.name}.process`);
-            
+                }
+                Logger.error(Logger.message(message.message,ext),undefined,`HttpCoordinator.${this.actor.name}.process`)
                 throw new Error(JSON.stringify(message));
             }
         })

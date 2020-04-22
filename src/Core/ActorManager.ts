@@ -43,6 +43,7 @@ export class ActorManager{
         await this.initActors();
         await this.loadActorsRemoteConfig();  
         await this.bootstrapActorsCoordinatorprocessor();
+        await this.setActorsClearJob();
     }
     public async shutdown(){
         await this.closeActors();
@@ -81,6 +82,13 @@ export class ActorManager{
             }else{
                 Logger.error(`Coordinator can not bootstrap, Actor status is ${actor.status}`,undefined,`ActorManager <${actor.name}>`)
             }
+        }
+    }
+
+    public async setActorsClearJob(){
+        for(let [id,actor] of this.actors){
+            await actor.actorCleaner.removeClearJob();
+            await actor.actorCleaner.setClearJob();
         }
     }
 

@@ -19,6 +19,7 @@ import {SubtaskManager} from './SubtaskManager';
 import { ActorModelClass } from "../Models/ActorModel";
 import { SystemException } from "../Exceptions/SystemException";
 import { ActorOptions } from "../Config/ActorConfig";
+import { ActorCleaner } from "./ActorCleaner";
 
 export class Actor{
     public id:number;
@@ -42,6 +43,7 @@ export class Actor{
     public jobManager:JobManager;
     public subtaskManager:SubtaskManager
     private model:ActorModelClass
+    public actorCleaner:ActorCleaner;
 
     constructor(public actorManager:ActorManager,private redisManager:RedisManager){
 
@@ -61,6 +63,7 @@ export class Actor{
         Logger.log(`Init actor: ${this.name}.`,'Actor')
         this.redisClient = await this.redisManager.client(this.redis);
         this.messageManager = new MessageManager(this);
+        this.actorCleaner = new ActorCleaner(this);
         this.jobManager = new JobManager(this);
         this.subtaskManager = new SubtaskManager(this);
         this.initCoordinator();

@@ -108,6 +108,9 @@ export abstract class Subtask{
     public getJobID(){
         return this.model.property('job_id');
     }
+    public async delete(){
+        await this.model.remove();
+    }
 
       /**
      * 整理数据

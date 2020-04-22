@@ -44,7 +44,8 @@ export class ActorModelClass extends NohmModel<ActorProperties> {
             type: 'string'
         },
         options: {
-            type: 'json'
+            type: 'json',
+            defaultValue: {}
         },
         redis: {
             type: 'string'

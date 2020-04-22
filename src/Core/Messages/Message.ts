@@ -1,4 +1,3 @@
-import { ActorManager } from "../ActorManager";
 import { Actor } from "../Actor";
 import { MessageStatus, MessageType } from "../../Constants/MessageConstants";
 import { Job } from "../Job/Job";
@@ -119,6 +118,14 @@ export abstract class Message{
     }
     async getStatus(){
         return this.status;
+    }
+
+    public async delete() {
+        await this.loadSubtasks();
+        for (const subtask of this.subtasks) {
+            await subtask.delete();
+        }
+        await this.model.remove();
     }
 
      /**

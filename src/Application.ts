@@ -61,15 +61,15 @@ export class Application {
         this.masterRedisClient.publish('ACTORS_CONFIG_UPDATED',Date.now().toString());
     }
 
-    async shutdown(){
-        // await this.actorManager.shutdown();
-        Logger.log('ActorManager shutdown','Application');
-        // await this.masterModels.shutdown();
-        Logger.log('MasterModels shutdown','Application');
-        // await this.redisManager.shutdown();
-        Logger.log('RedisManager shutdown','Application');
+    // async shutdown(){
+    //     // await this.actorManager.shutdown();
+    //     Logger.log('ActorManager shutdown','Application');
+    //     // await this.masterModels.shutdown();
+    //     Logger.log('MasterModels shutdown','Application');
+    //     // await this.redisManager.shutdown();
+    //     Logger.log('RedisManager shutdown','Application');
         
-    }
+    // }
     
     async setUiQueue(){//TODO 自己开发ui后移除
         

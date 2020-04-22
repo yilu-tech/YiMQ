@@ -8,6 +8,7 @@ import { Message } from "./Messages/Message";
 import * as bull from 'bull';
 import { TransactionMessage } from "./Messages/TransactionMessage";
 import { Subtask } from "./Subtask/BaseSubtask/Subtask";
+import { ActorClearJob } from "./Job/ActorClearJob";
 export class JobManager{
     constructor(private actor:Actor){
     }
@@ -80,6 +81,9 @@ export class JobManager{
                 
                 //生成subtask实例
                 job = new SubtaskJob(subtask,jobContext);
+                break;
+            case JobType.ACTOR_CLEAR:
+                job = new ActorClearJob(this.actor,jobContext);
                 break;
             default:
                 throw new Error('JobType is not exists.');

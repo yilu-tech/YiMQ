@@ -7,7 +7,7 @@ import * as bull from 'bull';
 import { JobType } from "../../../Constants/JobConstants";
 
 export abstract class ConsumerSubtask extends Subtask{
-    consumer:Actor;
+    public consumer:Actor;
     consumer_id:number;
     consumerprocessorName:string;
 
