@@ -38,6 +38,7 @@ export class ActorCleaner{
             delay:this.clearInterval,
             attempts:3,
             jobId: job_id,
+            removeOnComplete:true,
             backoff:{
                 type:'exponential',
                 delay: 1000*5
@@ -74,7 +75,7 @@ export class ActorCleaner{
         let watingClearProcessorIds = await this.getWatingClearConsumeProcessors();
         if(doneMessageIds.length == 0 && watingClearProcessorIds.length == 0 ){
             let message = `<${this.actor.name}> actor not have message and process to clear`;
-            Logger.debug(message,'ActorCleaner');
+            Logger.log(message,'ActorCleaner');
             return {message}
         }
         await this.clearRemote(doneMessageIds,watingClearProcessorIds)
