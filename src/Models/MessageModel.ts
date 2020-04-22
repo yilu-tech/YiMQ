@@ -66,10 +66,12 @@ export class MessageModelClass extends NohmModel<MessageProperties> {
         },
         updated_at: {
             type: 'timestamp',
+            index: true,
             validations: ['notEmpty']
         },
         created_at: {
             type: 'timestamp',
+            index: true,
             validations: ['notEmpty']
         }
     };

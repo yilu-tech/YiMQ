@@ -36,7 +36,6 @@ export abstract class Subtask{
         this.parent_id = subtaskModel.property('parent_id');
     }
     public async createSubtaskModel(body){
-        let now = new Date().getTime();
         
         let subtaskModel = new this.message.producer.subtaskModel();
         subtaskModel.id = body.subtask_id; 
@@ -46,8 +45,8 @@ export abstract class Subtask{
         subtaskModel.property('type',this.type);
         subtaskModel.property('status',SubtaskStatus.PREPARING);
         subtaskModel.property('data',body.data);
-        subtaskModel.property('created_at',now);
-        subtaskModel.property('updated_at',now);
+        subtaskModel.property('updated_at',new Date().getTime());
+        subtaskModel.property('created_at',new Date().getTime());
         return subtaskModel;
     }
 
@@ -85,7 +84,7 @@ export abstract class Subtask{
         return `${this.model['nohmClass'].prefix.hash}${this.model.modelName}:${this.id}`;
     }
     public async completeAndSetMeesageStatusByScript(status,messageStatus:MessageStatus){
-        return this.message.producer.redisClient['subtaskCompleteAndSetMessageStatus'](this.id,this.message.id,status,messageStatus);    
+        return this.message.producer.redisClient['subtaskCompleteAndSetMessageStatus'](this.id,this.message.id,'updated_at',status,messageStatus,new Date().getTime());    
     }
     public async completeAndSetMeesageStatus(status,messageStatus){
 
@@ -102,6 +101,7 @@ export abstract class Subtask{
         return pendingSubtaskTotal;
     }
     async save(){
+        this.model.property('updated_at',new Date().getTime());
         return this.model.save();
     }
 

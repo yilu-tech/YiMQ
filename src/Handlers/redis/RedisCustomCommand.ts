@@ -14,6 +14,7 @@ export function redisCustomCommand(client){
     local subtask_current_status = redis.call("HGET", subtask_hash_key, 'status')
 
     redis.call("HSET", subtask_hash_key,'status',subtask_status)
+    redis.call("HSET", subtask_hash_key,'updated_at',updated_at)
     local subtask_updated_status = redis.call("HGET", subtask_hash_key, 'status')
     -- 处理subtask status索引
     redis.call("SREM", prefix .. 'index:subtask:status:' .. subtask_current_status,subtask_id)
@@ -47,15 +48,22 @@ export function redisCustomCommand(client){
     redis.call("SREM", prefix .. 'index:message:status:' .. message_current_status,message_id)
     redis.call("SADD", prefix .. 'index:message:status:' .. message_updated_status,message_id)
 
+    --处理updated_at
+    local message_current_updated_at = redis.call("HGET", message_hash_key, 'updated_at')
+    redis.call("HSET", message_hash_key,'updated_at',updated_at)
+    redis.call("SREM", prefix .. 'index:message:updated_at:' .. message_current_updated_at,message_id)
+    redis.call("SADD", prefix .. 'index:message:updated_at:' .. updated_at,message_id)
+
 
     `
     client.defineCommand('subtaskCompleteAndSetMessageStatus',{
-        numberOfKeys:2,
+        numberOfKeys:3,
         lua:`
             local subtask_id = KEYS[1];
             local subtask_status = ARGV[1];
             local message_id = KEYS[2];
             local message_status = ARGV[2];
+            local updated_at = ARGV[3];
             ${subtaskCompleteScript}
             return result;
         `
@@ -65,12 +73,13 @@ export function redisCustomCommand(client){
      * LstrSubtask专用，含有处理由BcstSubtask创建的广播消息，广播之后完成任务状态的逻辑
      */
     client.defineCommand('LstrSubtaskCompleteAndSetMessageStatus',{
-        numberOfKeys:2,
+        numberOfKeys:3,
         lua:`
         local subtask_id = KEYS[1];
         local subtask_status = ARGV[1];
         local message_id = KEYS[2];
         local message_status = ARGV[2];
+        local updated_at = ARGV[3];
     
         ${subtaskCompleteScript}
 

@@ -61,7 +61,7 @@ export abstract class Message{
     async create(topic:string, jobOptions:bull.JobOptions):Promise<any>{
         jobOptions.jobId = await this.producer.actorManager.getJobGlobalId();
         this.model.property('job_id',jobOptions.jobId);//先保存job_id，如果先创建job再保存id可能产生，message未记录job_id的情况
-        await this.model.save();
+        await this.save();
         await this.initProperties();
         this.job = await this.producer.jobManager.add(this,JobType.MESSAGE,jobOptions);//TODO JobType.TRANSACTION -> JobType.MESSAGE
         return this;
@@ -114,6 +114,7 @@ export abstract class Message{
         return this;
     }
     async save(){
+        this.model.property('updated_at',new Date().getTime());
         return this.model.save();
     }
     async getStatus(){
