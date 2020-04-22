@@ -80,7 +80,6 @@ export abstract class Subtask{
         return this;
     }
     public getDbHash(){
-        console.log(this.model['nohmClass'].prefix)
         return `${this.model['nohmClass'].prefix.hash}${this.model.modelName}:${this.id}`;
     }
     public async completeAndSetMeesageStatusByScript(status,messageStatus:MessageStatus){

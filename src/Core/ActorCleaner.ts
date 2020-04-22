@@ -4,7 +4,7 @@ import { CoordinatorCallActorAction } from "../Constants/Coordinator";
 import { SystemException } from "../Exceptions/SystemException";
 import { Message } from "./Messages/Message";
 import { ConsumerSubtask } from "./Subtask/BaseSubtask/ConsumerSubtask";
-import { JobType } from "../Constants/JobConstants";
+import { JobType, JobStatus } from "../Constants/JobConstants";
 import { Logger } from "../Handlers/Logger";
 import { JobOptions } from "bull";
 
@@ -24,11 +24,14 @@ export class ActorCleaner{
     
 
 
-    public async setClearJob(){
+    public async setClearJob(init=false){
         let data = {type:JobType.ACTOR_CLEAR};
         let jobName = JobType.ACTOR_CLEAR;
-        let job_id = await this.actor.actorManager.getJobGlobalId();
 
+        if(init && await this.hasActiveClearJob()){
+            return
+        }
+        let job_id = await this.actor.actorManager.getJobGlobalId();
         await this.actor.redisClient.set(this.db_key_last_job_id,await this.getJobId());
         await this.actor.redisClient.set(this.db_key_job_id,job_id);
         let options:JobOptions = {
@@ -43,11 +46,13 @@ export class ActorCleaner{
         await this.actor.coordinator.getQueue().add(jobName,data,options);
         await this.actor.coordinator.getQueue().add(jobName,data,options);
     }
-    public async removeClearJob(){
+    public async hasActiveClearJob(){
         let job = await this.actor.coordinator.getJob(await this.getJobId());
         if(job){
-            await job.remove();
+            return true;
         }
+        return false;
+
     }
 
     public async getJobId(){

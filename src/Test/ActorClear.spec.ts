@@ -224,7 +224,7 @@ describe('ActorClearTest', () => {
                     expect(doneMessage.length).toBe(0);
                     let watingClearProcessorIds = await producer.actorCleaner.getWatingClearConsumeProcessors();
                     expect(watingClearProcessorIds.length).toBe(1);
-                    await producer.actorCleaner.removeClearJob();
+                    // await producer.actorCleaner.removeClearJob();
                     await contentActor.actorCleaner.setClearJob();
                     
                 }
@@ -243,7 +243,7 @@ describe('ActorClearTest', () => {
                 if(job.data.type == JobType.ACTOR_CLEAR){
                     let watingClearProcessorIds = await contentActor.actorCleaner.getWatingClearConsumeProcessors();
                     expect(watingClearProcessorIds.length).toBe(0);
-                    await contentActor.actorCleaner.removeClearJob();
+                    // await contentActor.actorCleaner.removeClearJob();
                     done();
                 }
 
@@ -262,14 +262,12 @@ describe('ActorClearTest', () => {
 
     describe('.job:',() => {
 
-        it('.set job after clear job',async ()=>{
+        it('.set job after',async ()=>{
             let userProducer = actorManager.get('user');
             await userProducer.actorCleaner.setClearJob();
             let job = await userProducer.coordinator.getJob(await userProducer.actorCleaner.getJobId());
             expect(job).toBeDefined();
-            await userProducer.actorCleaner.removeClearJob();
-            job = await userProducer.coordinator.getJob(await userProducer.actorCleaner.getJobId());
-            expect(job).toBeNull();
+    
         })
 
         it('.clear failed retry',async (done)=>{

@@ -87,8 +87,7 @@ export class ActorManager{
 
     public async setActorsClearJob(){
         for(let [id,actor] of this.actors){
-            await actor.actorCleaner.removeClearJob();
-            await actor.actorCleaner.setClearJob();
+            await actor.actorCleaner.setClearJob(true);
         }
     }
 
