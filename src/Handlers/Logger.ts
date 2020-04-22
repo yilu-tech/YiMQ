@@ -29,11 +29,11 @@ export class LoggerClass extends BaseLogger {
   }
 
   log(message: any, context?: string, ...args: any[]) {
-    this.call('debug',message,context,args)
+    this.call('info',message,context,args)
   }
 
   warn(message: any, context?: string, ...args: any[]) {
-    this.call('debug',message,context,args)
+    this.call('warn',message,context,args)
   }
 
   error(message: any, trace?: string, context?: string, ...args: any[]) {
