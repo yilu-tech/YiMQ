@@ -2,7 +2,6 @@ import { Injectable } from "@nestjs/common";
 import { Config } from "../Config";
 import { RedisManager } from "../Handlers/redis/RedisManager";
 import { MasterModels } from "../Models/MasterModels";
-import { Logger } from "../Handlers/Logger";
 import { CoordinatorCallActorAction } from "../Constants/Coordinator";
 import { SystemException } from "../Exceptions/SystemException";
 import {differenceBy} from 'lodash';
@@ -10,6 +9,7 @@ import axios from 'axios';
 import { HttpCoordinatorRequestException } from "../Exceptions/HttpCoordinatorRequestException";
 import { ActorStatus } from "../Constants/ActorConstants";
 import { ActorConfig } from "../Config/ActorConfig";
+import {AppLogger as Logger} from '../Handlers/AppLogger';
 
 @Injectable()
 export class ActorConfigManager{
@@ -26,7 +26,7 @@ export class ActorConfigManager{
     }
 
     public async saveConfigFileToMasterRedis(){
-        Logger.log('Save actors config to master redis.','ActorManager');
+        Logger.log('Save actors config to master redis.','ActorConfigManager');
         let actorsConfig = this.config.actors;
 
         let actorModels = await this.getAllActorModels();
@@ -43,7 +43,7 @@ export class ActorConfigManager{
         for (const removeActorModel of removeActorModels) {
             removeActorModel.property('status',ActorStatus.REMOVED)
             await removeActorModel.save()
-            Logger.warn(removeActorModel.allProperties(),'ActorManager Actor_Remove');
+            Logger.warn(removeActorModel.allProperties(),'ActorConfigManager Actor_Remove');
         }
 
         
@@ -55,10 +55,10 @@ export class ActorConfigManager{
             }))[0]
             
             if(actorModel){
-                Logger.debug(Logger.message('Actor_Update',actorModel.allProperties()),'ActorManager');
+                Logger.debug(`${actorModel.property('name')} update`,'ActorConfigManager');
             }else{
                 actorModel = new this.masterModels.ActorModel();
-                Logger.debug(actorConfig,'Actor_Add');
+                Logger.debug(`${actorConfig.name} add`,'ActorConfigManager');
             }
             actorModel.id = actorConfig.id;
             actorModel.property('id',actorConfig.id);
@@ -101,10 +101,10 @@ export class ActorConfigManager{
 
         try {
             let result = (await axios.post(actor.api,body,config)).data;
-            Logger.debug(Logger.message('call actor',{request:body,response:result}),'ActorConfigManager')
+            // Logger.debug({request:body,response:result},'ActorConfigManager call actor')
             return result;            
         } catch (error) {
-            Logger.debug(Logger.message('call actor',{request:body}),'ActorConfigManager',{request:body})
+            // Logger.debug({request:body},'ActorConfigManager call actor')
             throw new SystemException(error.message);
         }
     }
@@ -121,7 +121,7 @@ export class ActorConfigManager{
             if(error instanceof HttpCoordinatorRequestException){
                 errorMessage = `${error.message} ${error.response.message||''} `;
             }
-            Logger.error(errorMessage,undefined,`ActorConfigManager <${actor.name}>`)
+            Logger.error(`Actor <${actor.name}> ${errorMessage}`,undefined,`ActorConfigManager`)
         }
     }
 
@@ -150,7 +150,7 @@ export class ActorConfigManager{
             }))[0];
 
             if(listenerModel){
-                Logger.log(`${item.processor}`,`Actor_Listener_Update <${actor.name}>`);
+                Logger.debug(`${item.processor}`,`Actor_Listener_Update <${actor.name}>`);
             }else{
                 listenerModel = new this.masterModels.ListenerModel();
                 Logger.log(item,'Actor_Listener_Add');

@@ -2,7 +2,6 @@
 import { RedisManager } from "../Handlers/redis/RedisManager";
 import { NohmClass, IStaticMethods } from "nohm";
 import { Redis } from "ioredis";
-import { Logger} from '../Handlers/Logger';
 import { Coordinator } from "./Coordinator/Coordinator";
 import { HttpCoordinator } from "./Coordinator/HttpCoordinator";
 import { GrpcCoordinator } from "./Coordinator/GrpcCoordinator";
@@ -20,6 +19,7 @@ import { ActorModelClass } from "../Models/ActorModel";
 import { SystemException } from "../Exceptions/SystemException";
 import { ActorOptions } from "../Config/ActorConfig";
 import { ActorCleaner } from "./ActorCleaner";
+import { AppLogger } from "../Handlers/AppLogger";
 
 export class Actor{
     public id:number;
@@ -60,7 +60,7 @@ export class Actor{
         this.model = actorModel;
     }
     public async init(){
-        Logger.log(`Init actor: ${this.name}.`,'Actor')
+        AppLogger.debug(`Init actor: ${this.name}.`,'Actor')
         this.redisClient = await this.redisManager.client(this.redis);
         this.messageManager = new MessageManager(this);
         this.actorCleaner = new ActorCleaner(this);

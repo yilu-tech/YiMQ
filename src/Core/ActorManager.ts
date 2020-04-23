@@ -1,12 +1,13 @@
 
 
-import { Injectable } from '@nestjs/common';
+import { Injectable} from '@nestjs/common';
 import { Actor } from './Actor';
 import { Config } from '../Config';
 import { RedisManager } from '../Handlers/redis/RedisManager';
 import { MasterModels } from '../Models/MasterModels';
 import { ActorStatus } from '../Constants/ActorConstants';
-import { Logger} from '../Handlers/Logger';
+import {AppLogger} from '../Handlers/AppLogger';
+
 
 @Injectable()
 export class ActorManager{
@@ -37,7 +38,7 @@ export class ActorManager{
             this.actorsName.set(actor.name,actor);
         }
         //todo::通过masterRedis对比，取出配置文件不存在的actor也进行初始化，用于后续手动操作
-        Logger.log('Inited actors.','ActorManager')
+        AppLogger.log('Inited actors.','ActorManager')
     }
     public async bootstrap(){
         await this.initActors();
@@ -68,9 +69,9 @@ export class ActorManager{
         for(let [id,actor] of this.actors){
             if(actor.status == ActorStatus.ACTIVE){
                 actor.coordinator.processBootstrap();
-                Logger.log(`Coordinator bootstrap`,`ActorManager <${actor.name}>`)
+                AppLogger.debug(`Coordinator bootstrap`,`ActorManager <${actor.name}>`)
             }else{
-                Logger.error(`Coordinator can not bootstrap, Actor status is ${actor.status}`,undefined,`ActorManager <${actor.name}>`)
+                AppLogger.error(`Coordinator can not bootstrap, Actor status is ${actor.status}`,undefined,`ActorManager <${actor.name}>`)
             }
         }
     }

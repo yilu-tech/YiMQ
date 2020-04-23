@@ -3,6 +3,7 @@ const prog = require('caporal');
 prog.version(require('../package.json').version);
 
 prog.command('start', '启动').action(require('./cmds/start'));
+prog.command('run', '启动').action(require('./cmds/run'));
 
 prog.command('stop', '停止').action(require('./cmds/stop'));
 

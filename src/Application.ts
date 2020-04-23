@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { Logger} from './Handlers/Logger';
 import { MasterModels } from './Models/MasterModels';
 import { ActorManager } from './Core/ActorManager';
 import { RedisManager } from './Handlers/redis/RedisManager';
@@ -7,6 +6,7 @@ import { RedisClient } from './Handlers/redis/RedisClient';
 import { Config } from './Config';
 import { ActorConfigManager } from './Core/ActorConfigManager';
 const { setQueues } = require('bull-board')
+import {AppLogger as Logger} from './Handlers/AppLogger';
 @Injectable()
 export class Application {
     public masterRedisClient:RedisClient;
@@ -43,7 +43,7 @@ export class Application {
 
         let subscribeRedisClient = await this.redisManager.getDefaultSubscribeClient();
 
-        Logger.log('Subscribe ACTORS_CONFIG_UPDATED event','Application');
+        // Logger.log('Subscribe ACTORS_CONFIG_UPDATED event','Application');
         subscribeRedisClient.subscribe('ACTORS_CONFIG_UPDATED',function(err,count){
             if(err){
                 Logger.error(new Error(err));

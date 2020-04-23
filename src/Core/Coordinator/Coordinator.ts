@@ -1,8 +1,7 @@
 import * as bull from 'bull';
 import { RedisOptions } from 'ioredis';
 import { Actor } from '../Actor';
-import { Logger } from '../../Handlers/Logger';
-
+import {AppLogger} from '../../Handlers/AppLogger';
 export abstract class Coordinator{
     
     protected queue:bull.Queue;
@@ -18,7 +17,7 @@ export abstract class Coordinator{
     }
     public async close(){
         return this.queue.close().then(()=>{
-            Logger.log(`queue closed.`,`Coordinator <${this.actor.name}>`)
+            AppLogger.log(`(${this.actor.name}) queue closed.`,`Coordinator`)
         });
     }
 

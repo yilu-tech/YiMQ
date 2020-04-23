@@ -1,8 +1,8 @@
 import { Config, ConfigEvents } from "./Config";
 import { Application } from "./Application";
-import { Logger} from './Handlers/Logger';
-import { ActorConfigManager } from "./Core/ActorConfigManager";
 
+import { ActorConfigManager } from "./Core/ActorConfigManager";
+import {AppLogger as Logger} from './Handlers/AppLogger';
 
 export const Bootstrap = {
   provide: 'Bootstrap',

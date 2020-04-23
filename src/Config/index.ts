@@ -4,9 +4,8 @@ import {safeLoad} from 'js-yaml';
 import { readFileSync,readdirSync } from "fs";
 import { join } from "path";
 import { ActorConfig } from "./ActorConfig";
-import { get } from 'lodash';
 import { EventEmitter } from "events";
-import { Logger} from '../Handlers/Logger';
+import {AppLogger as Logger} from '../Handlers/AppLogger';
 
 process.env.CONFIG_DIR_PATH = process.env.CONFIG_DIR_PATH || join(process.cwd(),'config');
 
@@ -37,7 +36,7 @@ export class Config {
     async loadConfig(){
         try {
             this.load_system_config();
-            Logger.log(`system_config is loaded`,'Config')
+            Logger.debug(`system_config is loaded`,'Config')
             this.event.emit(ConfigEvents.SYSTEM_CONFIG_LOAD);
         } catch (error) {
             Logger.error(error,'Config');
@@ -45,7 +44,7 @@ export class Config {
         
         try {
             this.load_actors_config();
-            Logger.log(`actors_config is loaded`,'Config')
+            Logger.debug(`actors_config is loaded`,'Config')
             this.event.emit(ConfigEvents.ACTORS_CONFIG_LOAD);
         } catch (error) {
             Logger.error(error,'Config');
