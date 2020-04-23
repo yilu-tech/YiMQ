@@ -18,6 +18,7 @@ import { TccSubtask } from '../Core/Subtask/TccSubtask';
 import { TransactionMessage } from '../Core/Messages/TransactionMessage';
 import { Message } from '../Core/Messages/Message';
 import { JobType, JobStatus } from '../Constants/JobConstants';
+import { ActorConfigManager } from '../Core/ActorConfigManager';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('ActorClearTest', () => {
@@ -39,6 +40,7 @@ describe('ActorClearTest', () => {
             RedisManager,
             MasterModels,
             Application,
+            ActorConfigManager,
             ActorManager,
             ...services,
         ],

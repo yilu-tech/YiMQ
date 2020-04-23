@@ -18,6 +18,7 @@ import { MasterModels } from '../../Models/MasterModels';
 import { services } from '../../app.module';
 import { BcstSubtask } from '../../Core/Subtask/BcstSubtask';
 import { Application } from '../../Application';
+import { ActorConfigManager } from '../../Core/ActorConfigManager';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('Subtask', () => {
@@ -38,6 +39,7 @@ describe('Subtask', () => {
             Config,
             RedisManager,
             MasterModels,
+            ActorConfigManager,
             ActorManager,
             Application,
             ...services,

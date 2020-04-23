@@ -27,6 +27,7 @@ export class ActorModelClass extends NohmModel<ActorProperties> {
         name: {
             type: 'string',
             unique: true,
+            index:true,
             validations: ['notEmpty'],
         },
         key: {

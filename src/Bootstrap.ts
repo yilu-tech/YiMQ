@@ -1,12 +1,12 @@
 import { Config, ConfigEvents } from "./Config";
 import { Application } from "./Application";
 import { Logger} from './Handlers/Logger';
-import { ActorManager } from "./Core/ActorManager";
+import { ActorConfigManager } from "./Core/ActorConfigManager";
 
 
 export const Bootstrap = {
   provide: 'Bootstrap',
-  useFactory: async(config:Config,application:Application,actroManager:ActorManager)=>{
+  useFactory: async(config:Config,application:Application,actorConfigManager:ActorConfigManager)=>{
 
     
     config.event.on(ConfigEvents.CONFIG_LOAD,async ()=>{
@@ -16,7 +16,8 @@ export const Bootstrap = {
     })
 
     config.event.on(ConfigEvents.CONFIG_RELOAD,async ()=>{
-      await actroManager.saveConfigFileToMasterRedis();
+      await actorConfigManager.saveConfigFileToMasterRedis();
+      await actorConfigManager.loadRemoteActorsConfig();
       await application.publishActorsConfigChange();
     })
 
@@ -40,5 +41,5 @@ export const Bootstrap = {
     await config.loadConfig()
     
   },
-  inject:[Config,Application,ActorManager]
+  inject:[Config,Application,ActorConfigManager]
 }

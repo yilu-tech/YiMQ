@@ -41,7 +41,7 @@ export class ActorManager{
     }
     public async bootstrap(){
         await this.initActors();
-        await this.loadActorsRemoteConfig();  
+        // await this.loadActorsRemoteConfig();  
         await this.bootstrapActorsCoordinatorprocessor();
         await this.setActorsClearJob();
     }
@@ -50,17 +50,7 @@ export class ActorManager{
         this.actors = new Map();
         this.actorsName = new Map();
     }
-
-
-    public async loadActorsRemoteConfig(){
-        for(let [id,actor] of this.actors){
-            if(actor.status == ActorStatus.ACTIVE){
-                await actor.loadRemoteConfigToDB();
-            }
-            
-        }
-        Logger.log('Loaded actors remote config.','ActorManager')
-    }
+    
     public async closeActors(){
         for(let [id,actor] of this.actors){
             await actor.close();
@@ -110,58 +100,4 @@ export class ActorManager{
         },false);
         return this.masterModels.ActorModel.loadMany(ids);
     }
-
-
-    public async saveConfigFileToMasterRedis(){
-        Logger.log('Save actors config to master redis.','ActorManager');
-        let actorsConfig = this.config.actors;
-
-        let actorModels = await this.getAllActorModels();
- 
-        let removeActorModels = actorModels.filter((item)=>{
-            for(let actorConfig of actorsConfig){
-                if(Number(item.id) == Number(actorConfig.id)){
-                    return false;
-                } 
-            }
-            return true;
-        })
-
-        for (const removeActorModel of removeActorModels) {
-            removeActorModel.property('status',ActorStatus.REMOVED)
-            await removeActorModel.save()
-            Logger.warn(removeActorModel.allProperties(),'ActorManager Actor_Remove');
-        }
-
-        
-        for(let actorConfig of actorsConfig){
-
-
-            let actorModel = (await this.masterModels.ActorModel.findAndLoad({
-                id: actorConfig.id
-            }))[0]
-            
-            if(actorModel){
-                Logger.debug(Logger.message('Actor_Update',actorModel.allProperties()),'ActorManager');
-            }else{
-                actorModel = new this.masterModels.ActorModel();
-                Logger.debug(actorConfig,'Actor_Add');
-            }
-            actorModel.id = actorConfig.id;
-            actorModel.property('id',actorConfig.id);
-            actorModel.property('name',actorConfig.name);
-
-            actorModel.property('key',actorConfig.key);
-
-            actorModel.property('api',actorConfig.api);
-            actorModel.property('status',ActorStatus.ACTIVE);
-            actorModel.property('protocol',actorConfig.protocol);
-            actorModel.property('options',actorConfig.options);
-            actorModel.property('redis',actorConfig.redis);
-            actorModel.property('redisOptions',this.config.system.redis[actorConfig.redis]);
-            await  actorModel.save(); 
-        }
-        return true;
-    }
-
 }

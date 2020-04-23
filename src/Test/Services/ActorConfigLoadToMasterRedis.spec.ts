@@ -6,14 +6,14 @@ import { RedisManager } from '../../Handlers/redis/RedisManager';
 import { MasterModels } from '../../Models/MasterModels';
 import { join } from 'path';
 import { RedisClient } from '../../Handlers/redis/RedisClient';
-import { ActorManager } from '../../Core/ActorManager';
+import { ActorConfigManager } from '../../Core/ActorConfigManager';
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('ActorConfigLoadToMasterRedis.spec', () => {
     let actorService:ActorService;
     let config:Config;
     let redisManager:RedisManager;
     let redisClient:RedisClient;
-    let actorManager:ActorManager;
+    let actorConfigManager:ActorConfigManager;
     beforeEach(async () => {
         process.env.CONFIG_DIR_PATH = join(__dirname,'../config');
 
@@ -24,7 +24,7 @@ describe('ActorConfigLoadToMasterRedis.spec', () => {
             RedisManager,
             MasterModels,
             ActorService,
-            ActorManager,
+            ActorConfigManager,
         ],
         }).compile();
         config = app.get<Config>(Config);
@@ -36,7 +36,7 @@ describe('ActorConfigLoadToMasterRedis.spec', () => {
         
         
         redisManager = app.get<RedisManager>(RedisManager);
-        actorManager = app.get<ActorManager>(ActorManager);
+        actorConfigManager = app.get<ActorConfigManager>(ActorConfigManager);
         redisClient = await redisManager.client();
         await redisClient.flushdb();
     });
@@ -47,7 +47,7 @@ describe('ActorConfigLoadToMasterRedis.spec', () => {
 
     it('Load config file to redis.', async () => {
        
-        await actorManager.saveConfigFileToMasterRedis()
+        await actorConfigManager.saveConfigFileToMasterRedis()
         let actors = await actorService.list();
         expect(actors.length).toBe(2);
     });

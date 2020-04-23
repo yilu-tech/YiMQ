@@ -15,6 +15,7 @@ import MockAdapter from 'axios-mock-adapter';
 import {JobStatus} from '../../Constants/JobConstants'
 import { TransactionMessage } from '../../Core/Messages/TransactionMessage';
 import { Application } from '../../Application';
+import { ActorConfigManager } from '../../Core/ActorConfigManager';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('MessageService', () => {
@@ -34,6 +35,7 @@ describe('MessageService', () => {
             Config,
             RedisManager,
             MasterModels,
+            ActorConfigManager,
             ActorManager,
             Application,
             ...services,

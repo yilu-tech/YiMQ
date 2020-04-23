@@ -4,7 +4,7 @@ import { CoordinatorCallActorAction } from "../Constants/Coordinator";
 import { SystemException } from "../Exceptions/SystemException";
 import { Message } from "./Messages/Message";
 import { ConsumerSubtask } from "./Subtask/BaseSubtask/ConsumerSubtask";
-import { JobType, JobStatus } from "../Constants/JobConstants";
+import { JobType } from "../Constants/JobConstants";
 import { Logger } from "../Handlers/Logger";
 import { JobOptions } from "bull";
 
@@ -75,7 +75,7 @@ export class ActorCleaner{
         let watingClearProcessorIds = await this.getWatingClearConsumeProcessors();
         if(doneMessageIds.length == 0 && watingClearProcessorIds.length == 0 ){
             let message = `<${this.actor.name}> actor not have message and process to clear`;
-            Logger.log(message,'ActorCleaner');
+            Logger.debug(message,'ActorCleaner');
             return {message}
         }
         await this.clearRemote(doneMessageIds,watingClearProcessorIds)

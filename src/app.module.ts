@@ -13,6 +13,7 @@ import { Application } from './Application';
 import { ActorService } from './Services/ActorService';
 import { MessageService } from './Services/MessageService';
 import { JobService } from './Services/JobService';
+import { ActorConfigManager } from './Core/ActorConfigManager';
 
 
 export const services = [
@@ -35,6 +36,7 @@ export const services = [
     Config,
     RedisManager,
     MasterModels,
+    ActorConfigManager,
     ActorManager,
     Bootstrap,
     ...services

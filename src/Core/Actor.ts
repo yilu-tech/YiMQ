@@ -77,62 +77,6 @@ export class Actor{
     }
 
 
-    public async loadRemoteConfigToDB(){
-        try {
-            let result = await this.coordinator.callActor(this,CoordinatorCallActorAction.GET_CONFIG);
-            if(result.actor_name != this.name){
-                throw new SystemException(`Remote config actor_name is <${result.actor_name}>`);
-            }
-            await this.saveListener(result['broadcast_listeners']);   
-        } catch (error) {
-            let errorMessage = `${error.message}`;
-            if(error instanceof HttpCoordinatorRequestException){
-                errorMessage = `${error.message} ${error.response.message||''} `;
-            }
-            Logger.error(errorMessage,undefined,`Actor <${this.name}>`)
-            this.status = ActorStatus.INACTIVE;
-        }
-        //TODO processor记录到db
-    }
-    
-    private async saveListener(listenerOptions){
-        let listenerModels = await this.actorManager.masterModels.ListenerModel.findAndLoad({
-            actor_id:this.id
-        });
-
-        let listeners = listenerModels.map((item)=>{
-            return item.allProperties();
-        })
-        let removeListeners = differenceBy(listeners, listenerOptions, 'processor');
-
-        for (const item of removeListeners) {
-            await this.actorManager.masterModels.ListenerModel.remove(item.id);
-            Logger.log(item,'Actor_Listener_Remove');
-        }
-
-
-        for (const item of listenerOptions) {
-            let listenerModel;
-
-            listenerModel = (await this.actorManager.masterModels.ListenerModel.findAndLoad({
-                actor_id:this.id,
-                processor: item.processor,
-            }))[0];
-
-            if(listenerModel){
-                Logger.log(`${item.processor}`,`Actor_Listener_Update <${this.name}>`);
-            }else{
-                listenerModel = new this.actorManager.masterModels.ListenerModel();
-                Logger.log(item,'Actor_Listener_Add');
-            }
-            
-            listenerModel.property('topic',item.topic);
-            listenerModel.property('processor',item.processor);
-            listenerModel.property('actor_id',this.id);
-            await listenerModel.save() 
-        }
-    }
-
     private initCoordinator(){
         let redisOptions = this.redisManager.getClientOptions(this.redis);
         switch (this.protocol) {

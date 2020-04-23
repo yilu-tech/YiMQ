@@ -5,11 +5,12 @@ import { ActorManager } from './Core/ActorManager';
 import { RedisManager } from './Handlers/redis/RedisManager';
 import { RedisClient } from './Handlers/redis/RedisClient';
 import { Config } from './Config';
+import { ActorConfigManager } from './Core/ActorConfigManager';
 const { setQueues } = require('bull-board')
 @Injectable()
 export class Application {
     public masterRedisClient:RedisClient;
-    constructor(public redisManager:RedisManager, public masterModels:MasterModels, public actorManager:ActorManager,public config:Config){
+    constructor(public redisManager:RedisManager, public masterModels:MasterModels, public actorConfigManager:ActorConfigManager,public actorManager:ActorManager,public config:Config){
     }
 
     private online = true;
@@ -26,7 +27,8 @@ export class Application {
 
     async baseBootstrap(){
         await this.masterModels.register()
-        await this.actorManager.saveConfigFileToMasterRedis()
+        await this.actorConfigManager.saveConfigFileToMasterRedis()
+        await this.actorConfigManager.loadRemoteActorsConfig();
     }
     async bootstrap(){
         await this.baseBootstrap();
