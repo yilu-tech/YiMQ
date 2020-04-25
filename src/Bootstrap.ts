@@ -8,6 +8,11 @@ export const Bootstrap = {
   provide: 'Bootstrap',
   useFactory: async(config:Config,application:Application,actorConfigManager:ActorConfigManager)=>{
 
+    process.on('SIGINT', async ()=>{
+      await application.shutdown()
+      process.exit(1);
+    });
+
     
     config.event.on(ConfigEvents.CONFIG_LOAD,async ()=>{
       Logger.log('........Application bootstrap........','Bootstrap');
@@ -39,6 +44,7 @@ export const Bootstrap = {
     });
 
     await config.loadConfig()
+    
     
   },
   inject:[Config,Application,ActorConfigManager]
