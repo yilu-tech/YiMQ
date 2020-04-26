@@ -28,10 +28,10 @@ export class Application {
     async baseBootstrap(){
         await this.masterModels.register()
         await this.actorConfigManager.saveConfigFileToMasterRedis()
-        await this.actorConfigManager.loadRemoteActorsConfig();
     }
     async bootstrap(){
         await this.baseBootstrap();
+        await this.actorConfigManager.loadRemoteActorsConfig();
         await this.actorManagerBootstrap();
         await this.setUiQueue();
     }

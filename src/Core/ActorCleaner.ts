@@ -88,12 +88,14 @@ export class ActorCleaner{
 
     public async getDoneMessage():Promise<string[]>{
         let doneMessageIds = await this.actor.messageModel.find({
+            actor_id: this.actor.id,
             status:MessageStatus.DONE,
             updated_at: {
                 max: (new Date().getTime()) - this.clearInterval
             }
         })
         let canceldMessageIds = await this.actor.messageModel.find({
+            actor_id: this.actor.id,
             status:MessageStatus.CANCELED,
             updated_at: {
                 max: (new Date().getTime()) - this.clearInterval 
