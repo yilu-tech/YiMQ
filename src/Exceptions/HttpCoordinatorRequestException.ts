@@ -16,17 +16,14 @@ export  class CoordinatorRequestException extends Error{
 
 export class HttpCoordinatorRequestException extends CoordinatorRequestException {
     public response:any;
+    public statusCode:number;
     constructor(coordinator:Coordinator,action,context,error:AxiosError){
         let message = `${action}: ${coordinator.actor.api} ${error.message}`;
         super(
             message
           );
 
-        
-        this.response = {
-            api: coordinator.actor.api,
-            context: context,
-        }
+        this.statusCode = error.response.status;
         if(error.response && error.response.data){
             // this.response.meesage = error.response.data.message;
             // this.response.data = error.response.data.data;

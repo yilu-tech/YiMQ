@@ -141,8 +141,8 @@ describe('Subtask', () => {
             let savedTccSubtask = updatedMessage.subtasks[0];
             expect(savedTccSubtask.id).toBe(tccsubtask.id);
             expect(savedTccSubtask.toJson()['data'].title).toBe('new post');
-            expect(savedTccSubtask.toJson()['prepareResult'].title).toBe('get new post');
-            expect(savedTccSubtask['prepareResult'].title).toBe('get new post');
+            expect(savedTccSubtask.toJson()['prepareResult'].data.title).toBe('get new post');
+            expect(savedTccSubtask['prepareResult'].data.title).toBe('get new post');
         });
 
 
@@ -403,7 +403,7 @@ describe('Subtask', () => {
                     title: 'new post'
                 }
             })          
-            expect(tccSubtask.toJson()['prepareResult'].title).toBe(prepareResult.title);
+            expect(tccSubtask.toJson()['prepareResult'].data.title).toBe(prepareResult.title);
 
             prepareResult = {title: 'get update user'};
             mock.onPost(producer.api).reply(200,prepareResult)
@@ -535,7 +535,7 @@ describe('Subtask', () => {
                     title: 'new post'
                 }
             })          
-            expect(tccSubtask.toJson()['prepareResult'].title).toBe(prepareResult.title);
+            expect(tccSubtask.toJson()['prepareResult'].data.title).toBe(prepareResult.title);
             
 
             //mock添加ec子任务时的远程调用
@@ -638,7 +638,7 @@ describe('Subtask', () => {
                     username: 'jack'
                 }
             })          
-            expect(tccSubtask.toJson()['prepareResult'].title).toBe(prepareResult.title);
+            expect(tccSubtask.toJson()['prepareResult'].data.title).toBe(prepareResult.title);
 
             //把message确认
             await messageService.confirm(producerName,message.id);
@@ -724,7 +724,7 @@ describe('Subtask', () => {
                     username: 'jack'
                 }
             })          
-            expect(tccSubtask.toJson()['prepareResult'].title).toBe(prepareResult.title);
+            expect(tccSubtask.toJson()['prepareResult'].data.title).toBe(prepareResult.title);
 
             //mock添加ec子任务时的远程调用
             prepareResult = {title: 'get update user'};
@@ -902,7 +902,7 @@ describe('Subtask', () => {
                     username: 'jack'
                 }
             })          
-            expect(tccSubtask.toJson()['prepareResult'].title).toBe(prepareResult.title);
+            expect(tccSubtask.toJson()['prepareResult'].data.title).toBe(prepareResult.title);
 
             //把message确认
             await messageService.cancel(producerName,message.id);
@@ -952,4 +952,41 @@ describe('Subtask', () => {
         });
 
     });
+
+    describe('.prepare faild:', () => {
+
+        it('.tcc try faild', async () => {
+            let producerName = 'user';
+            let messageType = MessageType.TRANSACTION;
+            let topic = 'subtask_test';
+            let message:TransactionMessage;
+           
+            message = await messageService.create(producerName,messageType,topic,{},{
+                delay:300,
+                attempts:5,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+        
+            let producer = actorManager.get(producerName); 
+
+            process.env.SUBTASK_JOB_DELAY = '200';//子任务延迟，否则会有一定几率比message的job先执行完毕
+
+            //mock添加tcc子任务时的远程调用
+            let prepareResult = {message: 'username exists.'};
+            mock.onPost(producer.api).reply(400,prepareResult)
+            let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                processor:"user@user.create",
+                data:{
+                    username: 'jack'
+                }
+            })   
+            expect(tccSubtask.prepareResult.status).toBe(400);       
+
+        })
+
+    })
 });

@@ -4,9 +4,11 @@ import { SubtaskStatus, SubtaskType } from '../../Constants/SubtaskConstants';
 import { TransactionMessage } from '../Messages/TransactionMessage';
 import { MessageStatus } from '../../Constants/MessageConstants';
 import { ConsumerSubtask } from './BaseSubtask/ConsumerSubtask';
+import { HttpCoordinatorRequestException } from '../../Exceptions/HttpCoordinatorRequestException';
 export class TccSubtask extends ConsumerSubtask{
     public type:SubtaskType = SubtaskType.TCC;
     public prepareResult;
+ 
     constructor(message:TransactionMessage){
         super(message);
     }
@@ -24,14 +26,28 @@ export class TccSubtask extends ConsumerSubtask{
             processor: this.processor,
             data: this.data,
         }
-
-        let prepareResult = (await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.TRY,callContext)); 
-        await this.setPrepareResult(prepareResult)
-        .setStatus(SubtaskStatus.PREPARED)
+        this.prepareResult = {};
+        try {
+            this.prepareResult.status = 200;
+            this.prepareResult.data = (await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.TRY,callContext));     
+            this.setStatus(SubtaskStatus.PREPARED);
+        } catch (error) {
+            if(!(error instanceof HttpCoordinatorRequestException)){
+               throw error;
+            }
+            //如果是 HttpCoordinatorRequestException 不抛出异常，以200状态码返回
+            this.prepareResult = {
+                status: error.statusCode,
+                message: error.message,
+                data: error.response,
+            };
+        }
+        
+        await this.setPrepareResult(this.prepareResult)
         .save()
         return this;
         
-    } 
+    }
 
     async toDo(){
         let callContext = {
