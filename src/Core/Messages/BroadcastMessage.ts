@@ -77,7 +77,7 @@ export class BroadcastMessage extends Message{
         })
         let subtasks:Array<LstrSubtask> = [];
         for(var subtask_id of subtaskIds){
-            let subtask:LstrSubtask = <LstrSubtask>(await this.producer.subtaskManager.getByFrom(this,subtask_id));
+            let subtask:LstrSubtask = <LstrSubtask>(await this.producer.subtaskManager.getByMessage(this,subtask_id));
             subtasks.push(subtask);
         }
         this.subtasks = subtasks;

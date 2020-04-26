@@ -102,7 +102,7 @@ export function redisCustomCommand(client){
             return result;
         end
         local bcst_subtask_hash_key = prefix .. 'hash:subtask:' .. bcst_subtask_id;
-        local transaction_message_id = redis.call("HGET", bcst_subtask_hash_key, 'parent_id')
+        local transaction_message_id = redis.call("HGET", bcst_subtask_hash_key, 'message_id')
 
         subtask_id = bcst_subtask_id;
         message_id = transaction_message_id;

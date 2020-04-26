@@ -12,7 +12,7 @@ export abstract class Subtask{
     created_at:Number;
     updated_at:Number;
     processor:string;
-    parent_id:string;
+    message_id:string;
 
 
 
@@ -33,14 +33,14 @@ export abstract class Subtask{
         this.data = subtaskModel.property('data');
         this.created_at = subtaskModel.property('created_at');
         this.updated_at = subtaskModel.property('updated_at');
-        this.parent_id = subtaskModel.property('parent_id');
+        this.message_id = subtaskModel.property('message_id');
     }
     public async createSubtaskModel(body){
         
         let subtaskModel = new this.message.producer.subtaskModel();
         subtaskModel.id = body.subtask_id; 
 
-        subtaskModel.property('parent_id',this.message.id);//rename parent_id
+        subtaskModel.property('message_id',this.message.id);//rename message_id
 
         subtaskModel.property('type',this.type);
         subtaskModel.property('status',SubtaskStatus.PREPARING);

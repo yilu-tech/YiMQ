@@ -3,7 +3,7 @@ import { NohmModel, TTypedDefinitions } from "nohm";
 import { SubtaskType, SubtaskStatus } from "../Constants/SubtaskConstants";
 
 interface SubtaskProperties {
-    parent_id: Number; //TODO 还原为message_id
+    message_id: Number; //TODO 还原为message_id
     job_id: Number;
     type:SubtaskType;
     status: SubtaskStatus;
@@ -21,7 +21,7 @@ export class SubtaskModelClass extends NohmModel<SubtaskProperties> {
     public static modelName = 'subtask';
     // public static idGenerator = 'increment';
     protected static definitions: TTypedDefinitions<SubtaskProperties> = {
-        parent_id: {
+        message_id: {
             type: 'integer',
             index:true,
             validations: ['notEmpty']
