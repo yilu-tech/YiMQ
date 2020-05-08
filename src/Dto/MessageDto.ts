@@ -36,6 +36,7 @@ export class AddSubtaskDto{
     processor:string;
 
     data:JSON;
+    options:JSON;
 }
 
 

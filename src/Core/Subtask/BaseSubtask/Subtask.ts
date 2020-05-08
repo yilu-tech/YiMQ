@@ -1,4 +1,4 @@
-import { SubtaskType, SubtaskStatus } from "../../../Constants/SubtaskConstants";
+import { SubtaskType, SubtaskStatus, SubtaskOptions } from "../../../Constants/SubtaskConstants";
 import { SubtaskModelClass } from "../../../Models/SubtaskModel";
 import { Job } from "../../Job/Job";
 import { TransactionMessage } from "../../Messages/TransactionMessage";
@@ -9,6 +9,7 @@ export abstract class Subtask{
     type:SubtaskType;
     status: SubtaskStatus;
     data:any;
+    options:SubtaskOptions;
     created_at:Number;
     updated_at:Number;
     processor:string;
@@ -31,6 +32,7 @@ export abstract class Subtask{
         // this.type = subtaskModel.property('type');
         this.status = subtaskModel.property('status');
         this.data = subtaskModel.property('data');
+        this.options = subtaskModel.property('options');
         this.created_at = subtaskModel.property('created_at');
         this.updated_at = subtaskModel.property('updated_at');
         this.message_id = subtaskModel.property('message_id');
@@ -45,6 +47,7 @@ export abstract class Subtask{
         subtaskModel.property('type',this.type);
         subtaskModel.property('status',SubtaskStatus.PREPARING);
         subtaskModel.property('data',body.data);
+        subtaskModel.property('options',body.options);
         subtaskModel.property('updated_at',new Date().getTime());
         subtaskModel.property('created_at',new Date().getTime());
         return subtaskModel;

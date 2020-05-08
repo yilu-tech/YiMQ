@@ -64,6 +64,8 @@ export class Config {
         let actors = [];
         let fileContent = this.readConfig(this.paths.actors_config);
         fileContent.actors.forEach((actorConfig)=>{
+            let common_options = Object.assign({},fileContent.common_options);
+            actorConfig.options = Object.assign(common_options,actorConfig.options);
             actors.push(actorConfig)
         })
         this.actors = actors;

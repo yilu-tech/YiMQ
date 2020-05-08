@@ -1,3 +1,6 @@
+common_options:
+    # subtask_force_attempts: 1
+
 actors:
     -
         id: 1
@@ -5,6 +8,9 @@ actors:
         key: asdfasdfasdf
         protocol: http
         api: 'user/yimq'
+        options:
+            headers: 
+                auth-type: internal
         redis: master
     -
         id: 2

@@ -20,7 +20,6 @@ export class HttpCoordinator extends Coordinator{
                 job = await this.actor.jobManager.restoreByContext(jobContext);
                 return await job.process();
             } catch (error) {
-                       
                 let message = {
                     message: error.message,
                     job: {},
@@ -37,7 +36,7 @@ export class HttpCoordinator extends Coordinator{
                 }
                 let ext = {
                     job: message.job,
-                    actor_response_message: message.actor_response['message'],
+                    actor_response_message: message.actor_response ? message.actor_response['message']:'',
                     tips: 'Error details View UI Manager.'
                 }
                 Logger.error(Logger.message(message.message,ext),undefined,`HttpCoordinator.${this.actor.name}.process`)

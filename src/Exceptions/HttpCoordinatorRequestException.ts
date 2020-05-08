@@ -23,8 +23,9 @@ export class HttpCoordinatorRequestException extends CoordinatorRequestException
             message
           );
 
-        this.statusCode = error.response.status;
+        
         if(error.response && error.response.data){
+            this.statusCode = error.response.status;
             // this.response.meesage = error.response.data.message;
             // this.response.data = error.response.data.data;
             // this.response.stack = error.response.data.stack;

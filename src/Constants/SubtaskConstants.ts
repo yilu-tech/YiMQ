@@ -18,3 +18,7 @@ export enum SubtaskStatus{
     CANCELLING = 'CANCELLING',
     CANCELED = 'CANCELED',
 }
+
+export interface SubtaskOptions{
+    attempts?:number;
+}

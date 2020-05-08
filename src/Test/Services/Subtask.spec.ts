@@ -59,6 +59,7 @@ describe('Subtask', () => {
         messageService = app.get<MessageService>(MessageService);
         actorManager = app.get<ActorManager>(ActorManager);
         await actorManager.initActors()
+        mock.reset()
     });
 
     afterEach(async()=>{
@@ -507,6 +508,70 @@ describe('Subtask', () => {
         let messageType = MessageType.TRANSACTION;
         let topic = 'subtask_test';
         let message:TransactionMessage;
+
+
+        it('.message confirm ec attemptsMade2',async(done)=>{
+
+            message = await messageService.create(producerName,messageType,topic,{},{
+                delay:300,
+                attempts:5,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+            expect(message.job_id).toBe(1)
+
+            
+            let producer = actorManager.get(producerName); 
+
+
+            mock.onPost(producer.api).timeoutOnce();
+            mock.onPost(producer.api).replyOnce(400,{'username':'username is locked'});
+            mock.onPost(producer.api).replyOnce(200,{user_id:1});
+            process.env.SUBTASK_JOB_BACKOFF_DELAY = '100';//加快二次尝试，防止测试超时
+            let body  = {
+                processor:"user@user.create",
+                data:{
+                    username: 'jack'
+                },
+                options:{
+                    attempts: 3,
+                }
+            }
+            let ecSubtask:EcSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,body)   
+            expect(ecSubtask.options.attempts).toBe(body.options.attempts)
+
+            //把message确认
+            await messageService.confirm(producerName,message.id);
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            await updatedMessage.loadSubtasks();
+            expect(updatedMessage.status).toBe(MessageStatus.DOING);
+
+
+            producer.coordinator.getQueue().on('completed',async (job)=>{
+                updatedMessage = await producer.messageManager.get(message.id);
+                await updatedMessage.loadSubtasks();
+                if(message.job.id == job.id){
+                    expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
+                    //检查EcSubtask
+                    expect(updatedMessage.subtasks[0].type).toBe(SubtaskType.EC)
+                    expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DOING)
+                    expect(updatedMessage.subtasks[0].job_id).toBe(2)
+
+                    expect(updatedMessage.subtasks[0].job.context.opts.attempts).toBe(body.options.attempts)
+                    
+                }else if(updatedMessage.subtasks[0].job_id == job.id){
+                    expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DONE);
+                    expect(job.attemptsMade).toBe(2);
+                    done()
+                }
+            })
+            await actorManager.bootstrapActorsCoordinatorprocessor();
+
+        
+        })
 
 
        
