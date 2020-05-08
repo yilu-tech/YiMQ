@@ -5,6 +5,7 @@ import { TransactionMessage } from '../Messages/TransactionMessage';
 import { MessageStatus } from '../../Constants/MessageConstants';
 import { ConsumerSubtask } from './BaseSubtask/ConsumerSubtask';
 import { HttpCoordinatorRequestException } from '../../Exceptions/HttpCoordinatorRequestException';
+import { Logger} from '../../Handlers/Logger';
 export class TccSubtask extends ConsumerSubtask{
     public type:SubtaskType = SubtaskType.TCC;
     public prepareResult;
@@ -30,7 +31,12 @@ export class TccSubtask extends ConsumerSubtask{
         try {
             this.prepareResult.status = 200;
             this.prepareResult.data = (await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.TRY,callContext));     
-            this.setStatus(SubtaskStatus.PREPARED);
+            if((await this.getStatus()) == SubtaskStatus.CANCELLING){
+                Logger.warn(Logger.message(`Subtask ${this.id} status is CANCELLING after prepared.`,this.toJson()),`TccSubtask ${this.type}`)
+            }else{
+                this.setStatus(SubtaskStatus.PREPARED);
+            }
+            
         } catch (error) {
             if(!(error instanceof HttpCoordinatorRequestException)){
                throw error;

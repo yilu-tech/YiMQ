@@ -72,6 +72,9 @@ export abstract class Subtask{
         this.model.property('job_id',this.job_id);
         return this;
     }
+    public async getStatus(){
+        return await this.message.producer.redisClient.hget(this.getDbHash(),'status');
+    }
     setStatus(status:SubtaskStatus){
         this.status = status;
         this.model.property('status',this.status);

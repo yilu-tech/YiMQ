@@ -1015,7 +1015,75 @@ describe('Subtask', () => {
             })
             await actorManager.bootstrapActorsCoordinatorprocessor();
         });
+        
 
+        it('.message tcc timeout after prepared to cancel', async (done) => {
+
+           
+            message = await messageService.create(producerName,messageType,topic,{},{
+                delay:500,
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+            
+            let producer = actorManager.get(producerName); 
+
+
+            let prepareResult = {title: 'get new user'};
+            mock.onPost(producer.api).replyOnce(async ()=>{//让subtask超时perpared
+                await timeout(1000)
+                return [200,prepareResult];
+            })
+
+            mock.onPost(producer.api).replyOnce(async ()=>{ //让subtask第一次cancel失败
+                await timeout(1000)
+                return [500,{message: 'failed'}];
+            })
+
+            mock.onPost(producer.api).replyOnce(async ()=>{ //让subtaks第二次cancel成功
+                await timeout(10)
+                return [200,{message: 'success'}];
+            })
+            
+
+            process.env.SUBTASK_JOB_BACKOFF_DELAY = '10';
+            //没有await，让其在cancel之后再返回数据
+            messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                processor:"user@user.create",
+                data:{
+                    username: 'jack'
+                }
+            }).then(async (tccSubtask:TccSubtask)=>{
+                expect(tccSubtask.toJson()['prepareResult'].data.title).toBe(prepareResult.title);
+                // expect(await tccSubtask.getStatus()).toBe(SubtaskStatus.CANCELLING);
+            })          
+        
+            await messageService.cancel(producerName,message.id);
+
+
+
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            await updatedMessage.loadSubtasks();
+            expect(updatedMessage.status).toBe(MessageStatus.CANCELLING);
+
+            
+            // //任务执行完毕
+            producer.coordinator.getQueue().on('completed',async (job)=>{
+                // console.debug('Job completed',job.id)
+                updatedMessage = await producer.messageManager.get(message.id);
+                await updatedMessage.loadSubtasks();
+
+                if(message.job.id == job.id){
+                    
+                    expect(updatedMessage.status).toBe(MessageStatus.CANCELLING)//检查message
+                    
+                }
+                else if(updatedMessage.subtasks[0].job_id == job.id){
+                    expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.CANCELED);
+                    done()
+                }
+            })
+            await actorManager.bootstrapActorsCoordinatorprocessor();
+        });
     });
 
     describe('.prepare faild:', () => {
