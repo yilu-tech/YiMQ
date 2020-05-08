@@ -146,6 +146,43 @@ describe('Subtask', () => {
             expect(savedTccSubtask['prepareResult'].data.title).toBe('get new post');
         });
 
+        it('.add tcc subtask prepare timeout', async () => {
+          
+            message = await messageService.create(producerName,messageType,topic,{},{
+                delay:300,
+                attempts:5,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+
+
+
+
+            let producer = actorManager.get(producerName); 
+      
+
+            mock.onPost(producer.api).timeoutOnce();
+            let tccBody = {
+                processor:'user@user.create',
+                data:{
+                    title: 'new post'
+                },
+                options:{
+                    timeout:300
+                }
+            };
+            let tccsubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,tccBody) 
+
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            await updatedMessage.loadSubtasks();
+            let savedTccSubtask = updatedMessage.subtasks[0];
+            expect(savedTccSubtask.id).toBe(tccsubtask.id);
+            expect(savedTccSubtask['prepareResult'].message).toBe(`TRY: user/yimq timeout of ${tccBody.options.timeout}ms exceeded`);
+        });
+
 
         it('.add ec tcc subtask', async () => {
 

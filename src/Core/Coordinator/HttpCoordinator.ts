@@ -45,12 +45,13 @@ export class HttpCoordinator extends Coordinator{
         })
     };
 
-    public async callActor(producer:Actor,action:CoordinatorCallActorAction,context={}) {
+    public async callActor(producer:Actor,action:CoordinatorCallActorAction,context:any={},options:any={}) {
         let config = {
             headers:{
                 'content-type':'application/json',
                 ...this.actor.options.headers
-            }
+            },
+            timeout: options.timeout ? options.timeout : 1000*10
         }
         let body = {
             action: action,
@@ -60,7 +61,8 @@ export class HttpCoordinator extends Coordinator{
         };
 
         try {
-            let result = (await axios.post(this.actor.api,body,config)).data;
+            let response = await axios.post(this.actor.api,body,config);
+            let result = response.data;
             Logger.debug(Logger.message('call actor',{request:body,response:result}),'HttpCoordinator')
             return result;            
         } catch (error) {
