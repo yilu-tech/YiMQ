@@ -24,13 +24,18 @@ export class HttpCoordinatorRequestException extends CoordinatorRequestException
           );
 
         
-        if(error.response && error.response.data){
+
+        if(error.response){
             this.statusCode = error.response.status;
+        }
+
+        if(error.response && error.response.data){
             // this.response.meesage = error.response.data.message;
             // this.response.data = error.response.data.data;
             // this.response.stack = error.response.data.stack;
             this.response = error.response.data;
         }
+        this.statusCode = 500;
     }
 
 

@@ -20,19 +20,21 @@ export class TccSubtask extends ConsumerSubtask{
     }
     
     async prepare() {
+        let options = {
+            timeout:this.options.timeout ? this.options.timeout : 1000*10
+        }
         let callContext = {
             id: this.id,
             type: this.type,
             message_id: this.message.id,
             processor: this.processor,
             data: this.data,
+            options:options
         }
         this.prepareResult = {};
         try {
             this.prepareResult.status = 200;
-            let options = {
-                timeout:this.options.timeout ? this.options.timeout : 1000*10
-            }
+         
             this.prepareResult.data = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.TRY,callContext,options);     
             if((await this.getStatus()) == SubtaskStatus.CANCELLING){
                 Logger.warn(Logger.message(`Subtask ${this.id} status is CANCELLING after prepared.`,this.toJson()),`TccSubtask ${this.type}`)
@@ -50,6 +52,8 @@ export class TccSubtask extends ConsumerSubtask{
                 message: error.message,
                 data: error.response,
             };
+
+            Logger.debug(Logger.message(`Subtask ${this.id} ${error.message}`,this.prepareResult),`TccSubtask ${this.type}`)
         }
         
         await this.setPrepareResult(this.prepareResult)
