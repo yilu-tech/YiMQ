@@ -23,10 +23,12 @@ export class HttpCoordinatorRequestException extends CoordinatorRequestException
             message
           );
 
-        
+
 
         if(error.response){
             this.statusCode = error.response.status;
+        }else{
+            this.statusCode = 500;
         }
 
         if(error.response && error.response.data){
@@ -35,7 +37,7 @@ export class HttpCoordinatorRequestException extends CoordinatorRequestException
             // this.response.stack = error.response.data.stack;
             this.response = error.response.data;
         }
-        this.statusCode = 500;
+        
     }
 
 
