@@ -18,7 +18,8 @@ export class TransactionMessage extends Message{
 
     async toDoing():Promise<any>{
         //没有子任务直接完成message
-        if(this.pending_subtask_total == 0){
+        let pending_subtask_total = await this.getPendingSubtaskTotal();
+        if(pending_subtask_total== 0){
             await this.setStatus(MessageStatus.DONE).save();
             return this;
         }
@@ -36,7 +37,8 @@ export class TransactionMessage extends Message{
 
     async toCancelling(){
         //没有子任务直接完成message
-        if(this.pending_subtask_total == 0){
+        let pending_subtask_total = await this.getPendingSubtaskTotal();
+        if(pending_subtask_total == 0){
             await this.setStatus(MessageStatus.CANCELED).save();
             return this;
         }
@@ -152,6 +154,9 @@ export class TransactionMessage extends Message{
 
     public getMessageHash(){
         return `${this.model['nohmClass'].prefix.hash}${this.model.modelName}:${this.id}`;
+    }
+    async getPendingSubtaskTotal(){
+        return Number(await this.producer.redisClient.hget(this.getMessageHash(),'pending_subtask_total'));
     }
 
     private subtasksToJson(){

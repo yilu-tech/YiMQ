@@ -1081,32 +1081,11 @@ describe('Subtask', () => {
                 return [200,{message: 'success'}];
             })
             
-
-            process.env.SUBTASK_JOB_BACKOFF_DELAY = '10';
-            //没有await，让其在cancel之后再返回数据
-            messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
-                processor:"user@user.create",
-                data:{
-                    username: 'jack'
-                }
-            }).then(async (tccSubtask:TccSubtask)=>{
-                expect(tccSubtask.toJson()['prepareResult'].data.title).toBe(prepareResult.title);
-                // expect(await tccSubtask.getStatus()).toBe(SubtaskStatus.CANCELLING);
-            })          
         
-            await messageService.cancel(producerName,message.id);
-
-
-
-            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
-            await updatedMessage.loadSubtasks();
-            expect(updatedMessage.status).toBe(MessageStatus.CANCELLING);
-
-            
-            // //任务执行完毕
+               // //任务执行完毕
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 // console.debug('Job completed',job.id)
-                updatedMessage = await producer.messageManager.get(message.id);
+                let updatedMessage = await producer.messageManager.get(message.id);
                 await updatedMessage.loadSubtasks();
 
                 if(message.job.id == job.id){
@@ -1120,6 +1099,32 @@ describe('Subtask', () => {
                 }
             })
             await actorManager.bootstrapActorsCoordinatorprocessor();
+
+            process.env.SUBTASK_JOB_BACKOFF_DELAY = '10';
+            //没有await，让其在cancel之后再返回数据
+            messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                processor:"user@user.create",
+                data:{
+                    username: 'jack'
+                },
+                options:{
+                    timeout:0
+                }
+            }).then(async (tccSubtask:TccSubtask)=>{
+                expect(tccSubtask.toJson()['prepareResult'].data.title).toBe(prepareResult.title);
+                // expect(await tccSubtask.getStatus()).toBe(SubtaskStatus.CANCELLING);
+            })  
+        
+            await messageService.cancel(producerName,message.id);
+
+
+
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            await updatedMessage.loadSubtasks();
+            expect(updatedMessage.status).toBe(MessageStatus.CANCELLING);
+
+            
+         
         });
     });
 
