@@ -114,6 +114,7 @@ export abstract class Subtask{
         return this.model.property('job_id');
     }
     public async delete(){
+        await this.job.remove()
         await this.model.remove();
     }
 

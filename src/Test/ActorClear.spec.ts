@@ -121,9 +121,10 @@ describe('ActorClearTest', () => {
             //把message确认
             await messageService.confirm(producerName,message.id);
 
+            await ecSubtask.confirm();
+            await tccSubtask.confirm();
             await ecSubtask.completeAndSetMeesageStatus(SubtaskStatus.DONE,MessageStatus.DONE)
             await tccSubtask.completeAndSetMeesageStatus(SubtaskStatus.DONE,MessageStatus.DONE);
-
 
 
             let message2:TransactionMessage = await messageService.create(producerName,messageType,topic,{},{
@@ -142,6 +143,8 @@ describe('ActorClearTest', () => {
                     username: 'jack'
                 }
             })   
+            await message2ecSubtask.confirm();
+
             message2ecSubtask.completeAndSetMeesageStatus(SubtaskStatus.DONE,MessageStatus.DONE)
 
 
@@ -215,11 +218,18 @@ describe('ActorClearTest', () => {
             mock.onPost(contentActor.api).replyOnce(200,{message: 'success'})
             mock.onPost(producer.api).replyOnce(200,{message: 'success'})
 
+            let updatedMessage:TransactionMessage;
+
             // producer.coordinator.getQueue().on('failed',async (job,err)=>{
             //     console.log(job.id,err)
             // })
             //    //任务执行完毕
             producer.coordinator.getQueue().on('completed',async (job)=>{
+
+                if(message.job_id == job.id){
+                    updatedMessage = await producer.messageManager.get(message.id);
+                    await updatedMessage.loadSubtasks();
+                }
 
                 if(job.data.type == JobType.ACTOR_CLEAR){
                     let doneMessage = await producer.actorCleaner.getDoneMessage();
@@ -245,6 +255,9 @@ describe('ActorClearTest', () => {
                 if(job.data.type == JobType.ACTOR_CLEAR){
                     let watingClearProcessorIds = await contentActor.actorCleaner.getWatingClearConsumeProcessors();
                     expect(watingClearProcessorIds.length).toBe(0);
+                    expect(await producer.coordinator.getQueue().getJob(updatedMessage.job_id)).toBeNull();
+                    expect(await contentActor.coordinator.getQueue().getJob(updatedMessage.subtasks[0].job_id)).toBeNull();
+                    expect(await producer.coordinator.getQueue().getJob(updatedMessage.subtasks[1].job_id)).toBeNull();
                     // await contentActor.actorCleaner.removeClearJob();
                     done();
                 }

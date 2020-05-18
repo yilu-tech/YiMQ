@@ -16,6 +16,9 @@ export abstract class Job{
     private async update(){
         await this.context.update(this.toJson());
     }
+    public async remove(){
+        return await this.context.remove();
+    }
 
     public async getStatus(){
         return await this.context.getState();

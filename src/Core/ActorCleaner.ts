@@ -71,17 +71,17 @@ export class ActorCleaner{
 
 
     public async clearActor(){
-        let doneMessageIds = await this.getDoneMessage();
-        let watingClearProcessorIds = await this.getWatingClearConsumeProcessors();
+        let doneMessageIds = await this.getDoneMessage();//获取done和cancled状态的message
+        let watingClearProcessorIds = await this.getWatingClearConsumeProcessors();//获取等待清理的processers
         if(doneMessageIds.length == 0 && watingClearProcessorIds.length == 0 ){
             let message = `<${this.actor.name}> actor not have message and process to clear`;
             Logger.debug(message,'ActorCleaner');
             return {message}
         }
-        await this.clearRemote(doneMessageIds,watingClearProcessorIds)
-        await this.saveSubtaskIdsToConsumer(doneMessageIds);
-        await this.clearDbMeesage(doneMessageIds);
-        await this.clearDbWatingConsumeProcessors(watingClearProcessorIds);
+        await this.clearRemote(doneMessageIds,watingClearProcessorIds)//清理远程
+        await this.saveSubtaskIdsToConsumer(doneMessageIds);//保存此次清理的mesaage对应的subtask的id到消费actor，用于清理远程prcessor
+        await this.clearDbMeesage(doneMessageIds);//清理message 和 subtasks
+        await this.clearDbWatingConsumeProcessors(watingClearProcessorIds);//清理掉本次已经远程清理了的processor的id
         return {doneMessageIds,watingClearProcessorIds}
     }
 
