@@ -11,10 +11,12 @@ import { JobOptions } from "bull";
 
 
 export class ActorCleaner{
+    public db_key_lock:string;
     public db_key_job_id:string;
     public db_key_last_job_id:string;//上一个已经完成的清理jobid (测试用)
     public db_key_wating_clear_processors:string;
     constructor(private actor:Actor){
+        this.db_key_lock = `actors:${this.actor.id}:db_key_lock`;
         this.db_key_job_id = `actors:${this.actor.id}:cleaner_job_id`;
         this.db_key_last_job_id = `actors:${this.actor.id}:cleaner_last_job_id`;
         this.db_key_wating_clear_processors = `actors:${this.actor.id}:wating_clear_processors`;
@@ -28,9 +30,16 @@ export class ActorCleaner{
         let data = {type:JobType.ACTOR_CLEAR};
         let jobName = JobType.ACTOR_CLEAR;
 
+    
+
         if(init && await this.hasActiveClearJob()){
             return
         }
+
+        if((await this.getLock()) == null){
+            return;
+        }
+
         let job_id = await this.actor.actorManager.getJobGlobalId();
         await this.actor.redisClient.set(this.db_key_last_job_id,await this.getJobId());
         await this.actor.redisClient.set(this.db_key_job_id,job_id);
@@ -45,7 +54,14 @@ export class ActorCleaner{
             }
         }
         await this.actor.coordinator.getQueue().add(jobName,data,options);
-        await this.actor.coordinator.getQueue().add(jobName,data,options);
+        await this.removeLock();
+    }
+
+    public async getLock(){
+        return await this.actor.redisClient.set(this.db_key_lock,1,'EX',10,'NX')
+    }
+    public async removeLock(){
+        return await this.actor.redisClient.del(this.db_key_lock);
     }
     public async hasActiveClearJob(){
         let job = await this.actor.coordinator.getJob(await this.getJobId());
