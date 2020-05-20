@@ -22,6 +22,7 @@ export class HttpCoordinator extends Coordinator{
             } catch (error) {
                 let message = {
                     message: error.message,
+                    stack: error.stack,
                     job: {},
                     actor_response: {}
                 }

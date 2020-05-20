@@ -125,7 +125,7 @@ export abstract class Message{
         for (const subtask of this.subtasks) {
             await subtask.delete();
         }
-        await this.job.remove();
+        this.job && await this.job.remove();   
         await this.model.remove();
     }
 
