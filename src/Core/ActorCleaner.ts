@@ -107,14 +107,16 @@ export class ActorCleaner{
             actor_id: this.actor.id,
             status:MessageStatus.DONE,
             updated_at: {
-                max: (new Date().getTime()) - this.clearInterval
-            }
+                max: (new Date().getTime()) - this.clearInterval,
+                limit: 500
+            },
         })
         let canceldMessageIds = await this.actor.messageModel.find({
             actor_id: this.actor.id,
             status:MessageStatus.CANCELED,
             updated_at: {
-                max: (new Date().getTime()) - this.clearInterval 
+                max: (new Date().getTime()) - this.clearInterval ,
+                limit: 500
             }
         })
         return [...doneMessageIds,...canceldMessageIds];
