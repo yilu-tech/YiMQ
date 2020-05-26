@@ -94,6 +94,8 @@ export class ActorCleaner{
             Logger.debug(message,'ActorCleaner');
             return {message}
         }
+        console.log(`actor_clear ${this.actor.id} message `,doneMessageIds.length,JSON.stringify(doneMessageIds));
+        console.log(`actor_clear ${this.actor.id} processor`,watingClearProcessorIds.length,JSON.stringify(watingClearProcessorIds));
         await this.clearRemote(doneMessageIds,watingClearProcessorIds)//清理远程
         await this.saveSubtaskIdsToConsumer(doneMessageIds);//保存此次清理的mesaage对应的subtask的id到消费actor，用于清理远程prcessor
         await this.clearDbMeesage(doneMessageIds);//清理message 和 subtasks
@@ -108,7 +110,7 @@ export class ActorCleaner{
             status:MessageStatus.DONE,
             updated_at: {
                 max: (new Date().getTime()) - this.clearInterval,
-                limit: 500
+                limit: 2000
             },
         })
         let canceldMessageIds = await this.actor.messageModel.find({
@@ -116,7 +118,7 @@ export class ActorCleaner{
             status:MessageStatus.CANCELED,
             updated_at: {
                 max: (new Date().getTime()) - this.clearInterval ,
-                limit: 500
+                limit: 2000
             }
         })
         return [...doneMessageIds,...canceldMessageIds];
@@ -164,7 +166,7 @@ export class ActorCleaner{
         await this.actor.redisClient.sadd(this.db_key_wating_clear_processors,subtask_id);
     }
     public async getWatingClearConsumeProcessors():Promise<number[]>{
-        return this.actor.redisClient.smembers(this.db_key_wating_clear_processors);
+        return this.actor.redisClient.srandmember(this.db_key_wating_clear_processors,1000);
     }
 
 }
