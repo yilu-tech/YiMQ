@@ -6,7 +6,16 @@ export abstract class Coordinator{
     
     protected queue:bull.Queue;
     constructor(public actor:Actor,options:RedisOptions){
-        this.queue = new bull(String(this.actor.id),{redis:options});
+
+        let queueOptions:bull.QueueOptions = {
+            redis:options
+        };
+        let defaultLimiter:bull.RateLimiter =  {
+            max: 500,
+            duration: 1000*5
+        };
+        queueOptions.limiter = this.actor.options.coordinator_limiter ? this.actor.options.coordinator_limiter : defaultLimiter ;
+        this.queue = new bull(String(this.actor.id),queueOptions);
     }
 
     public abstract async processBootstrap();
