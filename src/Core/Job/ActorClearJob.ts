@@ -10,7 +10,7 @@ export class ActorClearJob extends Job{
     }
     async process() {
         let result =  await this.actor.actorCleaner.clearActor();
-        await this.actor.actorCleaner.setClearJob();
+        await this.actor.actorCleaner.setClearJob(false,result.delay);
         return result;
     }
 

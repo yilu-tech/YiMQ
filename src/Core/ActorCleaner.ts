@@ -26,7 +26,7 @@ export class ActorCleaner{
     
 
 
-    public async setClearJob(init=false){
+    public async setClearJob(init,delay){
         let data = {type:JobType.ACTOR_CLEAR};
         let jobName = JobType.ACTOR_CLEAR;
 
@@ -44,7 +44,7 @@ export class ActorCleaner{
         await this.actor.redisClient.set(this.db_key_last_job_id,await this.getJobId());
         await this.actor.redisClient.set(this.db_key_job_id,job_id);
         let options:JobOptions = {
-            delay:this.clearInterval,
+            delay: delay ? this.clearInterval : 0,
             attempts:3,
             jobId: job_id,
             removeOnComplete:true,
@@ -92,7 +92,7 @@ export class ActorCleaner{
         if(doneMessageIds.length == 0 && watingClearProcessorIds.length == 0 ){
             let message = `<${this.actor.name}> actor not have message and process to clear`;
             Logger.debug(message,'ActorCleaner');
-            return {message}
+            return {message,delay:true}
         }
         console.log(`actor_clear ${this.actor.id} message `,doneMessageIds.length,JSON.stringify(doneMessageIds));
         console.log(`actor_clear ${this.actor.id} processor`,watingClearProcessorIds.length,JSON.stringify(watingClearProcessorIds));
@@ -100,7 +100,7 @@ export class ActorCleaner{
         await this.saveSubtaskIdsToConsumer(doneMessageIds);//保存此次清理的mesaage对应的subtask的id到消费actor，用于清理远程prcessor
         await this.clearDbMeesage(doneMessageIds);//清理message 和 subtasks
         await this.clearDbWatingConsumeProcessors(watingClearProcessorIds);//清理掉本次已经远程清理了的processor的id
-        return {doneMessageIds,watingClearProcessorIds}
+        return {doneMessageIds,watingClearProcessorIds,delay:false}
     }
 
 
@@ -108,19 +108,13 @@ export class ActorCleaner{
         let doneMessageIds = await this.actor.messageModel.find({
             actor_id: this.actor.id,
             status:MessageStatus.DONE,
-            updated_at: {
-                max: (new Date().getTime()) - this.clearInterval,
-                limit: 2000
-            },
         })
+        doneMessageIds = doneMessageIds.slice(0,500);
         let canceldMessageIds = await this.actor.messageModel.find({
             actor_id: this.actor.id,
             status:MessageStatus.CANCELED,
-            updated_at: {
-                max: (new Date().getTime()) - this.clearInterval ,
-                limit: 2000
-            }
         })
+        canceldMessageIds = canceldMessageIds.slice(0,500);
         return [...doneMessageIds,...canceldMessageIds];
     }
 
