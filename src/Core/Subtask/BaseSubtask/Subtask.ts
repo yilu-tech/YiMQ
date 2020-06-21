@@ -43,7 +43,7 @@ export abstract class Subtask{
         subtaskModel.id = body.subtask_id; 
 
         subtaskModel.property('message_id',this.message.id);//rename message_id
-
+        subtaskModel.property('job_id',-1);//默认值必须手动设置，否则在重新设置值的时候，不会从默认值中删除索引
         subtaskModel.property('type',this.type);
         subtaskModel.property('status',SubtaskStatus.PREPARING);
         subtaskModel.property('data',body.data);

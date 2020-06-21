@@ -29,7 +29,7 @@ export class SubtaskModelClass extends NohmModel<SubtaskProperties> {
         },
         job_id: {
             type: 'integer',
-            defaultValue:'-1',//nohm数字类型，不存在的时候为0，为了避免误解
+            // defaultValue:-1,//nohm默认值不会自动删除索引，不能使用
             index:true
         },
         type: {
