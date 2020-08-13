@@ -67,18 +67,23 @@ export class ActorManager{
 
     public async bootstrapActorsCoordinatorprocessor(){
         for(let [id,actor] of this.actors){
-            if(actor.status == ActorStatus.ACTIVE){
-                actor.coordinator.processBootstrap();
-                AppLogger.debug(`Coordinator bootstrap`,`ActorManager <${actor.name}>`)
-            }else{
-                AppLogger.error(`Coordinator can not bootstrap, Actor status is ${actor.status}`,undefined,`ActorManager <${actor.name}>`)
-            }
+            //并行启动
+            (async function(){
+                if(actor.status == ActorStatus.ACTIVE){
+                    await actor.coordinator.processBootstrap();
+                    await actor.coordinator.onCompletedBootstrap();
+                    AppLogger.debug(`Coordinator bootstrap`,`ActorManager <${actor.name}>`)
+                }else{
+                    AppLogger.error(`Coordinator can not bootstrap, Actor status is ${actor.status}`,undefined,`ActorManager <${actor.name}>`)
+                }
+            })()
+
         }
     }
 
     public async setActorsClearJob(){
         for(let [id,actor] of this.actors){
-            await actor.actorCleaner.setClearJob(true,true);
+            await actor.actorCleaner.setClearJob(false);
         }
     }
 

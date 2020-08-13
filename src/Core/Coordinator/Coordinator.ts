@@ -19,6 +19,7 @@ export abstract class Coordinator{
     }
 
     public abstract async processBootstrap();
+    public abstract async onCompletedBootstrap();
     public abstract async callActor(producer,action,context?,options?);
 
     public getQueue():bull.Queue{

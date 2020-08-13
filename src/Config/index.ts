@@ -3,7 +3,7 @@ import { SystemConfig } from './SystemConfig.';
 import {safeLoad} from 'js-yaml';
 import { readFileSync,readdirSync } from "fs";
 import { join } from "path";
-import { ActorConfig } from "./ActorConfig";
+import { ActorConfig, actorDefaultOptions } from "./ActorConfig";
 import { EventEmitter } from "events";
 import {AppLogger as Logger} from '../Handlers/AppLogger';
 
@@ -64,7 +64,8 @@ export class Config {
         let actors = [];
         let fileContent = this.readConfig(this.paths.actors_config);
         fileContent.actors.forEach((actorConfig)=>{
-            let common_options = Object.assign({},fileContent.common_options);
+            let default_options = Object.assign({},actorDefaultOptions);
+            let common_options = Object.assign(default_options,fileContent.common_options);
             actorConfig.options = Object.assign(common_options,actorConfig.options);
             actors.push(actorConfig)
         })

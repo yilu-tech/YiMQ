@@ -9,7 +9,7 @@ import { HttpCoordinatorRequestException } from '../../Exceptions/HttpCoordinato
 import { Job } from '../Job/Job';
 export class HttpCoordinator extends Coordinator{
     
-    public processBootstrap(){
+    public async processBootstrap(){
         this.queue.process('*',1000,async (jobContext:bull.Job)=>{
             let job:Job = null;
             try {
@@ -45,6 +45,22 @@ export class HttpCoordinator extends Coordinator{
             }
         })
     };
+
+    public async onCompletedBootstrap(){
+        this.queue.on('completed',async (jobContext:bull.Job,result)=>{
+            let job:Job = null;
+            try{
+                job = await this.actor.jobManager.restoreByContext(jobContext);
+                return await job.onCompleted(job,result);
+
+            }catch(error){
+                let ext = {
+                    job: job.toJson()
+                }
+                Logger.error(Logger.message(error.message,ext),undefined,`HttpCoordinator.${this.actor.name}.onCompleted`)
+            }
+        })
+    }
 
     public async callActor(producer:Actor,action:CoordinatorCallActorAction,context:any={},options:any={}) {
         let config = {

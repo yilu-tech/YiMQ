@@ -26,7 +26,7 @@ export class RedisManager {
             ...this.getClientOptions(name)
         }
         let client = new Ioredis(this.getClientOptions(name));
-        redisCustomCommand(client);
+        await redisCustomCommand(client);
 
         return new Promise((res,rej)=>{
             client.on('ready',()=>{

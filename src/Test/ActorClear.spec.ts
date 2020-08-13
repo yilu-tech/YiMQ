@@ -11,7 +11,7 @@ import MockAdapter from 'axios-mock-adapter';
 import { MasterModels } from '../Models/MasterModels';
 import { services } from '../app.module';
 import { Application } from '../Application';
-import { MessageStatus, MessageType } from '../Constants/MessageConstants';
+import { MessageStatus, MessageType, MessageClearStatus } from '../Constants/MessageConstants';
 import { EcSubtask } from '../Core/Subtask/EcSubtask';
 import { SubtaskType, SubtaskStatus } from '../Constants/SubtaskConstants';
 import { TccSubtask } from '../Core/Subtask/TccSubtask';
@@ -19,6 +19,11 @@ import { TransactionMessage } from '../Core/Messages/TransactionMessage';
 import { Message } from '../Core/Messages/Message';
 import { JobType, JobStatus } from '../Constants/JobConstants';
 import { ActorConfigManager } from '../Core/ActorConfigManager';
+import { async } from 'rxjs/internal/scheduler/async';
+import { Coordinator } from '../Core/Coordinator/Coordinator';
+import { SystemException } from '../Exceptions/SystemException';
+import { ActorClearJob } from '../Core/Job/ActorClearJob';
+import { Job } from '../Core/Job/Job';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('ActorClearTest', () => {
@@ -77,199 +82,262 @@ describe('ActorClearTest', () => {
         let topic = 'subtask_test';
         let message:TransactionMessage;
 
-
-        it('.test by method',async ()=>{
-            let producer = actorManager.get(producerName); 
+        it('get waiting clear message',async()=>{
+            let userActor = actorManager.get('user'); 
             let contentActor = actorManager.get('content'); 
-            let clear_interval = 300;
+
             
-            producer.options.clear_interval = clear_interval;
-            contentActor.options.clear_interval = clear_interval;
-            message = await messageService.create(producerName,messageType,topic,{},{
-                delay:300,
-                attempts:5,
-                backoff:{
-                    type:'exponential',
-                    delay: 100  
-                }
+            for(var i =0;i<10;i++){
+                let message:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+                    delay:10,
+                });
+                await message.setStatus(MessageStatus.DONE).save();
+            }
+            //增加一种其他状态的数据
+            message = await userActor.messageManager.create(messageType,topic,{},{
+                delay:10,
             });
-            expect(message.status).toBe(MessageStatus.PENDING)
-        
-           
-            let contentProducer = actorManager.get('content'); 
-            let prepareResult = {title: 'get new user'};
-            mock.onPost(contentActor.api).replyOnce(200,prepareResult)
-            let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
-                processor:"content@post.create",
-                data:{
-                    title: 'new post'
-                }
-            })          
-            //mock添加ec子任务时的远程调用
-            prepareResult = {title: 'get update user'};
-            let ecSubtask:EcSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,{
-                processor:"user@user.create",
-                data:{
-                    username: 'jack'
-                }
-            })   
+            await message.setStatus(MessageStatus.PENDING).save();
+
+            for(var i =0;i<10;i++){
+                let message:TransactionMessage = await contentActor.messageManager.create(messageType,topic,{},{
+                    delay:10,
+                });
+                await message.setStatus(MessageStatus.CANCELED).save();
+            }
 
 
-        
-
-
-            //把message确认
-            await messageService.confirm(producerName,message.id);
-
-            await ecSubtask.confirm();
-            await tccSubtask.confirm();
-            await ecSubtask.completeAndSetMeesageStatus(SubtaskStatus.DONE,MessageStatus.DONE)
-            await tccSubtask.completeAndSetMeesageStatus(SubtaskStatus.DONE,MessageStatus.DONE);
-
-
-            let message2:TransactionMessage = await messageService.create(producerName,messageType,topic,{},{
-                delay:300,
-                attempts:5,
-                backoff:{
-                    type:'exponential',
-                    delay: 100  
-                }
-            });
-            // await message2.setStatus(MessageStatus.DONE).save()
-            prepareResult = {title: 'get update user'};
-            let message2ecSubtask:EcSubtask= await messageService.addSubtask(producerName,message2.id,SubtaskType.EC,{
-                processor:"content@user.create",
-                data:{
-                    username: 'jack'
-                }
-            })   
-            await message2ecSubtask.confirm();
-
-            message2ecSubtask.completeAndSetMeesageStatus(SubtaskStatus.DONE,MessageStatus.DONE)
-
-
-            await timeout(clear_interval)
             //验证待删除message数量
-            let doneMessageIds = await producer.actorCleaner.getDoneMessage()
-            expect(doneMessageIds.length).toBe(2);
+            let userDoneMessageIds = await userActor.actorCleaner.getMessageIds(MessageStatus.DONE)
+            expect(userDoneMessageIds.length).toBe(10);
 
-            
-            mock.onPost(producer.api).replyOnce(200,{message: 'success'})
-            await producer.actorCleaner.clearRemote(doneMessageIds,[]);//清理远程message
-            await producer.actorCleaner.saveSubtaskIdsToConsumer(doneMessageIds);//保存待删除消费方的processor
-
-            await producer.actorCleaner.clearDbMeesage(doneMessageIds);//删除数据库的message
-            expect((await producer.actorCleaner.getDoneMessage()).length).toBe(0);
-
-            mock.onPost(contentProducer.api).replyOnce(200,{message: 'success'})
-            let watingClearConsumeSubtaskIds = await contentProducer.actorCleaner.getWatingClearConsumeProcessors();
-            expect(watingClearConsumeSubtaskIds.length).toBe(2);
-            await contentProducer.actorCleaner.clearRemote([],watingClearConsumeSubtaskIds)
-            await contentProducer.actorCleaner.clearDbWatingConsumeProcessors(watingClearConsumeSubtaskIds);
-    
-            expect((await contentProducer.actorCleaner.getWatingClearConsumeProcessors()).length).toBe(0);
+            let contentDoneMessageIds = await contentActor.actorCleaner.getMessageIds(MessageStatus.CANCELED)
+            expect(contentDoneMessageIds.length).toBe(10);
 
         })
 
-
-        it('.test clear by job',async (done)=>{
-
-            let producer = actorManager.get(producerName); 
+        it('markFailedMessages',async()=>{
+            let userActor = actorManager.get('user'); 
             let contentActor = actorManager.get('content'); 
-            let clear_interval = 300;
-            
-            producer.options.clear_interval = clear_interval;
-            contentActor.options.clear_interval = clear_interval;
 
-            message = await messageService.create(producerName,messageType,topic,{},{
-                delay:300,
-                attempts:5,
-                backoff:{
-                    type:'exponential',
-                    delay: 100  
-                }
+            
+            for(var i =0;i<5;i++){
+                let message:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+                    delay:10,
+                });
+                await message.setStatus(MessageStatus.DONE).save();
+            }
+
+            //验证待删除message数量
+            let userDoneMessageIds = await userActor.actorCleaner.getMessageIds(MessageStatus.DONE)
+            expect(userDoneMessageIds.length).toBe(5);
+
+            let failedCleardMessageIds = userDoneMessageIds.slice(0,2);
+            
+            await userActor.actorCleaner.markFailedMessages(failedCleardMessageIds)
+            expect((await userActor.actorCleaner.getFailedClearMessageIds())).toEqual(failedCleardMessageIds);
+        })
+
+    
+
+
+
+        it('clearLocalMessage',async()=>{
+            let userActor = actorManager.get('user'); 
+            let contentActor = actorManager.get('content'); 
+           
+            
+            for(var i =0;i<5;i++){
+                let message:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+                    delay:10,
+                });
+                await message.setStatus(MessageStatus.DONE).save();
+            }
+
+            //验证待删除message数量
+            let userDoneMessageIds = await userActor.actorCleaner.getMessageIds(MessageStatus.DONE)
+
+
+            let failedCleardMessageIds = userDoneMessageIds.slice(0,2);
+            let canCleardMessageIdsForVerify = userDoneMessageIds.slice(2);
+
+            
+            let canCleardMessageIds =  await userActor.actorCleaner.clearLocalMessage(userDoneMessageIds,failedCleardMessageIds);
+            expect(canCleardMessageIdsForVerify).toEqual(canCleardMessageIdsForVerify);
+        })
+
+        it('saveSubtaskIdsToConsumer',async()=>{
+            let userActor = actorManager.get('user'); 
+            let contentActor = actorManager.get('content'); 
+
+            let message:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+                delay:10,
             });
-            expect(message.status).toBe(MessageStatus.PENDING)
-        
-            
-            let prepareResult = {title: 'get new user'};
-            mock.onPost(contentActor.api).replyOnce(200,prepareResult)
-            mock.onPost(contentActor.api).replyOnce(200,prepareResult)
-            let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
-                processor:"content@post.create",
+            let userSubtask =  await message.addSubtask(SubtaskType.EC,{
+                processor:userActor.name,
                 data:{
-                    title: 'new post'
+                    'name':1
                 }
-            })          
-            //mock添加ec子任务时的远程调用
-            prepareResult = {title: 'get update user'};
-            mock.onPost(producer.api).replyOnce(200,prepareResult)
-            let ecSubtask:EcSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,{
-                processor:"user@user.create",
+            }) 
+            let contentSubtask = await message.addSubtask(SubtaskType.EC,{
+                processor:contentActor.name,
                 data:{
-                    username: 'jack'
+                    'name':1
                 }
-            })   
-
-
-            //把message确认
-            await messageService.confirm(producerName,message.id);
-
-            mock.onPost(contentActor.api).replyOnce(200,{message: 'success'})
-            mock.onPost(producer.api).replyOnce(200,{message: 'success'})
-
-            let updatedMessage:TransactionMessage;
-
-            // producer.coordinator.getQueue().on('failed',async (job,err)=>{
-            //     console.log(job.id,err)
-            // })
-            //    //任务执行完毕
-            producer.coordinator.getQueue().on('completed',async (job)=>{
-
-                if(message.job_id == job.id){
-                    updatedMessage = await producer.messageManager.get(message.id);
-                    await updatedMessage.loadSubtasks();
-                }
-
-                if(job.data.type == JobType.ACTOR_CLEAR){
-                    let doneMessage = await producer.actorCleaner.getDoneMessage();
-                    expect(doneMessage.length).toBe(0);
-                    let watingClearProcessorIds = await producer.actorCleaner.getWatingClearConsumeProcessors();
-                    expect(watingClearProcessorIds.length).toBe(1);
-                    // await producer.actorCleaner.removeClearJob();
-                    await contentActor.actorCleaner.setClearJob();
-                    
-                }
-
             })
+            await message.setStatus(MessageStatus.DONE).save();
 
-          
-              //任务执行完毕
-            contentActor.coordinator.getQueue().on('completed',async (job)=>{
+            await userActor.actorCleaner.saveSubtaskIdsToConsumer([message.id]);
+
+            let userWatingClearConsumeProcessorIds = await userActor.actorCleaner.getWatingClearConsumeProcessorIds();
+            let contentWatingClearConsumeProcessorIds = await contentActor.actorCleaner.getWatingClearConsumeProcessorIds();
+            expect(userWatingClearConsumeProcessorIds).toEqual([userSubtask.id]);
+            expect(contentWatingClearConsumeProcessorIds).toEqual([contentSubtask.id])
+        })
+        it('clearLocalProcessorIds',async()=>{
+            let userActor = actorManager.get('user'); 
+            let contentActor = actorManager.get('content'); 
+           
+            
+            let message:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+                delay:10,
+            });
+            let userSubtask1 =  await message.addSubtask(SubtaskType.EC,{
+                processor:userActor.name,
+                data:{
+                    'name':1
+                }
+            }) 
+            let userSubtask2 = await message.addSubtask(SubtaskType.EC,{
+                processor:userActor.name,
+                data:{
+                    'name':1
+                }
+            })
+            let userSubtask3 = await message.addSubtask(SubtaskType.EC,{
+                processor:userActor.name,
+                data:{
+                    'name':1
+                }
+            })
+            await message.setStatus(MessageStatus.DONE).save();
+            await userActor.actorCleaner.saveSubtaskIdsToConsumer([message.id]);
+
+
+
+            let message2:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+                delay:10,
+            });
+            let userSubtask4 =  await message2.addSubtask(SubtaskType.EC,{
+                processor:userActor.name,
+                data:{
+                    'name':1
+                }
+            }) 
+
+            await message2.setStatus(MessageStatus.DONE).save();
+            await userActor.actorCleaner.saveSubtaskIdsToConsumer([message2.id]);
+            
+            let userWatingClearConsumeProcessorIds = await userActor.actorCleaner.getWatingClearConsumeProcessorIds();
+            let waittingClearProcessIds = [userSubtask1.id,userSubtask2.id,userSubtask3.id];
+            let failedProcessIds = [userSubtask2.id,userSubtask3.id];
+            //  1和2,3等待清理，2,3清理错误 ,1被正常清理，4还在等待清理
+            await userActor.actorCleaner.clearLocalProcessorIds(waittingClearProcessIds,failedProcessIds)
+            expect(await userActor.actorCleaner.getFailedClearProcessIds()).toEqual([userSubtask2.id,userSubtask3.id])
+            expect(await userActor.actorCleaner.getWatingClearConsumeProcessorIds()).toEqual([userSubtask4.id])
+        })
+
+        it('remoteClearSuccess',async ()=>{
+            let userActor = actorManager.get('user'); 
+            mock.onPost(userActor.api).replyOnce(200,{
+                failed_done_message_ids:[1],
+                failed_canceled_message_ids:[],
+                failed_process_ids:[20],
+                message: 'success'
+            });
+
+            let result = await userActor.actorCleaner.remoteClear([1,2],[10,11],[20,30]);
+            expect(result).toEqual([
+                [1],
+                [],
+                [20]
+            ])
+        })
+
+        it('remoteClearMessageFailed',async ()=>{
+            let userActor = actorManager.get('user'); 
+            mock.onPost(userActor.api).replyOnce(200);
+            let err;
+            try {
+                let result = await userActor.actorCleaner.remoteClear([1,2],[10,11],[20,30]);                
+            } catch (error) {
+                err = error;
+            }
+
+            expect(err).toBeInstanceOf(SystemException);        
+        })
+
+        it('run',async()=>{
+            let userActor = actorManager.get('user'); 
+            userActor.options.clear_limit = 1; //设置清理条数
+            //创建两条message开始清理
+            let message1:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+                delay:10,
+            });
+            await message1.setStatus(MessageStatus.DONE).save();
+            let message2:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+                delay:10,
+            });
+            await message2.setStatus(MessageStatus.DONE).save();
+            
+            mock.onPost(userActor.api).replyOnce(200,{
+                failed_done_message_ids:[message2.id],
+                failed_canceled_message_ids:[],
+                failed_process_ids:[],
+                message: 'success'
+            });
+            let result = await userActor.actorCleaner.run();
+            let updatedMessage2:Message =  await userActor.messageManager.get(message2.id);
+            expect(updatedMessage2.clear_status).toBe(MessageClearStatus.FAILED);
+        })
+
+        it('runDelayTrue',async()=>{
+            let userActor = actorManager.get('user'); 
+            userActor.options.clear_limit = 10;
+            let message:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
+                delay:10,
+            });
+            await message.setStatus(MessageStatus.DONE).save();
+
+            let result = await userActor.actorCleaner.run();
+            expect(result.delay).toBe(true)
+        })
+
+        it('runDelayFalse',async()=>{
+            let userActor = actorManager.get('user'); 
+            userActor.options.clear_limit = 10;
+
+            for(var i =0;i<10;i++){
+                let message:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+                    delay:10,
+                });
+                await message.setStatus(MessageStatus.DONE).save();
+            }
+            mock.onPost(userActor.api).replyOnce(200,{
+                failed_done_message_ids:[],
+                failed_canceled_message_ids:[],
+                failed_process_ids:[],
+                message: 'success'
+            });
+
+            let result = await userActor.actorCleaner.run();
+            expect(result.delay).toBe(false)
+        })
+
        
 
-                if(job.data.type == JobType.SUBTASK){
-                    await producer.actorCleaner.setClearJob();
-                }
-                
-                if(job.data.type == JobType.ACTOR_CLEAR){
-                    let watingClearProcessorIds = await contentActor.actorCleaner.getWatingClearConsumeProcessors();
-                    expect(watingClearProcessorIds.length).toBe(0);
-                    expect(await producer.coordinator.getQueue().getJob(updatedMessage.job_id)).toBeNull();
-                    expect(await contentActor.coordinator.getQueue().getJob(updatedMessage.subtasks[0].job_id)).toBeNull();
-                    expect(await producer.coordinator.getQueue().getJob(updatedMessage.subtasks[1].job_id)).toBeNull();
-                    // await contentActor.actorCleaner.removeClearJob();
-                    done();
-                }
 
-            })
-
-            
-            await actorManager.bootstrapActorsCoordinatorprocessor();
-
-           
-           
-        })
+        
 
        
 
@@ -277,42 +345,132 @@ describe('ActorClearTest', () => {
 
     describe('.job:',() => {
 
-        it('.set job after',async ()=>{
-            let userProducer = actorManager.get('user');
-            await userProducer.actorCleaner.setClearJob();
-            let job = await userProducer.coordinator.getJob(await userProducer.actorCleaner.getJobId());
-            expect(job).toBeDefined();
-    
-        })
 
-        it('.clear failed retry',async (done)=>{
-            let userProducer = actorManager.get('user');
-            userProducer.options.clear_interval = 200;
+        it('.setJob',async(done)=>{
+            let userActor = actorManager.get('user');
 
+            
+            let job1 = await userActor.actorCleaner.setClearJob(false);
+            expect(job1).not.toBeNull();
+            expect(job1.id).toBe(await userActor.actorCleaner.getActiveJobId())
+            let job2 = await userActor.actorCleaner.setClearJob(false);
+            expect(job2).toBeNull();//job1还没有完成，所有job设置失败
 
-            let message:TransactionMessage = await userProducer.messageManager.create(MessageType.TRANSACTION,'user.create',{
-                delay:200
-            })
-            await userProducer.messageManager.cancel(message.id);
-            mock.onPost(userProducer.api).replyOnce(200,{message: 'success'})
-            userProducer.coordinator.getQueue().on('completed',async (job)=>{
-
-                if(message.job_id == job.id){
-                    await userProducer.actorCleaner.setClearJob();
-                    let job = await userProducer.coordinator.getJob(await userProducer.actorCleaner.getJobId());
-                    expect(job).toBeDefined();
-                }
-                if(await userProducer.actorCleaner.getLastJobId() == job.id){
-                    let job = await userProducer.coordinator.getJob(await userProducer.actorCleaner.getJobId());
-                    expect(await job.getState()).toBe(JobStatus.DELAYED);
+            userActor.coordinator.getQueue().on('completed',async (job)=>{
+                if(job.id == job1.id){
+                    let job3 = await userActor.actorCleaner.setClearJob(false);   
+                    // //job2已经处理完毕，设置job3成功
+                    expect(job3).not.toBeNull(); 
+                    expect(job3.id).toBe(await userActor.actorCleaner.getActiveJobId())
+                   
                     done();
                 }
             })
+            userActor.coordinator.getQueue().on('failed',async (job,error)=>{
+                done(error);
+            })
 
-            await actorManager.bootstrapActorsCoordinatorprocessor();
 
+            userActor.coordinator.getQueue().process('*',async (job)=>{
+                return 1;
+            })
+        })
+
+        it('test clear by real job',async(done)=>{
+            let userActor = actorManager.get('user'); 
+            userActor.options.clear_limit = 5;
+
+            
+            userActor.options.clear_interval = 500;
+
+
+            let clearJob1 = await userActor.actorCleaner.setClearJob(false)
+
+            userActor.coordinator.getQueue().on('failed',async (error)=>{
+                done(error)
+        
+            })
+            let clearJob2:Job;
+            let clearJob3:Job
+            userActor.coordinator.getQueue().on('completed',async (job,result)=>{
+                //clearJob1 完成后创建了，延迟300毫秒的clearJob2
+                if(clearJob1.id == job.id){
+                    mock.onPost(userActor.api).replyOnce(async ()=>{
+                        await timeout(200);
+                        return [200,{
+                            failed_done_message_ids:[],
+                            failed_canceled_message_ids:[],
+                            failed_process_ids:[],
+                            message: 'success'
+                        }]
+                    });
+                    //模拟5个完成的message给clearJob2，300毫秒后，清理message
+                    for(var i =0;i<5;i++){
+                        let message:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
+                            delay:10,
+                        });
+                        await message.setStatus(MessageStatus.DONE).save();
+                    }
+                    await timeout(100);//延迟，让ActorClearJob 在onCompleted完成job的创建
+                    clearJob2 = await userActor.actorCleaner.getActiveJob();
+                    expect(clearJob2.context.opts.delay).toBe(500);
+            
+                }
+
+                //clearJob2完成后，创建不延迟的clearJob3
+                if(clearJob2 && clearJob2.id == job.id){
+                    done();
+                }
+
+        
+            })
+
+            await userActor.coordinator.processBootstrap();
+            await userActor.coordinator.onCompletedBootstrap();
 
         })
+
+        it('.clear failed retry',async (done)=>{
+
+            let userActor = actorManager.get('user'); 
+            userActor.options.clear_limit = 1;
+
+            
+            userActor.options.clear_interval = 8000;
+ 
+            let message:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
+                delay:10000,
+            });
+            await message.setStatus(MessageStatus.DONE).save();
+
+            userActor.options.clear_backoff = 1
+            let clearJob1 = await userActor.actorCleaner.setClearJob(false)
+
+            mock.onPost(userActor.api).replyOnce(500);
+
+
+            let failedTotal = 0;
+            userActor.coordinator.getQueue().on('failed',async (job, err)=>{
+                failedTotal++;
+                mock.onPost(userActor.api).replyOnce(200,{
+                    failed_done_message_ids:[],
+                    failed_canceled_message_ids:[],
+                    failed_process_ids:[],
+                    message: 'success'
+                });
+                expect(clearJob1.id).toBe(job.id)
+            })
+
+            userActor.coordinator.getQueue().on('completed',async (job,result)=>{
+                await timeout(100);//等到结束，防止redis无法正常关闭
+                done()
+            })
+
+            await userActor.coordinator.processBootstrap();
+            await userActor.coordinator.onCompletedBootstrap();
+        })
+
+     
 
     })
 

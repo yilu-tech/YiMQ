@@ -129,7 +129,7 @@ export class TransactionMessage extends Message{
     }
 
     async addSubtask(type,body){
-        if(this.status != MessageStatus.PENDING){
+        if(this.status != MessageStatus.PENDING){//todo:: this.status改为从数据库实时获取
             throw new BusinessException(`The status of this message is ${this.status} instead of ${MessageStatus.PENDING}`);
         }
         body.subtask_id = await this.producer.actorManager.getSubtaskGlobalId();

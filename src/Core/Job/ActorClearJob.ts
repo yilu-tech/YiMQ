@@ -9,9 +9,12 @@ export class ActorClearJob extends Job{
         super(context);
     }
     async process() {
-        let result =  await this.actor.actorCleaner.clearActor();
-        await this.actor.actorCleaner.setClearJob(false,result.delay);
+        let result =  await this.actor.actorCleaner.run();
         return result;
+    }
+
+    async onCompleted(job,result){
+        await this.actor.actorCleaner.setClearJob(result.delay);
     }
 
     public toJson(full=false){

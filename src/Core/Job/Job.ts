@@ -13,6 +13,10 @@ export abstract class Job{
 
     abstract async process();
 
+    async onCompleted(job,result){
+        console.log('ActorClearJob onCompleted')
+    }
+
     private async update(){
         await this.context.update(this.toJson());
     }

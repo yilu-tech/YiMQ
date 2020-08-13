@@ -1,5 +1,5 @@
 import { Actor } from "../Actor";
-import { MessageStatus, MessageType } from "../../Constants/MessageConstants";
+import { MessageStatus, MessageType, MessageClearStatus } from "../../Constants/MessageConstants";
 import { Job } from "../Job/Job";
 import { JobType } from "../../Constants/JobConstants";
 import { MessageModelClass } from "../../Models/MessageModel";
@@ -29,6 +29,7 @@ export abstract class Message{
     public subtask_contexts:Array<SubtaskContext>;
     public subtasks:Array<Subtask> = [];  //事物的子项目
     public pending_subtask_total:number;
+    public clear_status:string;
 
     constructor(producer:Actor){
 
@@ -44,6 +45,7 @@ export abstract class Message{
         this.model.property('topic',topic);
         this.model.property('type',this.type);
         this.model.property('status',MessageStatus.PENDING);
+        this.model.property('clear_status',MessageClearStatus.WAITING);
         if(data){
             this.model.property('data',data)
         }
@@ -79,6 +81,7 @@ export abstract class Message{
         this.created_at = this.model.property('created_at');
         this.pending_subtask_total = this.model.property('pending_subtask_total');
         this.subtask_contexts = <Array<SubtaskContext>>this.model.property('subtask_contexts');
+        this.clear_status = this.model.property('clear_status');
 
 
     }

@@ -13,6 +13,7 @@ interface MessageProperties {
     status: MessageStatus;
     job_id: number;
     subtask_contexts:object;//TODO change name to subtasks
+    clear_status:string;
     updated_at: number;
     created_at: number;
 
@@ -63,6 +64,11 @@ export class MessageModelClass extends NohmModel<MessageProperties> {
         subtask_contexts:{
             type: 'json',
             defaultValue:[]
+        },
+        clear_status: {
+            type: 'string',
+            index: true,
+            validations: ['notEmpty']
         },
         updated_at: {
             type: 'timestamp',

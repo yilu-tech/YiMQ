@@ -92,4 +92,12 @@ export class JobManager{
         }      
         return job;
     }
+
+    public async get(id){
+        if(id == null){
+            return null;
+        }
+        let jobContext = await this.actor.coordinator.getJob(id);
+        return this.restoreByContext(jobContext);
+    }
 }
