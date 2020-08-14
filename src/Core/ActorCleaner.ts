@@ -7,7 +7,7 @@ import { ConsumerSubtask } from "./Subtask/BaseSubtask/ConsumerSubtask";
 import { JobType, JobStatus } from "../Constants/JobConstants";
 import { Logger } from "../Handlers/Logger";
 import { JobOptions } from "bull";
-import { difference } from "lodash";
+import { differenceBy } from "lodash";
 import IORedis = require("ioredis");
 
 
@@ -31,19 +31,16 @@ export class ActorCleaner{
         let doneMessageIds = await this.getMessageIds(MessageStatus.DONE,MessageClearStatus.WAITING);
         let canceldMessageIds = await this.getMessageIds(MessageStatus.CANCELED,MessageClearStatus.WAITING);
         let watingClearProcessorIds = await this.getWatingClearConsumeProcessorIds();//获取等待清理的processers
+        let total = doneMessageIds.length + canceldMessageIds.length + watingClearProcessorIds.length;
 
-        if(doneMessageIds.length < this.actor.options.clear_limit 
-            && watingClearProcessorIds.length < this.actor.options.clear_limit 
-            && watingClearProcessorIds.length < this.actor.options.clear_limit
-            ){
-            let message = `<${this.actor.name}> actor not have message and process to clear`;
-            Logger.debug(message,'ActorCleaner');
+        if(total < this.actor.options.clear_limit){
+            let message = `<${this.actor.name}> actor not have enough message and process to clear ${total}`;
+            Logger.log(message,'ActorCleaner');
             await this.clearSelfJob();
             return {message,delay:true}
         }
-
+    
         let [failedDoneMessageIds,failedcCanceledMessageIds,failed_process_ids] = await this.remoteClear(doneMessageIds,canceldMessageIds,watingClearProcessorIds);
-
         let cleardDoneMessageIds = await this.clearLocalMessage(doneMessageIds,failedDoneMessageIds);
         let cleardCanceldMessageIds = await this.clearLocalMessage(canceldMessageIds,failedcCanceledMessageIds);
         let cleardProcessorIds = await this.clearLocalProcessorIds(watingClearProcessorIds,failed_process_ids);//清理掉本次已经远程清理了的processor的id
@@ -61,8 +58,13 @@ export class ActorCleaner{
         let jobName = JobType.ACTOR_CLEAR;
 
     
-
-        if(await this.getActiveClearJob()){
+        let clearJob = await this.getActiveClearJob();
+        if(clearJob && (await clearJob.getStatus()) == JobStatus.FAILED){
+            await clearJob.context.retry();
+            Logger.error(`${this.actor.name} has failed clear job retry.`,'ActorCleaner');
+            return 
+        }
+        if(clearJob){
             Logger.error(`${this.actor.name} has active clear job.`,'ActorCleaner');
             return null;
         }
@@ -111,8 +113,8 @@ export class ActorCleaner{
         return this.actor.redisClient.lindex(this.db_key_clear_jobs,0)
     }
 
-    public async getMessageIds(status:MessageStatus.DONE|MessageStatus.CANCELED,messageClearStatsu:MessageClearStatus){
-        return await this.actor.redisClient['getClearMessageIds'](this.actor.id,status,messageClearStatsu,this.actor.options.clear_limit);
+    public async getMessageIds(status:MessageStatus.DONE|MessageStatus.CANCELED,messageClearStatus:MessageClearStatus){
+        return await this.actor.redisClient['getClearMessageIds'](this.actor.id,status,messageClearStatus,this.actor.options.clear_limit);
     }
 
     /**
@@ -130,7 +132,7 @@ export class ActorCleaner{
 
     public async clearLocalMessage(originMessageIds,failedMessageIds){
         await this.markFailedMessages(failedMessageIds);
-        let canCleardMessageIds =  await this.getCanCleardMessageIds(originMessageIds,failedMessageIds);
+        let canCleardMessageIds =  this.getCanCleardIds(originMessageIds,failedMessageIds);
         await this.saveSubtaskIdsToConsumer(canCleardMessageIds);
         //save subtask ids to consumer成功后，再删除message，防止意外终止
         await this.clearDbMeesage(canCleardMessageIds);
@@ -145,8 +147,8 @@ export class ActorCleaner{
         }
     }
 
-    public async getCanCleardMessageIds(originMessageIds,failedMessageIds){
-        return difference(originMessageIds,failedMessageIds);
+    public getCanCleardIds(originIds,failedIds){
+        return differenceBy(originIds,failedIds,String);
     }
 
 
@@ -165,7 +167,7 @@ export class ActorCleaner{
             this.clearDbWatingProcessorIds(multi,originProcessIds); 
         } 
         await multi.exec();
-        let canCleardProcessorIds = difference(originProcessIds,failedProcessIds);
+        let canCleardProcessorIds = this.getCanCleardIds(originProcessIds,failedProcessIds);
         return canCleardProcessorIds;
 
     }
@@ -185,10 +187,11 @@ export class ActorCleaner{
     public async remoteClear(doneMessageIds,canceldMessageIds,watingClearProcessorIds){
         let body ={
             done_message_ids: doneMessageIds,
-            canceld_message_ids: canceldMessageIds,
+            canceled_message_ids: canceldMessageIds,
             process_ids: watingClearProcessorIds
         }
         let result = await this.actor.coordinator.callActor(this,CoordinatorCallActorAction.ACTOR_CLEAR,body);
+        // console.log('remoteClear-->',body,result)
         if(!result || result.message != 'success'){
             throw new SystemException(`Actor remote clear is failed, response message is not success.`);
         }

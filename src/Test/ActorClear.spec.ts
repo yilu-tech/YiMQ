@@ -152,8 +152,16 @@ describe('ActorClearTest', () => {
             expect((await userActor.actorCleaner.getFailedClearMessageIds())).toEqual(failedCleardMessageIds);
         })
 
+        it('getCanCleardIds',()=>{
+            //数字和字符串对比
+            let userActor = actorManager.get('user'); 
+            let originIds = ['1','2'];
+            let failedIds = [1];
+            let result = userActor.actorCleaner.getCanCleardIds(originIds,failedIds);
+            expect(result).toEqual(['2']);
+        })
+        
     
-
 
 
         it('clearLocalMessage',async()=>{
@@ -291,9 +299,9 @@ describe('ActorClearTest', () => {
             expect(err).toBeInstanceOf(SystemException);        
         })
 
-        it('run',async()=>{
+        it('run doneMessage more than limit',async()=>{
             let userActor = actorManager.get('user'); 
-            userActor.options.clear_limit = 1; //设置清理条数
+            userActor.options.clear_limit = 2; //设置清理条数
             //创建两条message开始清理
             let message1:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
                 delay:10,
@@ -311,6 +319,34 @@ describe('ActorClearTest', () => {
                 message: 'success'
             });
             let result = await userActor.actorCleaner.run();
+            expect(result.cleardDoneMessageIds).toEqual([message1.id])
+            
+            let updatedMessage2:Message =  await userActor.messageManager.get(message2.id);
+            expect(updatedMessage2.clear_status).toBe(MessageClearStatus.FAILED);
+        })
+
+        it('run canceledMessage more than limit',async()=>{
+            let userActor = actorManager.get('user'); 
+            userActor.options.clear_limit = 2; //设置清理条数
+            //创建两条message开始清理
+            let message1:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+                delay:10,
+            });
+            await message1.setStatus(MessageStatus.CANCELED).save();
+            let message2:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+                delay:10,
+            });
+            await message2.setStatus(MessageStatus.CANCELED).save();
+            
+            mock.onPost(userActor.api).replyOnce(200,{
+                failed_done_message_ids:[],
+                failed_canceled_message_ids:[message2.id],
+                failed_process_ids:[],
+                message: 'success'
+            });
+            let result = await userActor.actorCleaner.run();
+            expect(result.cleardCanceldMessageIds).toEqual([message1.id])
+
             let updatedMessage2:Message =  await userActor.messageManager.get(message2.id);
             expect(updatedMessage2.clear_status).toBe(MessageClearStatus.FAILED);
         })

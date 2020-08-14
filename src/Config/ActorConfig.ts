@@ -14,7 +14,7 @@ export interface ActorOptions{
 
 export const actorDefaultOptions:ActorOptions = {
     headers:{},
-    clear_interval:5000,
+    clear_interval:1000*60*60,
     clear_limit:1000,
     clear_backoff:{
         type:'exponential',

@@ -14,7 +14,7 @@ export abstract class Job{
     abstract async process();
 
     async onCompleted(job,result){
-        console.log('ActorClearJob onCompleted')
+        // console.log('Job onCompleted')
     }
 
     private async update(){
