@@ -13,14 +13,12 @@ import { services } from '../app.module';
 import { Application } from '../Application';
 import { MessageStatus, MessageType, MessageClearStatus } from '../Constants/MessageConstants';
 import { EcSubtask } from '../Core/Subtask/EcSubtask';
-import { SubtaskType, SubtaskStatus } from '../Constants/SubtaskConstants';
+import { SubtaskType } from '../Constants/SubtaskConstants';
 import { TccSubtask } from '../Core/Subtask/TccSubtask';
 import { TransactionMessage } from '../Core/Messages/TransactionMessage';
 import { Message } from '../Core/Messages/Message';
-import { JobType, JobStatus } from '../Constants/JobConstants';
+import { JobType } from '../Constants/JobConstants';
 import { ActorConfigManager } from '../Core/ActorConfigManager';
-import { async } from 'rxjs/internal/scheduler/async';
-import { Coordinator } from '../Core/Coordinator/Coordinator';
 import { SystemException } from '../Exceptions/SystemException';
 import { ActorClearJob } from '../Core/Job/ActorClearJob';
 import { Job } from '../Core/Job/Job';
@@ -348,12 +346,7 @@ describe('ActorClearTest', () => {
 
             let result = await userActor.actorCleaner.run();
             expect(result.delay).toBe(false)
-        })
-
-       
-
-
-        
+        })       
 
        
 
@@ -407,8 +400,12 @@ describe('ActorClearTest', () => {
         
             })
             let clearJob2:Job;
-            let clearJob3:Job
+
+            let clearJobIds = [];
             userActor.coordinator.getQueue().on('completed',async (job,result)=>{
+                if(job.data['type'] == JobType.ACTOR_CLEAR){
+                    clearJobIds.push(job.id);
+                }
                 //clearJob1 完成后创建了，延迟300毫秒的clearJob2
                 if(clearJob1.id == job.id){
                     mock.onPost(userActor.api).replyOnce(async ()=>{
@@ -428,12 +425,17 @@ describe('ActorClearTest', () => {
                         await message.setStatus(MessageStatus.DONE).save();
                     }
                     await timeout(100);//延迟，让ActorClearJob 在onCompleted完成job的创建
-                    clearJob2 = await userActor.actorCleaner.getActiveJob();
+                    clearJob2 = await userActor.actorCleaner.getActiveClearJob();
                     expect(clearJob2.context.opts.delay).toBe(500);
             
                 }
+                let doneClearJobIds = await userActor.actorCleaner.getDoneClearJobIds();
+                //启动后，没完成一个clear就会清理一个
+                if(clearJobIds.length > 1 ){
+                    expect(doneClearJobIds.length).toBe(0);
+                }
 
-                //clearJob2完成后，创建不延迟的clearJob3
+                // clearJob2完成后，创建不延迟的clearJob3
                 if(clearJob2 && clearJob2.id == job.id){
                     done();
                 }

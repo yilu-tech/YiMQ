@@ -38,6 +38,7 @@ export class ActorCleaner{
             ){
             let message = `<${this.actor.name}> actor not have message and process to clear`;
             Logger.debug(message,'ActorCleaner');
+            await this.clearSelfJob();
             return {message,delay:true}
         }
 
@@ -46,8 +47,11 @@ export class ActorCleaner{
         let cleardDoneMessageIds = await this.clearLocalMessage(doneMessageIds,failedDoneMessageIds);
         let cleardCanceldMessageIds = await this.clearLocalMessage(canceldMessageIds,failedcCanceledMessageIds);
         let cleardProcessorIds = await this.clearLocalProcessorIds(watingClearProcessorIds,failed_process_ids);//清理掉本次已经远程清理了的processor的id
+
+        await this.clearSelfJob();
         return {cleardDoneMessageIds,cleardCanceldMessageIds,cleardProcessorIds,delay:false}
     }
+
 
     
 
@@ -58,7 +62,8 @@ export class ActorCleaner{
 
     
 
-        if(await this.getActiveJob()){
+        if(await this.getActiveClearJob()){
+            Logger.error(`${this.actor.name} has active clear job.`,'ActorCleaner');
             return null;
         }
 
@@ -77,9 +82,24 @@ export class ActorCleaner{
         return this.actor.coordinator.getQueue().add(jobName,data,options);
     }
 
+    public async clearSelfJob(){
+        let doneClearJobIds = await this.getDoneClearJobIds();
+        
+        let multi = this.actor.redisClient.multi();
 
+        for (const job_id of doneClearJobIds) {
+            let job = await this.actor.coordinator.getQueue().getJob(job_id);
+            await job.remove();
+            multi.lrem(this.db_key_clear_jobs,0,job.id);
+        }
+        await multi.exec();
+    }
 
-    public async getActiveJob(){
+    public async getDoneClearJobIds():Promise<[any]>{
+        return await this.actor.redisClient.lrange(this.db_key_clear_jobs,1,-1);
+    }
+
+    public async getActiveClearJob(){
         let job = await this.actor.jobManager.get(await this.getActiveJobId());
         if(job && (await job.getStatus()) != JobStatus.COMPLETED){
             return job;
