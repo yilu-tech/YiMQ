@@ -49,6 +49,6 @@ describe('ActorConfigLoadToMasterRedis.spec', () => {
        
         await actorConfigManager.saveConfigFileToMasterRedis()
         let actors = await actorService.list();
-        expect(actors.length).toBe(2);
+        expect(actors.length).toBe(3);
     });
 });

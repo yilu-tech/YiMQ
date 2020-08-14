@@ -113,4 +113,24 @@ export function redisCustomCommand(client){
         
         `
     })
+
+    client.defineCommand('getClearMessageIds',{
+        numberOfKeys:4,
+        lua:`
+        local actor_key = 'nohm:index:message:actor_id:' .. KEYS[1];
+        local message_status_key = 'nohm:index:message:status:' .. KEYS[2];
+        local clear_status_key = 'nohm:index:message:clear_status:' .. KEYS[3];
+        local limit = KEYS[4];
+
+        local wating_clear_message_tmp_key = 'actors:' .. KEYS[1] ..':wating_clear_done_messages';
+
+        local wating_clear_done_messages = redis.call('SINTERSTORE',wating_clear_message_tmp_key, actor_key, message_status_key, clear_status_key)
+
+
+        local result =  redis.call('SRANDMEMBER',wating_clear_message_tmp_key,limit)
+        redis.call('DEL',wating_clear_message_tmp_key);
+
+        return result;
+        `
+    })
 }

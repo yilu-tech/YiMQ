@@ -84,20 +84,33 @@ describe('ActorClearTest', () => {
 
         it('get waiting clear message',async()=>{
             let userActor = actorManager.get('user'); 
+            let memberActor = actorManager.get('member');
             let contentActor = actorManager.get('content'); 
 
             
-            for(var i =0;i<10;i++){
+            for(var i =0;i<2;i++){
                 let message:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
                     delay:10,
                 });
                 await message.setStatus(MessageStatus.DONE).save();
             }
-            //增加一种其他状态的数据
+            //user增加一个pending状态
             message = await userActor.messageManager.create(messageType,topic,{},{
                 delay:10,
             });
             await message.setStatus(MessageStatus.PENDING).save();
+
+            //user增加一个MessageClearStatus.FAILED
+            message = await userActor.messageManager.create(messageType,topic,{},{
+                delay:10,
+            });
+            await message.setStatus(MessageStatus.DONE).setProperty('clear_status',MessageClearStatus.FAILED).save();
+
+            //同数据库下增加一个member的done message
+            message = await memberActor.messageManager.create(messageType,topic,{},{
+                delay:10,
+            });
+            await message.setStatus(MessageStatus.DONE).save();
 
             for(var i =0;i<10;i++){
                 let message:TransactionMessage = await contentActor.messageManager.create(messageType,topic,{},{
@@ -108,10 +121,13 @@ describe('ActorClearTest', () => {
 
 
             //验证待删除message数量
-            let userDoneMessageIds = await userActor.actorCleaner.getMessageIds(MessageStatus.DONE)
-            expect(userDoneMessageIds.length).toBe(10);
+            let userDoneMessageIds = await userActor.actorCleaner.getMessageIds(MessageStatus.DONE,MessageClearStatus.WAITING)
+            expect(userDoneMessageIds.length).toBe(2);
 
-            let contentDoneMessageIds = await contentActor.actorCleaner.getMessageIds(MessageStatus.CANCELED)
+            let userFailedMessageIds = await userActor.actorCleaner.getMessageIds(MessageStatus.DONE,MessageClearStatus.FAILED)
+            expect(userFailedMessageIds.length).toBe(1);
+
+            let contentDoneMessageIds = await contentActor.actorCleaner.getMessageIds(MessageStatus.CANCELED,MessageClearStatus.WAITING)
             expect(contentDoneMessageIds.length).toBe(10);
 
         })
@@ -129,7 +145,7 @@ describe('ActorClearTest', () => {
             }
 
             //验证待删除message数量
-            let userDoneMessageIds = await userActor.actorCleaner.getMessageIds(MessageStatus.DONE)
+            let userDoneMessageIds = await userActor.actorCleaner.getMessageIds(MessageStatus.DONE,MessageClearStatus.WAITING)
             expect(userDoneMessageIds.length).toBe(5);
 
             let failedCleardMessageIds = userDoneMessageIds.slice(0,2);
@@ -155,7 +171,7 @@ describe('ActorClearTest', () => {
             }
 
             //验证待删除message数量
-            let userDoneMessageIds = await userActor.actorCleaner.getMessageIds(MessageStatus.DONE)
+            let userDoneMessageIds = await userActor.actorCleaner.getMessageIds(MessageStatus.DONE,MessageClearStatus.WAITING)
 
 
             let failedCleardMessageIds = userDoneMessageIds.slice(0,2);
@@ -449,9 +465,8 @@ describe('ActorClearTest', () => {
             mock.onPost(userActor.api).replyOnce(500);
 
 
-            let failedTotal = 0;
+
             userActor.coordinator.getQueue().on('failed',async (job, err)=>{
-                failedTotal++;
                 mock.onPost(userActor.api).replyOnce(200,{
                     failed_done_message_ids:[],
                     failed_canceled_message_ids:[],

@@ -26,6 +26,29 @@ export class ActorCleaner{
 
     }
 
+
+    public async run(){
+        let doneMessageIds = await this.getMessageIds(MessageStatus.DONE,MessageClearStatus.WAITING);
+        let canceldMessageIds = await this.getMessageIds(MessageStatus.CANCELED,MessageClearStatus.WAITING);
+        let watingClearProcessorIds = await this.getWatingClearConsumeProcessorIds();//获取等待清理的processers
+
+        if(doneMessageIds.length < this.actor.options.clear_limit 
+            && watingClearProcessorIds.length < this.actor.options.clear_limit 
+            && watingClearProcessorIds.length < this.actor.options.clear_limit
+            ){
+            let message = `<${this.actor.name}> actor not have message and process to clear`;
+            Logger.debug(message,'ActorCleaner');
+            return {message,delay:true}
+        }
+
+        let [failedDoneMessageIds,failedcCanceledMessageIds,failed_process_ids] = await this.remoteClear(doneMessageIds,canceldMessageIds,watingClearProcessorIds);
+
+        let cleardDoneMessageIds = await this.clearLocalMessage(doneMessageIds,failedDoneMessageIds);
+        let cleardCanceldMessageIds = await this.clearLocalMessage(canceldMessageIds,failedcCanceledMessageIds);
+        let cleardProcessorIds = await this.clearLocalProcessorIds(watingClearProcessorIds,failed_process_ids);//清理掉本次已经远程清理了的processor的id
+        return {cleardDoneMessageIds,cleardCanceldMessageIds,cleardProcessorIds,delay:false}
+    }
+
     
 
 
@@ -68,40 +91,8 @@ export class ActorCleaner{
         return this.actor.redisClient.lindex(this.db_key_clear_jobs,0)
     }
 
-    public async run(){
-        let doneMessageIds = await this.getMessageIds(MessageStatus.DONE);
-        let canceldMessageIds = await this.getMessageIds(MessageStatus.CANCELED);
-        let watingClearProcessorIds = await this.getWatingClearConsumeProcessorIds();//获取等待清理的processers
-
-        if(doneMessageIds.length < this.actor.options.clear_limit 
-            && watingClearProcessorIds.length < this.actor.options.clear_limit 
-            && watingClearProcessorIds.length < this.actor.options.clear_limit
-            ){
-            let message = `<${this.actor.name}> actor not have message and process to clear`;
-            Logger.debug(message,'ActorCleaner');
-            return {message,delay:true}
-        }
-
-        let [failedDoneMessageIds,failedcCanceledMessageIds,failed_process_ids] = await this.remoteClear(doneMessageIds,canceldMessageIds,watingClearProcessorIds);
-
-        let cleardDoneMessageIds = await this.clearLocalMessage(doneMessageIds,failedDoneMessageIds);
-        let cleardCanceldMessageIds = await this.clearLocalMessage(canceldMessageIds,failedcCanceledMessageIds);
-        let cleardProcessorIds = await this.clearLocalProcessorIds(watingClearProcessorIds,failed_process_ids);//清理掉本次已经远程清理了的processor的id
-        return {cleardDoneMessageIds,cleardCanceldMessageIds,cleardProcessorIds,delay:false}
-    }
-
-
-
-
-
-    public async getMessageIds(status:MessageStatus.DONE|MessageStatus.CANCELED){
-        let messageIds = await this.actor.messageModel.find({
-            actor_id: this.actor.id,
-            status: status,
-            clear_status: MessageClearStatus.WAITING
-        })
-        messageIds = messageIds.slice(0,this.actor.options.clear_limit);
-        return messageIds;
+    public async getMessageIds(status:MessageStatus.DONE|MessageStatus.CANCELED,messageClearStatsu:MessageClearStatus){
+        return await this.actor.redisClient['getClearMessageIds'](this.actor.id,status,messageClearStatsu,this.actor.options.clear_limit);
     }
 
     /**
