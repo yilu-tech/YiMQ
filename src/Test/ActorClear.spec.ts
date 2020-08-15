@@ -22,6 +22,7 @@ import { ActorConfigManager } from '../Core/ActorConfigManager';
 import { SystemException } from '../Exceptions/SystemException';
 import { ActorClearJob } from '../Core/Job/ActorClearJob';
 import { Job } from '../Core/Job/Job';
+import { BusinessException } from '../Exceptions/BusinessException';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('ActorClearTest', () => {
@@ -484,7 +485,10 @@ describe('ActorClearTest', () => {
 
         })
 
-        it('.clear failed retry',async (done)=>{
+        /**
+         * clear 失败后，job 进行自动重试
+         */
+        it('.clear failed job attempt',async (done)=>{
 
             let userActor = actorManager.get('user'); 
             userActor.options.clear_limit = 1;
@@ -527,6 +531,70 @@ describe('ActorClearTest', () => {
 
     })
 
+    describe('.failed clear retry:',() => {
+        it('failedClearMessageRetrySome',async()=>{
+            let userActor = actorManager.get('user');
+            let message:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
+                delay:10,
+            });
+            await message.setStatus(MessageStatus.DONE).save();
+            let messageIds = [message.id];
+            await userActor.actorCleaner.markFailedMessages(messageIds);
+            expect(await userActor.actorCleaner.getFailedClearMessageIds()).toEqual(messageIds)
+            await userActor.actorCleaner.clearFailedReTry(messageIds,null);
+            expect(await userActor.actorCleaner.getMessageIds(MessageStatus.DONE,MessageClearStatus.WAITING)).toEqual(messageIds)
+        })
+
+        it('failedClearMessageRetryAll',async()=>{
+            let userActor = actorManager.get('user');
+            let message1:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
+                delay:10,
+            });
+            await message1.setStatus(MessageStatus.CANCELED).save();
+            let message2:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
+                delay:10,
+            });
+            await message2.setStatus(MessageStatus.CANCELED).save();
+
+            let messageIds = [message1.id,message2.id];
+
+            await userActor.actorCleaner.markFailedMessages(messageIds);
+            expect(await userActor.actorCleaner.getFailedClearMessageIds()).toEqual(messageIds)
+
+            await userActor.actorCleaner.clearFailedReTry('*',null);
+            expect(await userActor.actorCleaner.getMessageIds(MessageStatus.CANCELED,MessageClearStatus.WAITING)).toEqual(messageIds)
+        })
+
+        it('failedClearProcessRetry',async()=>{
+            let userActor = actorManager.get('user');
+            let failedProcessorIds = [3,5];
+            await userActor.actorCleaner.clearLocalProcessorIds(failedProcessorIds,failedProcessorIds);
+            expect(await userActor.actorCleaner.getFailedClearProcessIds());
+            await userActor.actorCleaner.clearFailedReTry(null,failedProcessorIds)
+            expect(await userActor.actorCleaner.getWatingClearConsumeProcessorIds());
+        })
+        it('failedClearProcessRetryFailed',async()=>{
+            let userActor = actorManager.get('user');
+            let failedProcessorIds = [3,5];
+            await userActor.actorCleaner.clearLocalProcessorIds(failedProcessorIds,failedProcessorIds);
+            expect(await userActor.actorCleaner.getFailedClearProcessIds());
+            let errorCheck;
+            try {
+                await userActor.actorCleaner.clearFailedReTry(null,[3,5,6])                
+            } catch (error) {
+                errorCheck = error;
+            }
+            expect(errorCheck).toBeInstanceOf(BusinessException);
+        })
+        it('failedClearProcessRetryAll',async()=>{
+            let userActor = actorManager.get('user');
+            let failedProcessorIds = [3,5];
+            await userActor.actorCleaner.clearLocalProcessorIds(failedProcessorIds,failedProcessorIds);
+            expect(await userActor.actorCleaner.getFailedClearProcessIds());
+            await userActor.actorCleaner.clearFailedReTry(null,'*')
+            expect(await userActor.actorCleaner.getWatingClearConsumeProcessorIds());
+        })
+    })
 
 
 });

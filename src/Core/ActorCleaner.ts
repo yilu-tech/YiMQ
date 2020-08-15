@@ -9,6 +9,7 @@ import { Logger } from "../Handlers/Logger";
 import { JobOptions } from "bull";
 import { differenceBy } from "lodash";
 import IORedis = require("ioredis");
+import { BusinessException } from "../Exceptions/BusinessException";
 
 
 
@@ -27,13 +28,17 @@ export class ActorCleaner{
     }
 
 
-    public async run(){
+    /**
+     * 
+     * @param force 强制清理，基础量的限制
+     */
+    public async run(force=false){
         let doneMessageIds = await this.getMessageIds(MessageStatus.DONE,MessageClearStatus.WAITING);
         let canceldMessageIds = await this.getMessageIds(MessageStatus.CANCELED,MessageClearStatus.WAITING);
         let watingClearProcessorIds = await this.getWatingClearConsumeProcessorIds();//获取等待清理的processers
         let total = doneMessageIds.length + canceldMessageIds.length + watingClearProcessorIds.length;
 
-        if(total < this.actor.options.clear_limit){
+        if(force == false && total < this.actor.options.clear_limit){
             let message = `<${this.actor.name}> actor not have enough message and process to clear ${total}`;
             Logger.log(message,'ActorCleaner');
             await this.clearSelfJob();
@@ -163,16 +168,18 @@ export class ActorCleaner{
         if(failedProcessIds.length > 0){
             this.moveFailedProcessIds(multi,failedProcessIds);
         }
-        if(originProcessIds.length > 0){
-            this.clearDbWatingProcessorIds(multi,originProcessIds); 
+        let canCleardProcessorIds = this.getCanCleardIds(originProcessIds,failedProcessIds);
+
+        if(canCleardProcessorIds.length > 0){
+            this.clearDbWatingProcessorIds(multi,canCleardProcessorIds); 
         } 
         await multi.exec();
-        let canCleardProcessorIds = this.getCanCleardIds(originProcessIds,failedProcessIds);
         return canCleardProcessorIds;
 
     }
     public async moveFailedProcessIds(multi:IORedis.Pipeline,failedProcessIds){
-         multi.sadd(this.db_key_failed_clear_processors,failedProcessIds);
+         multi.sadd(this.db_key_failed_clear_processors,failedProcessIds); //加db_key_failed_clear_processors中
+         multi.srem(this.db_key_wating_clear_processors,failedProcessIds); //从db_key_wating_clear_processors中移除
     }
 
     public async getFailedClearProcessIds():Promise<number[]>{
@@ -190,8 +197,9 @@ export class ActorCleaner{
             canceled_message_ids: canceldMessageIds,
             process_ids: watingClearProcessorIds
         }
+        // console.log('remoteClear-->body:',body)
         let result = await this.actor.coordinator.callActor(this,CoordinatorCallActorAction.ACTOR_CLEAR,body);
-        // console.log('remoteClear-->',body,result)
+        // console.log('remoteClear-->:result',result)
         if(!result || result.message != 'success'){
             throw new SystemException(`Actor remote clear is failed, response message is not success.`);
         }
@@ -225,5 +233,49 @@ export class ActorCleaner{
     public async getWatingClearConsumeProcessorIds():Promise<number[]>{
         return this.actor.redisClient.srandmember(this.db_key_wating_clear_processors,this.actor.options.clear_limit);
     }
+    
+
+    public async clearFailedReTry(message_ids:Array<number|string>|string,processor_ids:Array<number|string>|string,forceRun=false){
+        if(message_ids == '*'){
+            message_ids = await this.getFailedClearMessageIds();
+        }
+
+        if(message_ids && message_ids.length > 0){
+            await this.failedClearMessageRetry(message_ids);
+        }
+
+        if(processor_ids == '*'){
+            processor_ids = await this.getFailedClearProcessIds();
+        }
+        
+        if(processor_ids && processor_ids.length > 0){
+            await this.failedProcessorRetry(processor_ids);
+        }
+        await this.run(forceRun);
+        return {message_ids,processor_ids};
+        
+
+    }
+
+    public async failedClearMessageRetry(messageIds){
+        for(var id of messageIds){
+            let message:Message = await this.actor.messageManager.get(id);
+            message.setProperty("clear_status",MessageClearStatus.WAITING);
+            await message.save();
+        }
+    }
+
+    public async failedProcessorRetry(failedProcessIds){
+        for(let id of failedProcessIds){
+            let exists = await this.actor.redisClient.sismember(this.db_key_failed_clear_processors,id);
+            if(!exists){
+                throw new BusinessException(`Failed processor_id ${id} not exists.`)
+            }
+        }
+        let multi = this.actor.redisClient.multi();
+        multi.srem(this.db_key_failed_clear_processors,failedProcessIds);
+        multi.sadd(this.db_key_wating_clear_processors,failedProcessIds);
+        await multi.exec();
+   }
 
 }
