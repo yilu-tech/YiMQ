@@ -2,12 +2,12 @@ import { Controller, Post, Body, Get, Query, ParseIntPipe} from '@nestjs/common'
 import { MessageService } from '../Services/MessageService';
 import { MessagesDto, MessageDetailDto } from '../Dto/AdminControllerDto';
 import {ActorManager} from '../Core/ActorManager';
-
+import { Application } from '../Application';
 
 
 @Controller('admin')
 export class AdminController {
-    constructor(private messageService:MessageService,private actorManager:ActorManager){
+    constructor(private messageService:MessageService,private actorManager:ActorManager,private application:Application){
 
     }
 
@@ -23,7 +23,11 @@ export class AdminController {
     public async messageClearFailedRetry(@Body() body){
         let actor = this.actorManager.getById(body.id);    
         return await actor.actorCleaner.clearFailedReTry(body.message_ids,body.processor_ids,true);
-        
+    }
+    @Get('reload')
+    public async reload(){
+        await this.application.reload();
+        return {message:'success'};
     }
 
 

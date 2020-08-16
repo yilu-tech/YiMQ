@@ -3,7 +3,6 @@ import { Config } from './Config';
 import { RedisManager } from './Handlers/redis/RedisManager';
 
 import { MasterModels } from './Models/MasterModels';
-import {  Bootstrap } from './Bootstrap';
 import { ActorManager } from './Core/ActorManager';
 import { MessagesController } from './Controllers/MessageController';
 import { IndexController } from './Controllers/IndexController';
@@ -38,7 +37,6 @@ export const services = [
     MasterModels,
     ActorConfigManager,
     ActorManager,
-    Bootstrap,
     ...services
   ],
 })

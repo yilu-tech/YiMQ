@@ -64,7 +64,7 @@ describe('Subtask', () => {
 
     afterEach(async()=>{
         
-        await actorManager.closeActors();
+        await actorManager.closeCoordinators();
         await redisManager.quitAllDb();
     })
     

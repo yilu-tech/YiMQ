@@ -47,14 +47,13 @@ export class ActorManager{
         await this.setActorsClearJob();
     }
     public async shutdown(){
-        await this.closeActors();
         this.actors = new Map();
         this.actorsName = new Map();
     }
     
-    public async closeActors(){
+    public async closeCoordinators(){
         for(let [id,actor] of this.actors){
-            await actor.close();
+            await actor.coordinator.close();
         }
     }
 

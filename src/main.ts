@@ -19,6 +19,7 @@ async function bootstrap() {
     new FastifyAdapter({ logger: false }),{
       logger:false
     });
+    app.enableShutdownHooks();
 
   app.useGlobalPipes(new ValidationPipe({
     transform:true,
@@ -34,10 +35,6 @@ async function bootstrap() {
     );
   await app.listen(port,'0.0.0.0');
   
-  if(process.send){
-    process.send('ready');//pm2优雅启动
-    console.info(`YiMQ listening on port ${port}!`);
-  }
 
 
   //TODO remove

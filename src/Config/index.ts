@@ -73,33 +73,6 @@ export class Config {
     }
     
 
-    async reloadConfig(configName){
-        this[`load_${configName}`]()
-
-        this.event.emit(`${configName}_reload`.toUpperCase());
-
-        Logger.log(`${configName} is change`,'Config')
-        if(configName == 'actors_config'){
-            Logger.log('Config Reloaded','Config')
-            this.event.emit(ConfigEvents.CONFIG_RELOAD)
-        }
-    }
-    // async reloadConfigs(){
-    //     for (const name in this.paths) {
-    //         await this.reloadConfig(name);
-    //     }
-    // }
-
-    // async setWatch(){
-    //     chokidar.watch(process.env.CONFIG_DIR_PATH).on('change', async (path) => {
-    //         for (const name in this.paths) {
-    //             if(path == this.paths[name]){
-    //                 await this.reloadConfig(name);
-    //             }
-    //         }
-    //     });
-    // }
-
     private readConfig(filepath){
         try{
             var doc = safeLoad(readFileSync(filepath,'utf8'));

@@ -45,7 +45,7 @@ export class HttpCoordinator extends Coordinator{
             }
         })
     };
-
+    //关闭队列的时候，如果completed还在执行会因为redis链接断开报错，所以这里只能执行非一致性的操作
     public async onCompletedBootstrap(){
         this.queue.on('completed',async (jobContext:bull.Job,result)=>{
             let job:Job = null;
@@ -57,7 +57,7 @@ export class HttpCoordinator extends Coordinator{
                 let ext = {
                     job: job.toJson()
                 }
-                Logger.error(Logger.message(error.message,ext),undefined,`HttpCoordinator.${this.actor.name}.onCompleted`)
+                Logger.error(Logger.message(error.message,ext),undefined,`HttpCoordinator.onCompleted.${this.actor.name}`)
             }
         })
     }
