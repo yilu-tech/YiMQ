@@ -52,9 +52,11 @@ export class ActorManager{
     }
     
     public async closeCoordinators(){
+        let coordinatorClosers=[];
         for(let [id,actor] of this.actors){
-            await actor.coordinator.close();
+            coordinatorClosers.push(actor.coordinator.close());
         }
+        return Promise.all(coordinatorClosers);
     }
 
     public get(name:string):Actor{
