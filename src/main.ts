@@ -16,9 +16,7 @@ const port = 7379;
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ logger: false }),{
-      logger:false
-    });
+    new FastifyAdapter({ logger: false }));
     app.enableShutdownHooks();
 
   app.useGlobalPipes(new ValidationPipe({
