@@ -31,6 +31,7 @@
     "docker:run": "docker run --name yimq --hostname yimq -v $(pwd)/config:/apps/config yimq"
   },
   "dependencies": {
+    "@caporal/core": "^2.0.2",
     "@nestjs/common": "^7.0.0",
     "@nestjs/core": "^7.0.0",
     "@nestjs/platform-express": "^7.0.0",
