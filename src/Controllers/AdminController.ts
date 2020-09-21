@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Get, Query, ParseIntPipe} from '@nestjs/common';
 import { MessageService } from '../Services/MessageService';
-import { MessagesDto, MessageDetailDto } from '../Dto/AdminControllerDto';
+import { MessagesDto, MessageDetailDto, MessageClearFailedRetry } from '../Dto/AdminControllerDto';
 import {ActorManager} from '../Core/ActorManager';
 import { Application } from '../Application';
 
@@ -20,8 +20,8 @@ export class AdminController {
         return (await this.messageService.get(actor_id,query.message_id)).toJson(true);
     }
     @Post('actor/clearfailed/retry')
-    public async messageClearFailedRetry(@Body() body){
-        let actor = this.actorManager.getById(body.id);    
+    public async messageClearFailedRetry(@Body() body:MessageClearFailedRetry){
+        let actor = this.actorManager.getById(body.actor_id);    
         return await actor.actorCleaner.clearFailedReTry(body.message_ids,body.processor_ids,true);
     }
     @Get('reload')

@@ -14,3 +14,11 @@ export class MessageDetailDto{
     @IsDefined()
     message_id:number;
 }
+
+export class MessageClearFailedRetry{
+    @IsDefined()
+    actor_id:number;
+
+    message_ids:[number];
+    processor_ids:[number]
+}

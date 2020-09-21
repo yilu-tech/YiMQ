@@ -17,7 +17,7 @@ export class Application implements OnApplicationShutdown,OnApplicationBootstrap
     async onModuleInit() {
         this.startingUpTime = Date.now();
         console.info('..........................................Starting Up..........................................');
-        await this.config.loadConfig();
+        // await this.config.loadConfig();//移动到main.ts
         await this.bootstrap();
     }
 

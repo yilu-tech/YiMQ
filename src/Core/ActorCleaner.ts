@@ -40,7 +40,7 @@ export class ActorCleaner{
 
         if(force == false && total < this.actor.options.clear_limit){
             let message = `<${this.actor.name}> actor not have enough message and process to clear ${total}`;
-            Logger.log(message,'ActorCleaner');
+            // Logger.log(message,'ActorCleaner');
             await this.clearSelfJob();
             return {message,delay:true}
         }
@@ -70,7 +70,7 @@ export class ActorCleaner{
             return 
         }
         if(clearJob){
-            Logger.error(`${this.actor.name} has active clear job.`,'ActorCleaner');
+            // Logger.error(`${this.actor.name} has active clear job.`,'ActorCleaner');
             return null;
         }
 

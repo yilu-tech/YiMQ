@@ -54,6 +54,7 @@ export class Config {
             Logger.log('All configs Loaded','Config')
             this.event.emit(ConfigEvents.CONFIG_LOAD)
         }
+        return this;
     }
 
     load_system_config(){

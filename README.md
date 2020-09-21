@@ -16,6 +16,29 @@
 3. SUBTASK_JOB_DELAY (subtask job 延迟时间 )
 4. SUBTASK_JOB_BACKOFF_DELAY (subtask job重试延迟时间 )
 
+###管理接口
+
+1. /admin/reload (重新加载配置文件)
+
+2. /admin/actor/clearfailed/retry (重试清理错误)
+
+    body:
+    {
+
+        "actor_id":20,
+        "message_ids": "*",
+        "process_ids": "*"
+    }
+
+    {
+
+        "actor_id":20,
+        "message_ids": [1,2],
+        "process_ids": [2,3]
+    }
+
+
+
 
 
 

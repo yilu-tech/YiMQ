@@ -15,23 +15,26 @@ export class App{
     public actorManager:ActorManager;
     public masterModels:MasterModels;
     public redisManager:RedisManager;
-    async init(){
+
+    async initConfig(){
         this.context = await NestFactory.createApplicationContext(CommandModule);
-        this.config =  this.context.get<Config>(Config);
+        this.config =  await this.context.get<Config>(Config).loadConfig();
+        return this;
+    }
+    async initContext(){
+
         this.redisManager = this.context.get<RedisManager>(RedisManager);
         this.actorManager = this.context.get<ActorManager>(ActorManager);
         this.masterModels = this.context.get<MasterModels>(MasterModels);
-        
 
 
 
-        this.config.loadConfig()
         await this.masterModels.register();
         await this.actorManager.initActors();
+        return this;
     }
 
-    async close(){
-        
+    async closeContext(){
         await this.masterModels.shutdown();
         await this.actorManager.closeCoordinators();
         await this.actorManager.shutdown();

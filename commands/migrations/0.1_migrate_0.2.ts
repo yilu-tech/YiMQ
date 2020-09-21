@@ -6,7 +6,8 @@ import { Actor } from "../../src/Core/Actor";
 export async function run_01_migrate_02(){
     console.log('migrate to v2')
     let app = new App();
-    await app.init();
+    await app.initConfig();
+    await app.initContext();
 
     let actors = app.actorManager.actors;
     
@@ -27,7 +28,7 @@ export async function run_01_migrate_02(){
     
 
 
-    await app.close()
+    await app.closeContext()
    
 }
 

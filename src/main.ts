@@ -5,10 +5,11 @@ import {
   FastifyAdapter,
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { SystemExceptionFilter } from './ExceptionFilters/SystemExceptionFilter';
 import { ValidationException } from './Exceptions/ValidationException';
 import { CoordinatorRequestExceptionFilter } from './ExceptionFilters/CoordinatorRequestExceptionFilter';
+import { Config } from './Config';
 
 const { UI } = require('bull-board');
 
@@ -31,7 +32,12 @@ async function bootstrap() {
     new SystemExceptionFilter(),
     new CoordinatorRequestExceptionFilter
     );
-  await app.listen(port,'0.0.0.0');
+
+  let config = await app.get<Config>(Config).loadConfig();
+
+  await app.listen(config.system.port,'0.0.0.0');
+  // console.info(`..........................................Port: ${config.system.port}..........................................`);
+  Logger.log(`Port: ${config.system.port}`,'Main')
   
 
 
@@ -40,7 +46,6 @@ async function bootstrap() {
   var uiApp = express();
   uiApp.use('/',UI);
   uiApp.listen(7380, function () {
-    console.info('Ui app listening on port 7380!');
   });
   
 }

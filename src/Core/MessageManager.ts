@@ -29,7 +29,7 @@ export class MessageManager {
             }
         }catch(error){
             if(error && error.message === 'not found'){
-                throw new BusinessException(`Actor ${this.producer.name} Message ${id} not found`);
+                throw new BusinessException(`<${this.producer.name}> actor not found message by id=${id}.`);
             }
             throw error;
         }
