@@ -50,6 +50,8 @@ export class ActorCleaner{
         let cleardCanceldMessageIds = await this.clearLocalMessage(canceldMessageIds,failedcCanceledMessageIds);
         let cleardProcessorIds = await this.clearLocalProcessorIds(watingClearProcessorIds,failed_process_ids);//清理掉本次已经远程清理了的processor的id
 
+        let message = `<${this.actor.name}> actor cleared message: ${doneMessageIds.length + canceldMessageIds.length}  process: ${watingClearProcessorIds.length}`;
+        Logger.log(message,'ActorCleaner');
         await this.clearSelfJob();
         return {cleardDoneMessageIds,cleardCanceldMessageIds,cleardProcessorIds,delay:false}
     }
