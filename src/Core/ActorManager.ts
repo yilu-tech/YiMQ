@@ -62,8 +62,8 @@ export class ActorManager{
     public get(name:string):Actor{
         return this.actorsName.get(name);
     }
-    public getById(id):Actor{
-        return this.actors.get(id);
+    public getById(id:number):Actor{
+        return this.actors.get(Number(id));
     }
 
     public async bootstrapActorsCoordinatorprocessor(){

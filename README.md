@@ -20,7 +20,15 @@
 
 1. /admin/reload (重新加载配置文件)
 
-2. /admin/actor/clearfailed/retry (重试清理错误)
+2. /actor/clearfailed (获取清理失败的message和process)
+   
+   query:
+   {
+       actor_id: 1
+   }
+   
+
+3. /admin/actor/clearfailed/retry (重试清理错误)
 
     body:
     {

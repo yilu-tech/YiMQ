@@ -10,6 +10,7 @@ export class ActorClearJob extends Job{
     }
     async process() {
         let result =  await this.actor.actorCleaner.run();
+        await this.actor.actorCleaner.clearSelfJob(); //清理除这个job以外的actor_clear_job
         return result;
     }
 

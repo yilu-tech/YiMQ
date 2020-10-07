@@ -150,7 +150,7 @@ describe('ActorClearTest', () => {
             let failedCleardMessageIds = userDoneMessageIds.slice(0,2);
             
             await userActor.actorCleaner.markFailedMessages(failedCleardMessageIds)
-            expect((await userActor.actorCleaner.getFailedClearMessageIds())).toEqual(failedCleardMessageIds);
+            expect(((await userActor.actorCleaner.getFailedClearMessageIds()).failedRetryDoneMessageIds)).toEqual(failedCleardMessageIds);
         })
 
         it('getCanCleardIds',()=>{
@@ -534,15 +534,41 @@ describe('ActorClearTest', () => {
     describe('.failed clear retry:',() => {
         it('failedClearMessageRetrySome',async()=>{
             let userActor = actorManager.get('user');
-            let message:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
+
+            //done message
+            let doneMessage:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
                 delay:10,
             });
-            await message.setStatus(MessageStatus.DONE).save();
-            let messageIds = [message.id];
-            await userActor.actorCleaner.markFailedMessages(messageIds);
-            expect(await userActor.actorCleaner.getFailedClearMessageIds()).toEqual(messageIds)
-            await userActor.actorCleaner.clearFailedReTry(messageIds,null);
-            expect(await userActor.actorCleaner.getMessageIds(MessageStatus.DONE,MessageClearStatus.WAITING)).toEqual(messageIds)
+            await doneMessage.setStatus(MessageStatus.DONE).save();
+            let doneMessageIds = [doneMessage.id];
+
+            await userActor.actorCleaner.markFailedMessages(doneMessageIds);//标记doneMessageIds为清理失败的message
+            expect((await userActor.actorCleaner.getFailedClearMessageIds()).failedRetryDoneMessageIds).toEqual(doneMessageIds)
+
+            //cancled message
+            let canceldMessage:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
+                delay:10,
+            });
+            await canceldMessage.setStatus(MessageStatus.CANCELED).save();
+            let canceldMessageIds = [canceldMessage.id];
+            await userActor.actorCleaner.markFailedMessages(canceldMessageIds);//标记canceldMessage为清理失败的message
+            expect((await userActor.actorCleaner.getFailedClearMessageIds()).failedRetryCanceldMessageIds).toEqual(canceldMessageIds)
+
+
+            //done message清理重试成功  canceld message清理重试失败
+            mock.onPost(userActor.api).replyOnce(200,{
+                failed_done_message_ids:[],
+                failed_canceled_message_ids: canceldMessageIds,
+                failed_process_ids:[],
+                message: 'success'
+            });
+            //清理doneMessageIds和canceldMessageIds ，但canceldMessageIds重新清理失败
+            await userActor.actorCleaner.clearFailedReTry([...doneMessageIds,...canceldMessageIds],null);
+            
+            //确认failedRetryDoneMessageIds被清理
+            expect((await userActor.actorCleaner.getFailedClearMessageIds()).failedRetryDoneMessageIds).toEqual([])
+            //确认failedRetryCanceldMessageIds还存在
+            expect((await userActor.actorCleaner.getFailedClearMessageIds()).failedRetryCanceldMessageIds).toEqual(canceldMessageIds)
         })
 
         it('failedClearMessageRetryAll',async()=>{
@@ -559,40 +585,67 @@ describe('ActorClearTest', () => {
             let messageIds = [message1.id,message2.id];
 
             await userActor.actorCleaner.markFailedMessages(messageIds);
-            expect(await userActor.actorCleaner.getFailedClearMessageIds()).toEqual(messageIds)
+            expect((await userActor.actorCleaner.getFailedClearMessageIds()).failedRetryCanceldMessageIds).toEqual(messageIds)
 
+            mock.onPost(userActor.api).replyOnce(200,{
+                failed_done_message_ids:[],
+                failed_canceled_message_ids:[],
+                failed_process_ids:[],
+                message: 'success'
+            });
             await userActor.actorCleaner.clearFailedReTry('*',null);
-            expect(await userActor.actorCleaner.getMessageIds(MessageStatus.CANCELED,MessageClearStatus.WAITING)).toEqual(messageIds)
+            //确认没有成功清理的canceld message 是否重试清理成功，数量为0
+            expect((await userActor.actorCleaner.getFailedClearMessageIds()).failedRetryCanceldMessageIds.length).toEqual(0)
         })
 
-        it('failedClearProcessRetry',async()=>{
+        it('failedClearProcessRetrySuccess',async()=>{
             let userActor = actorManager.get('user');
-            let failedProcessorIds = [3,5];
-            await userActor.actorCleaner.clearLocalProcessorIds(failedProcessorIds,failedProcessorIds);
-            expect(await userActor.actorCleaner.getFailedClearProcessIds());
+            let failedProcessorIds = ['3','5'];
+            await userActor.actorCleaner.clearLocalProcessorIds([failedProcessorIds],failedProcessorIds);
+
+            expect(await userActor.actorCleaner.getFailedClearProcessIds()).toEqual(failedProcessorIds);
+
+            mock.onPost(userActor.api).replyOnce(200,{
+                failed_done_message_ids:[],
+                failed_canceled_message_ids:[],
+                failed_process_ids:[],//3处理失败
+                message: 'success'
+            });
             await userActor.actorCleaner.clearFailedReTry(null,failedProcessorIds)
-            expect(await userActor.actorCleaner.getWatingClearConsumeProcessorIds());
+
+            expect(await userActor.actorCleaner.getFailedClearProcessIds()).toEqual([]);
         })
         it('failedClearProcessRetryFailed',async()=>{
             let userActor = actorManager.get('user');
-            let failedProcessorIds = [3,5];
-            await userActor.actorCleaner.clearLocalProcessorIds(failedProcessorIds,failedProcessorIds);
-            expect(await userActor.actorCleaner.getFailedClearProcessIds());
-            let errorCheck;
-            try {
-                await userActor.actorCleaner.clearFailedReTry(null,[3,5,6])                
-            } catch (error) {
-                errorCheck = error;
-            }
-            expect(errorCheck).toBeInstanceOf(BusinessException);
+            let failedProcessorIds = ['3','5'];
+            await userActor.actorCleaner.clearLocalProcessorIds([failedProcessorIds],failedProcessorIds);
+
+            expect(await userActor.actorCleaner.getFailedClearProcessIds()).toEqual(failedProcessorIds);
+
+            mock.onPost(userActor.api).replyOnce(200,{
+                failed_done_message_ids:[],
+                failed_canceled_message_ids:[],
+                failed_process_ids:['3'],//3处理失败
+                message: 'success'
+            });
+            await userActor.actorCleaner.clearFailedReTry(null,failedProcessorIds)
+
+            expect(await userActor.actorCleaner.getFailedClearProcessIds()).toEqual(['3']);
         })
         it('failedClearProcessRetryAll',async()=>{
             let userActor = actorManager.get('user');
-            let failedProcessorIds = [3,5];
+            let failedProcessorIds = ["3","5"];
             await userActor.actorCleaner.clearLocalProcessorIds(failedProcessorIds,failedProcessorIds);
-            expect(await userActor.actorCleaner.getFailedClearProcessIds());
+            expect(await userActor.actorCleaner.getFailedClearProcessIds()).toEqual(failedProcessorIds);
+
+            mock.onPost(userActor.api).replyOnce(200,{
+                failed_done_message_ids:[],
+                failed_canceled_message_ids:[],
+                failed_process_ids:[],
+                message: 'success'
+            });
             await userActor.actorCleaner.clearFailedReTry(null,'*')
-            expect(await userActor.actorCleaner.getWatingClearConsumeProcessorIds());
+            expect(await userActor.actorCleaner.getFailedClearProcessIds()).toEqual([]);
         })
     })
 

@@ -7,7 +7,7 @@ import { ConsumerSubtask } from "./Subtask/BaseSubtask/ConsumerSubtask";
 import { JobType, JobStatus } from "../Constants/JobConstants";
 import { Logger } from "../Handlers/Logger";
 import { JobOptions } from "bull";
-import { differenceBy } from "lodash";
+import { differenceBy, isArray } from "lodash";
 import IORedis = require("ioredis");
 import { BusinessException } from "../Exceptions/BusinessException";
 
@@ -32,22 +32,21 @@ export class ActorCleaner{
      * 
      * @param force 强制清理，基础量的限制
      */
-    public async run(force=false){
+    public async run(){
         let doneMessageIds = await this.getMessageIds(MessageStatus.DONE,MessageClearStatus.WAITING);
         let canceldMessageIds = await this.getMessageIds(MessageStatus.CANCELED,MessageClearStatus.WAITING);
         let watingClearProcessorIds = await this.getWatingClearConsumeProcessorIds();//获取等待清理的processers
         let total = doneMessageIds.length + canceldMessageIds.length + watingClearProcessorIds.length;
 
-        if(force == false && total < this.actor.options.clear_limit){
+        if(total < this.actor.options.clear_limit){
             let message = `<${this.actor.name}> actor not have enough message and process to clear ${total}`;
             // Logger.log(message,'ActorCleaner');
-            await this.clearSelfJob();
             return {message,delay:true}
         }
     
-        let [failedDoneMessageIds,failedcCanceledMessageIds,failed_process_ids] = await this.remoteClear(doneMessageIds,canceldMessageIds,watingClearProcessorIds);
+        let [failedDoneMessageIds,failedCanceledMessageIds,failed_process_ids] = await this.remoteClear(doneMessageIds,canceldMessageIds,watingClearProcessorIds);
         let cleardDoneMessageIds = await this.clearLocalMessage(doneMessageIds,failedDoneMessageIds);
-        let cleardCanceldMessageIds = await this.clearLocalMessage(canceldMessageIds,failedcCanceledMessageIds);
+        let cleardCanceldMessageIds = await this.clearLocalMessage(canceldMessageIds,failedCanceledMessageIds);
         let cleardProcessorIds = await this.clearLocalProcessorIds(watingClearProcessorIds,failed_process_ids);//清理掉本次已经远程清理了的processor的id
 
         let message = `<${this.actor.name}> actor cleared message: ${doneMessageIds.length + canceldMessageIds.length}  process: ${watingClearProcessorIds.length}`;
@@ -128,12 +127,19 @@ export class ActorCleaner{
      * 获取清理失败的message
      */
     public async getFailedClearMessageIds(){
-        let messageIds = await this.actor.messageModel.find({
+        let failedRetryDoneMessageIds = await this.actor.messageModel.find({
             actor_id: this.actor.id,
-            clear_status: MessageClearStatus.FAILED
+            clear_status: MessageClearStatus.FAILED,
+            status: MessageStatus.DONE
         })
-        messageIds = messageIds.slice(0,this.actor.options.clear_limit);
-        return messageIds;
+        failedRetryDoneMessageIds = failedRetryDoneMessageIds.slice(0,this.actor.options.clear_limit);
+        let failedRetryCanceldMessageIds = await this.actor.messageModel.find({
+            actor_id: this.actor.id,
+            clear_status: MessageClearStatus.FAILED,
+            status: MessageStatus.CANCELED
+        })
+        failedRetryCanceldMessageIds = failedRetryCanceldMessageIds.slice(0,this.actor.options.clear_limit);
+        return {failedRetryDoneMessageIds,failedRetryCanceldMessageIds}
     }
 
 
@@ -237,47 +243,72 @@ export class ActorCleaner{
     }
     
 
-    public async clearFailedReTry(message_ids:Array<number|string>|string,processor_ids:Array<number|string>|string,forceRun=false){
-        if(message_ids == '*'){
-            message_ids = await this.getFailedClearMessageIds();
-        }
+    public async separateMessageIdsByStatus(message_ids){
+        let failedRetryDoneMessageIds = [];
+        let failedRetryCanceldMessageIds = [];
+        let messageModels = await this.actor.messageModel.loadMany(message_ids);
+        for(let messageModel of messageModels){
 
-        if(message_ids && message_ids.length > 0){
-            await this.failedClearMessageRetry(message_ids);
-        }
-
-        if(processor_ids == '*'){
-            processor_ids = await this.getFailedClearProcessIds();
-        }
-        
-        if(processor_ids && processor_ids.length > 0){
-            await this.failedProcessorRetry(processor_ids);
-        }
-        await this.run(forceRun);
-        return {message_ids,processor_ids};
-        
-
-    }
-
-    public async failedClearMessageRetry(messageIds){
-        for(var id of messageIds){
-            let message:Message = await this.actor.messageManager.get(id);
-            message.setProperty("clear_status",MessageClearStatus.WAITING);
-            await message.save();
-        }
-    }
-
-    public async failedProcessorRetry(failedProcessIds){
-        for(let id of failedProcessIds){
-            let exists = await this.actor.redisClient.sismember(this.db_key_failed_clear_processors,id);
-            if(!exists){
-                throw new BusinessException(`Failed processor_id ${id} not exists.`)
+            if(messageModel.property('actor_id') != this.actor.id){
+                throw new BusinessException(`message ${messageModel.property('id')} does not belong to actor ${this.actor.id}`);
+            }
+            if(messageModel.property('status') == MessageStatus.DONE){
+                failedRetryDoneMessageIds.push(messageModel.id);
+            }
+            else if(messageModel.property('status') == MessageStatus.CANCELED){
+                failedRetryCanceldMessageIds.push(messageModel.id);
             }
         }
+        return {failedRetryDoneMessageIds,failedRetryCanceldMessageIds}
+    }
+    
+
+    public async clearFailedReTry(message_ids:Array<number|string>|string,processor_ids:Array<number|string>|string){
+        let failedRetryMessage = {failedRetryDoneMessageIds:[],failedRetryCanceldMessageIds:[]};
+        let failedRetryWatingClearProcessorIds = processor_ids || [];
+        
+        if(message_ids == '*'){
+            failedRetryMessage = await this.getFailedClearMessageIds();
+        }else if(isArray(message_ids)){
+            failedRetryMessage = await this.separateMessageIdsByStatus(message_ids);
+        }
+
+        if(failedRetryWatingClearProcessorIds == '*'){
+            failedRetryWatingClearProcessorIds = await this.getFailedClearProcessIds();
+        }
+
+        return await this.clearFailedRetryRun(failedRetryMessage.failedRetryDoneMessageIds,failedRetryMessage.failedRetryCanceldMessageIds,failedRetryWatingClearProcessorIds);        
+
+    }
+    public async clearFailedRetryRun(failedRetryDoneMessageIds,failedRetryCanceldMessageIds,failedRetryWatingClearProcessorIds){
+        let [failedDoneMessageIds,failedCanceledMessageIds,failedProcessIds] = await this.remoteClear(failedRetryDoneMessageIds,failedRetryCanceldMessageIds,failedRetryWatingClearProcessorIds);
+        let cleardDoneMessageIds = await this.clearLocalMessage(failedRetryDoneMessageIds,failedDoneMessageIds);
+        let cleardCanceldMessageIds = await this.clearLocalMessage(failedRetryCanceldMessageIds,failedCanceledMessageIds);
+        let cleardProcessorIds = await this.clearFailedRetryLocalProcessorIds(failedRetryWatingClearProcessorIds,failedProcessIds);//清理掉本次已经远程清理了的processor的id
+        
+        return {
+            cleardDoneMessageIds,
+            failedDoneMessageIds,
+            cleardCanceldMessageIds,
+            failedCanceledMessageIds,
+            cleardProcessorIds,
+            failedProcessIds
+        }
+    }
+
+    public async clearFailedRetryLocalProcessorIds(failedProcessIds,retryFailedProcessIds){
+        if(failedProcessIds.length == 0 && retryFailedProcessIds.length == 0){
+            return [];
+        }
+
         let multi = this.actor.redisClient.multi();
-        multi.srem(this.db_key_failed_clear_processors,failedProcessIds);
-        multi.sadd(this.db_key_wating_clear_processors,failedProcessIds);
+        let canCleardProcessorIds = this.getCanCleardIds(failedProcessIds,retryFailedProcessIds);
+        if(canCleardProcessorIds.length > 0){
+            multi.srem(this.db_key_failed_clear_processors,canCleardProcessorIds);//重试成功的，直接从错误集合中移除
+        } 
         await multi.exec();
-   }
+        return canCleardProcessorIds;
+
+    }
 
 }
