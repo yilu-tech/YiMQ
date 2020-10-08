@@ -26,8 +26,8 @@ export class SubtaskJob extends Job{
                 throw new SystemException('SubtaskStatus is PENDING');
             case SubtaskStatus.PREPARED:
                 throw new SystemException('SubtaskStatus is PREPARED');
-            case SubtaskStatus.DONE://todo:: done情况可以考虑允许重复取消，因为job里面调整了subtask状态，但job失败了
-                throw new SystemException('SubtaskStatus is DONE');
+            case SubtaskStatus.DONE://todo:: 已经done情况可以考虑return job成功，因为job里面调整了subtask状态为done，只是job失败了
+                throw new SystemException(`SubtaskStatus is DONE can not to process.`);
             default:
                 throw new SystemException(`SubtaskStatus <${this.subtask.status}> is not exists.`);
         }

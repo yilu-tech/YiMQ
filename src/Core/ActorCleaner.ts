@@ -103,7 +103,7 @@ export class ActorCleaner{
         await multi.exec();
     }
 
-    public async getDoneClearJobIds():Promise<[any]>{
+    public async getDoneClearJobIds():Promise<string[]>{
         return await this.actor.redisClient.lrange(this.db_key_clear_jobs,1,-1);
     }
 
@@ -190,7 +190,7 @@ export class ActorCleaner{
          multi.srem(this.db_key_wating_clear_processors,failedProcessIds); //从db_key_wating_clear_processors中移除
     }
 
-    public async getFailedClearProcessIds():Promise<number[]>{
+    public async getFailedClearProcessIds():Promise<string[]>{
         return this.actor.redisClient.srandmember(this.db_key_failed_clear_processors,1000);
     }
     public async clearDbWatingProcessorIds(multi:IORedis.Pipeline,processIds:number[]){
@@ -238,7 +238,7 @@ export class ActorCleaner{
     private async addWatingClearConsumeProcessorToDb(subtask_id){
         await this.actor.redisClient.sadd(this.db_key_wating_clear_processors,subtask_id);
     }
-    public async getWatingClearConsumeProcessorIds():Promise<number[]>{
+    public async getWatingClearConsumeProcessorIds():Promise<string[]>{
         return this.actor.redisClient.srandmember(this.db_key_wating_clear_processors,this.actor.options.clear_limit);
     }
     

@@ -4,7 +4,7 @@ import { Config } from "../../Config";
 import * as Ioredis from 'ioredis'
 import { RedisClient } from "./RedisClient";
 import { BusinessException } from "../../Exceptions/BusinessException";
-import { Logger} from '../../Handlers/Logger';
+import { AppLogger as Logger} from '../../Handlers/AppLogger';
 import { redisCustomCommand } from "./RedisCustomCommand";
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 
@@ -23,30 +23,59 @@ export class RedisManager {
             return this.clients[name];
         }
         let opionts = {
-            ...this.getClientOptions(name)
+            ...this.getClientOptions(name),
+            maxRetriesPerRequest: null,
+            retryStrategy(times) {
+                const delay = Math.min(times * 100, 1000 * 5);
+                // Logger.log(`Reids client (${name}) redis retryStrategy ${times}.`,`RedisManager`)
+                return delay;
+            }
         }
-        let client = new Ioredis(this.getClientOptions(name));
+        let client = new Ioredis(opionts);
         await redisCustomCommand(client);
 
         return new Promise((res,rej)=>{
+            client.on('reconnecting',()=>{
+                Logger.error(`redis client (${name}) reconnecting`,null,`RedisManager`);
+            })
+            client.on('connect',()=>{
+                Logger.log(`redis client (${name}) connect`,`RedisManager`);
+            })
             client.on('ready',()=>{
                 this.clients[name]  = client;
                 res(client);
             })
             client.on('error', (error) => {
-                console.error(new Error(error));    
+                // console.error(new Error(error));    
                 rej(new Error(error))
             });
             client.on('end', () => {
-                Logger.log(`...is end.`,`RedisManager  <${name}>`);
+                Logger.log(`redis client (${name}) is end.`,`RedisManager`);
             });
         })
     }
 
     public getDefaultSubscribeClient(){//TODO 这里新添加的redis链接也需要管理起来，方便shutdown
-        let client = new Ioredis(this.getClientOptions());
+
+        let opionts = {
+            ...this.getClientOptions(),
+            maxRetriesPerRequest: null,
+            retryStrategy(times) {
+                const delay = Math.min(times * 100, 1000 * 5);
+                // Logger.log(`Reids client (SubscribeClient) redis retryStrategy ${times}.`,`RedisManager`)
+                return delay;
+            }
+        }
+
+        let client = new Ioredis(opionts);
+        client.on('reconnecting',()=>{
+            Logger.error(`redis client (Subscribe) reconnecting`,null,`RedisManager`);
+        })
+        client.on('connect',()=>{
+            Logger.log(`redis client (Subscribe) connect`,`RedisManager`);
+        })
         client.on('error', (error) => {
-            console.error(new Error(error));    
+            Logger.error(`redis client (Subscribe) ${error.message}`,null,`RedisManager`);
         });
         return client;
     }

@@ -6,7 +6,22 @@ export abstract class Coordinator{
     
     protected queue:bull.Queue;
     constructor(public actor:Actor,options:RedisOptions){
-
+        options = {
+            ...options,
+            maxRetriesPerRequest:null,//无限重试
+            enableReadyCheck: false,//需要设置为false,否则redis重新链接后，process不会继续处理，参考: https://github.com/OptimalBits/bull/issues/890
+            retryStrategy(times) {
+                const delay = Math.min(times * 100, 5000);
+                AppLogger.log(`Coordinator (${actor.name}) redis retryStrategy ${times}.`,`Coordinator`)
+                return delay;
+            },
+            //enableReadyCheck=false 的时候，导致redis还在恢复数据到内存的时候，命令已经发送，导致错误 https://github.com/luin/ioredis/issues/358
+            reconnectOnError: function(err) { 
+                if (err.message.includes("LOADING")) {
+                    return 2;
+                }
+              }
+        }
         let queueOptions:bull.QueueOptions = {
             redis:options
         };

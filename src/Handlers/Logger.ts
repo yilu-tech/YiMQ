@@ -7,11 +7,7 @@ process.env.LOG_LEVEL = process.env.LOG_LEVEL || 'info';
 
 const logger = pino({
   level: process.env.LOG_LEVEL,
-  prettyPrint: {
-    colorize: true,
-    translateTime: 'SYS:mm-dd HH:MM:ss',
-    ignore: 'pid,hostname'
-  },
+  prettyPrint: true
 })
 export class LoggerClass extends BaseLogger {
   private logger = logger;

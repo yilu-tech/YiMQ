@@ -78,7 +78,7 @@ export class Application implements OnApplicationShutdown,OnApplicationBootstrap
         // Logger.log('Subscribe ACTORS_CONFIG_UPDATED event','Application');
         subscribeRedisClient.subscribe('ACTORS_CONFIG_UPDATED',function(err,count){
             if(err){
-                Logger.error(new Error(err));
+                Logger.error(new Error(err.message));
             }
         })
         subscribeRedisClient.on('message',async (channel, message)=>{
