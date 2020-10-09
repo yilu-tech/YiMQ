@@ -6,79 +6,65 @@ import { RedisClient } from "./RedisClient";
 import { BusinessException } from "../../Exceptions/BusinessException";
 import { AppLogger as Logger} from '../../Handlers/AppLogger';
 import { redisCustomCommand } from "./RedisCustomCommand";
+import { Application } from "../../Application";
+import { ApplicationStatus } from "../../Constants/ApplicationConstants";
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 
 @Injectable()
 export class RedisManager {
+    public application:Application;
     private clients:Object = {}; //TODO 改为用map存
 
     constructor(private config:Config){
     }
 
-    public async client(name?:string):Promise<RedisClient>
+    public setApplication(application:Application){
+        this.application = application;
+    }
+
+    public async client(name?:string,optionName?:string):Promise<RedisClient>
      {
         name = name? name : this.config.system.default;
         
         if(this.clients[name]){
             return this.clients[name];
         }
-        let opionts = {
-            ...this.getClientOptions(name),
-            maxRetriesPerRequest: null,
-            retryStrategy(times) {
-                const delay = Math.min(times * 100, 1000 * 5);
-                // Logger.log(`Reids client (${name}) redis retryStrategy ${times}.`,`RedisManager`)
-                return delay;
-            }
+        
+
+        optionName = optionName ? optionName : name;
+        
+        let opionts:Ioredis.RedisOptions = {
+            ...this.getClientOptions(optionName),
+            ...this.getReconnectOptions(name),
+            connectionName: name
         }
         let client = new Ioredis(opionts);
         await redisCustomCommand(client);
 
         return new Promise((res,rej)=>{
             client.on('reconnecting',()=>{
-                Logger.error(`redis client (${name}) reconnecting`,null,`RedisManager`);
+                Logger.error(`redis client reconnecting (${name})`,null,`RedisManager`);
             })
             client.on('connect',()=>{
-                Logger.log(`redis client (${name}) connect`,`RedisManager`);
+                Logger.log(`redis client connect (${name})`,`RedisManager`);
             })
             client.on('ready',()=>{
                 this.clients[name]  = client;
                 res(client);
             })
             client.on('error', (error) => {
-                // console.error(new Error(error));    
-                rej(new Error(error))
+                Logger.error(`redis client error (${name}) ${error.message}`,null,`RedisManager`);
+                if(!this.clients[name]){ //启动的时候创建连接失败，直接退出程序, 程序已经启动的情况，只打印错误，等待重新连接
+                    process.exit();
+                }
+                // rej(new Error(error))
             });
             client.on('end', () => {
-                Logger.log(`redis client (${name}) is end.`,`RedisManager`);
+                Logger.log(`redis client end (${name}).`,`RedisManager`);
             });
         })
     }
-
-    public getDefaultSubscribeClient(){//TODO 这里新添加的redis链接也需要管理起来，方便shutdown
-
-        let opionts = {
-            ...this.getClientOptions(),
-            maxRetriesPerRequest: null,
-            retryStrategy(times) {
-                const delay = Math.min(times * 100, 1000 * 5);
-                // Logger.log(`Reids client (SubscribeClient) redis retryStrategy ${times}.`,`RedisManager`)
-                return delay;
-            }
-        }
-
-        let client = new Ioredis(opionts);
-        client.on('reconnecting',()=>{
-            Logger.error(`redis client (Subscribe) reconnecting`,null,`RedisManager`);
-        })
-        client.on('connect',()=>{
-            Logger.log(`redis client (Subscribe) connect`,`RedisManager`);
-        })
-        client.on('error', (error) => {
-            Logger.error(`redis client (Subscribe) ${error.message}`,null,`RedisManager`);
-        });
-        return client;
-    }
+    
 
     public getClientOptions(name?){
         name = name? name : this.config.system.default;
@@ -89,6 +75,35 @@ export class RedisManager {
         return redisOptions;
     }
 
+    public getReconnectOptions(name:string){
+        let options:Ioredis.RedisOptions = {
+            maxRetriesPerRequest: null
+        }
+
+        options.retryStrategy = (times)=>{
+            const delay = Math.min(times * 1000, 1000 * 5);
+            Logger.log(`Reids client (${name}) redis retryStrategy ${times}.`,`RedisManager`)
+            if(this.application.status == ApplicationStatus.SHUTDOWN){
+                console.log('RedisManager SHUTDOWN --------- null')
+                return null;
+            }
+            return delay;
+        }
+
+        if(name.includes('bclient') ){
+            options.enableReadyCheck = false; //需要设置为false,否则redis重新链接后，process不会继续处理，参考: https://github.com/OptimalBits/bull/issues/890
+            options.reconnectOnError = (err) =>{ //enableReadyCheck=false 的时候，导致redis还在恢复数据到内存的时候，命令已经发送，导致错误 https://github.com/luin/ioredis/issues/358
+                // Logger.log(`(${name}) ${err.message}`,`RedisManager`);
+                if (err.message.includes("LOADING")) {
+                    return 2;
+                }
+            }
+        }
+        
+        return options;
+
+    }
+
     public async close(name:string = 'default'){
         if(this.clients[name]){
             await this.clients[name].quit()
@@ -96,8 +111,8 @@ export class RedisManager {
         }
     }
     public async closeAll(){
+        await timeout(50);
         for (const key in this.clients) {
-            await timeout(1);
             await this.close(key);
         }
     }

@@ -7,10 +7,12 @@ import { RedisManager } from '../Handlers/redis/RedisManager';
 import { MasterModels } from '../Models/MasterModels';
 import { ActorStatus } from '../Constants/ActorConstants';
 import {AppLogger} from '../Handlers/AppLogger';
+import { Application } from '../Application';
 
 
 @Injectable()
 export class ActorManager{
+    public application:Application;
     public actors : Map<number,Actor> = new Map();
     private actorsName: Map<string,Actor> = new Map();
     
@@ -25,6 +27,9 @@ export class ActorManager{
 
     }
 
+    public setApplication(application:Application){
+        this.application = application;
+    }
 
     public async initActors(){
         let actorModels = await this.getAllActorModels();

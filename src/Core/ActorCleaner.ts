@@ -97,7 +97,8 @@ export class ActorCleaner{
 
         for (const job_id of doneClearJobIds) {
             let job = await this.actor.coordinator.getQueue().getJob(job_id);
-            await job.remove();
+            
+            job && await job.remove();
             multi.lrem(this.db_key_clear_jobs,0,job.id);
         }
         await multi.exec();

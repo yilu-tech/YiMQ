@@ -45,7 +45,7 @@ export class Actor{
     private model:ActorModelClass
     public actorCleaner:ActorCleaner;
 
-    constructor(public actorManager:ActorManager,private redisManager:RedisManager){
+    constructor(public actorManager:ActorManager,public redisManager:RedisManager){
 
     }
     setModel(actorModel){
@@ -66,7 +66,7 @@ export class Actor{
         this.actorCleaner = new ActorCleaner(this);
         this.jobManager = new JobManager(this);
         this.subtaskManager = new SubtaskManager(this);
-        this.initCoordinator();
+        await this.initCoordinator();
         this.initNohm();
     }
     private initNohm(){
@@ -77,16 +77,17 @@ export class Actor{
     }
 
 
-    private initCoordinator(){
-        let redisOptions = this.redisManager.getClientOptions(this.redis);
+    private async initCoordinator(){
+
         switch (this.protocol) {
             case 'http':
-                this.coordinator = new HttpCoordinator(this,redisOptions);
+                this.coordinator = new HttpCoordinator(this);
                 break;
             case 'grpc':
-                this.coordinator = new GrpcCoordinator(this,redisOptions);
+                this.coordinator = new GrpcCoordinator(this);
                 break;
         }
+        await this.coordinator.initQueue();
     }
 
 

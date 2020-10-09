@@ -7,17 +7,21 @@ import { Config } from './Config';
 import { ActorConfigManager } from './Core/ActorConfigManager';
 const { setQueues } = require('bull-board')
 import {AppLogger as Logger} from './Handlers/AppLogger';
+import { ApplicationStatus } from './Constants/ApplicationConstants';
+const timeout = ms => new Promise(res => setTimeout(res, ms))
 @Injectable()
-export class Application implements OnApplicationShutdown,OnApplicationBootstrap,OnModuleDestroy,OnModuleInit{
+export class Application implements OnApplicationShutdown,OnApplicationBootstrap,OnModuleInit{
     public masterRedisClient:RedisClient;
+    public status:ApplicationStatus;
     private startingUpTime:number;
     private shutdownTime:number;
     constructor(public redisManager:RedisManager, public masterModels:MasterModels, public actorConfigManager:ActorConfigManager,public actorManager:ActorManager,public config:Config){
+        this.actorManager.setApplication(this);
+        this.redisManager.setApplication(this);
     }
     async onModuleInit() {
         this.startingUpTime = Date.now();
         console.info('..........................................Starting Up..........................................');
-        // await this.config.loadConfig();//移动到main.ts
         await this.bootstrap();
     }
 
@@ -30,19 +34,20 @@ export class Application implements OnApplicationShutdown,OnApplicationBootstrap
         let costTime = (Date.now() - this.startingUpTime)/1000;
         console.info(`..........................................Starting Up: ${costTime}s..........................................`);
     }
-
-    async onModuleDestroy() {
-        this.shutdownTime = Date.now();
-        console.info('..........................................Shutdown..........................................');
-        await this.processShutdown()
-    }
     
     
     async onApplicationShutdown(signal?: string) {
-        await this.resourceShutdown();
+        this.status = ApplicationStatus.SHUTDOWN;
+        this.shutdownTime = Date.now();
+        console.info('..........................................Shutdown..........................................');
+        if(this.masterRedisClient.status == 'ready'){
+            await this.processShutdown()
+            await this.resourceShutdown();
+            await timeout(50);
+        }
         let costTime = (Date.now() - this.shutdownTime)/1000;
-        console.info(`..........................................Shutdown: ${costTime}s..........................................`);
-        // process.exit(0);//框架自己有发出信号
+        console.info(`..........................................Shutdown: ${costTime}s..........................................\n`);
+        // process.exit(0);//框架自己有发出信号，这里不需要手动
     }
 
     private online = true;
@@ -73,7 +78,7 @@ export class Application implements OnApplicationShutdown,OnApplicationBootstrap
         //todo 单独抽函数
         this.masterRedisClient = await this.redisManager.client();
 
-        let subscribeRedisClient = await this.redisManager.getDefaultSubscribeClient();
+        let subscribeRedisClient = await this.redisManager.client('app_subscribe',this.config.system.default);
 
         // Logger.log('Subscribe ACTORS_CONFIG_UPDATED event','Application');
         subscribeRedisClient.subscribe('ACTORS_CONFIG_UPDATED',function(err,count){
