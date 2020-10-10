@@ -58,7 +58,7 @@
     "@nestjs/cli": "^7.0.0",
     "@nestjs/schematics": "^7.0.0",
     "@nestjs/testing": "^7.0.0",
-    "@types/bull": "^3.5.14",
+    "@types/bull": "^3.14.4",
     "@types/express": "^4.17.3",
     "@types/ioredis": "^4.0.12",
     "@types/jest": "25.1.4",

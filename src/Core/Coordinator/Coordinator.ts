@@ -73,9 +73,11 @@ export abstract class Coordinator{
     }
 
     public async pause(){
+        AppLogger.log(`(${this.actor.name}) queue pause.`,`Coordinator`)
         return this.queue.pause();
     }
     public async resume(){
+        AppLogger.log(`(${this.actor.name}) queue resume.`,`Coordinator`)
         return this.queue.resume();
     }
     /**
