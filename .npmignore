@@ -1,35 +1,15 @@
-#dir
-src/Test/config/*
-src/Test/*
-.vscode/*
-test/*
-config/*
-logs/*
-docs/*
+*
+
+!package-lock.json
+!package*.json
+
+# change log
+!CHANGELOG.md
+
+#sourcecode
+!dist/**
 
 
-# source
-**/*.ts
-*.ts
+#boostrap file
+!ecosystem.config.js
 
-
-
-
-
-# configuration
-package-lock.json
-tslint.json
-tsconfig.json
-.prettierrc
-nodemon.json
-nodemon-debug.json
-nest-cli.json
-tsconfig.build.json
-
-
-
-
-
-# definitions
-!**/*.d.ts
-!*.d.ts

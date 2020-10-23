@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 const { program } = require("@caporal/core")
 import {run_01_migrate_02} from "./migrations/0.1_migrate_0.2"
 import { reload } from './Core/Reload';

@@ -9,7 +9,7 @@
     "url": "https://github.com/yilu-tech/YiMQ"
   },
   "bin": {
-    "yimq": "./bin/index.js"
+    "yimq": "./dist/commands/index.js"
   },
   "scripts": {
     "prebuild": "rimraf dist",
@@ -28,7 +28,8 @@
     "pm2:watch": "tsc --watch",
     "pm2:dev": "LOG_LEVEL=debug pm2 start dist/src/main.js --name yimq --no-daemon --watch",
     "docker:build": "docker build -t yimq .",
-    "docker:run": "docker run --name yimq --hostname yimq -v $(pwd)/config:/apps/config yimq"
+    "docker:run": "docker run --name yimq --hostname yimq -v $(pwd)/config:/apps/config yimq",
+    "pkgfiles": "pkgfiles"
   },
   "dependencies": {
     "@caporal/core": "^2.0.2",
@@ -73,6 +74,7 @@
     "eslint-config-prettier": "^6.10.0",
     "eslint-plugin-import": "^2.20.1",
     "jest": "^25.1.0",
+    "pkgfiles": "^2.3.2",
     "prettier": "^1.19.1",
     "supertest": "^4.0.2",
     "ts-jest": "25.2.1",
