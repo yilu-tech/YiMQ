@@ -62,13 +62,13 @@ describe('ActorClearTest', () => {
         config = app.get<Config>(Config);
         messageService = app.get<MessageService>(MessageService);
         actorManager = app.get<ActorManager>(ActorManager);
-        await actorManager.initActors()
+        await actorManager.bootstrap(false)
         
     });
 
     afterEach(async()=>{
-        await actorManager.closeCoordinators();
-        await redisManager.quitAllDb();
+        await actorManager.shutdown();
+        await redisManager.closeAll();
     })
     
 
@@ -474,6 +474,7 @@ describe('ActorClearTest', () => {
 
                 // clearJob2完成后，创建不延迟的clearJob3
                 if(clearJob2 && clearJob2.id == job.id){
+                    userActor.options.clear_interval = 5000;
                     done();
                 }
 

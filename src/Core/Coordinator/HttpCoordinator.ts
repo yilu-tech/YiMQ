@@ -7,6 +7,7 @@ import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
 import { Actor } from '../Actor';
 import { HttpCoordinatorRequestException } from '../../Exceptions/HttpCoordinatorRequestException';
 import { Job } from '../Job/Job';
+import {AppLogger} from '../../Handlers/AppLogger';
 export class HttpCoordinator extends Coordinator{
     
     public async processBootstrap(){
@@ -44,6 +45,7 @@ export class HttpCoordinator extends Coordinator{
                 throw new Error(JSON.stringify(message));
             }
         })
+        AppLogger.log(`Coordinator <${this.actor.name}> bootstrap`,`HttpCoordinator`)
     };
     //关闭队列的时候，如果completed还在执行会因为redis链接断开报错，所以这里只能执行非一致性的操作
     public async onCompletedBootstrap(){

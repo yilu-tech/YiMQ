@@ -10,6 +10,7 @@ import { HttpCoordinatorRequestException } from "../Exceptions/HttpCoordinatorRe
 import { ActorStatus } from "../Constants/ActorConstants";
 import { ActorConfig } from "../Config/ActorConfig";
 import {AppLogger as Logger} from '../Handlers/AppLogger';
+import { Actor } from "./Actor";
 
 @Injectable()
 export class ActorConfigManager{
@@ -26,10 +27,10 @@ export class ActorConfigManager{
     }
 
     public async saveConfigFileToMasterRedis(){
-        Logger.log('Save actors config to master redis.','ActorConfigManager');
+        Logger.log('Save actors local config to master redis.','ActorConfigManager');
         let actorsConfig = this.config.actors;
-
-        let actorModels = await this.getAllActorModels();
+        
+        let actorModels = await this.getAllActiveActorModels();
  
         let removeActorModels = actorModels.filter((item)=>{
             for(let actorConfig of actorsConfig){
@@ -77,41 +78,13 @@ export class ActorConfigManager{
         return true;
     }
 
-    public async loadRemoteActorsConfig(){
-        let actorModels = await this.getAllActorModels();
-        for(let actorModel of actorModels){
-            await this.loadRemoteConfigToDB(actorModel.allProperties());
-        }
-        Logger.log('Loaded actors remote config to db.','ActorManager')
 
-    }
-    public async callActor(actor,action,context?):Promise<any>{
-        let config = {
-            headers:{
-                'content-type':'application/json',
-                ...actor.options.headers
-            }
-        }
-        let body = {
-            action: action,
-            api: actor.api,
-            request_config: config,
-            context: context
-        };
 
+    public async loadRemoteConfigToDB(actor:Actor){
         try {
-            let result = (await axios.post(actor.api,body,config)).data;
-            // Logger.debug({request:body,response:result},'ActorConfigManager call actor')
-            return result;            
-        } catch (error) {
-            // Logger.debug({request:body},'ActorConfigManager call actor')
-            throw new SystemException(error.message);
-        }
-    }
-
-    public async loadRemoteConfigToDB(actor){
-        try {
-            let result = await this.callActor(actor,CoordinatorCallActorAction.GET_CONFIG);
+            let result = await actor.coordinator.callActor(actor,CoordinatorCallActorAction.GET_CONFIG,null,{
+                timeout: 1000*3
+            });
             if(result.actor_name != actor.name){
                 throw new SystemException(`Remote config actor_name is <${result.actor_name}>`);
             }
@@ -119,13 +92,13 @@ export class ActorConfigManager{
         } catch (error) {
             let errorMessage = `${error.message}`;
             if(error instanceof HttpCoordinatorRequestException){
-                errorMessage = `${error.message} ${error.response.message||''} `;
+                errorMessage = `${error.message} ${error.response?.message} `;
             }
             Logger.error(`Actor <${actor.name}> ${errorMessage}`,undefined,`ActorConfigManager`)
         }
     }
 
-    private async saveListener(actor,listenerOptions){
+    private async saveListener(actor:Actor,listenerOptions){
         let listenerModels = await this.masterModels.ListenerModel.findAndLoad({
             actor_id:actor.id
         });
@@ -161,6 +134,13 @@ export class ActorConfigManager{
             listenerModel.property('actor_id',actor.id);
             await listenerModel.save() 
         }
+    }
+
+    public async getAllActiveActorModels(){
+        let ids = await this.masterModels.ActorModel.find({
+            status: ActorStatus.ACTIVE
+        })
+        return this.masterModels.ActorModel.loadMany(ids);
     }
 
     public async getAllActorModels(){

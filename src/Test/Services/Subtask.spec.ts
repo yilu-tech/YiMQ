@@ -58,14 +58,14 @@ describe('Subtask', () => {
         actorService = app.get<ActorService>(ActorService);
         messageService = app.get<MessageService>(MessageService);
         actorManager = app.get<ActorManager>(ActorManager);
-        await actorManager.initActors()
+        await actorManager.bootstrap(false)
         mock.reset()
     });
 
     afterEach(async()=>{
         
-        await actorManager.closeCoordinators();
-        await redisManager.quitAllDb();
+        await actorManager.shutdown();
+        await redisManager.closeAll();
     })
     
 
@@ -345,7 +345,8 @@ describe('Subtask', () => {
                     done()   
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
              //把message确认
             await messageService.confirm(producerName,message.id);
         })
@@ -406,7 +407,8 @@ describe('Subtask', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
 
         });
 
@@ -475,7 +477,8 @@ describe('Subtask', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
 
         });
 
@@ -605,7 +608,8 @@ describe('Subtask', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
 
         
         })
@@ -709,7 +713,9 @@ describe('Subtask', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
+            await contentActor.process();
 
         });
 
@@ -784,7 +790,8 @@ describe('Subtask', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
         });
 
     });
@@ -910,7 +917,8 @@ describe('Subtask', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
 
         });
 
@@ -973,7 +981,8 @@ describe('Subtask', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
 
         });
 
@@ -1050,7 +1059,8 @@ describe('Subtask', () => {
                 }
                 //TODO 子任务完成后检查message状态为完成
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
         });
         
 
@@ -1098,7 +1108,8 @@ describe('Subtask', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
 
             process.env.SUBTASK_JOB_BACKOFF_DELAY = '10';
             //没有await，让其在cancel之后再返回数据

@@ -30,14 +30,13 @@ export class App{
 
 
         await this.masterModels.register();
-        await this.actorManager.initActors();
+        await this.actorManager.bootstrap(false);
         return this;
     }
 
     async closeContext(){
-        await this.masterModels.shutdown();
-        await this.actorManager.closeCoordinators();
         await this.actorManager.shutdown();
+        await this.masterModels.shutdown();
         await this.redisManager.shutdown();
     }
 

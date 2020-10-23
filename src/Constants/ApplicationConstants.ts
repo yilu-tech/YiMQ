@@ -2,5 +2,6 @@
 export enum ApplicationStatus{
     BOOTSTRAPPING='BOOTSTRAPPING',
     RUNNING = 'RUNNING',
+    RELOADING = 'RELOADING',
     SHUTDOWN = 'SHUTDOWN'
 }

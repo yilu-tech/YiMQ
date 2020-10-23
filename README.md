@@ -16,7 +16,13 @@
 3. SUBTASK_JOB_DELAY (subtask job 延迟时间 )
 4. SUBTASK_JOB_BACKOFF_DELAY (subtask job重试延迟时间 )
 
-###管理接口
+##命令
+
+1. yimq reload [actor_name]/--all
+2. yimq pause
+3. yimq resume
+
+##管理接口
 
 1. /admin/reload (重新加载配置文件)
 
@@ -47,6 +53,15 @@
 
 
 
+
+## boostrap流程
+
+
+## reload流程
+
+
+
+## shutdown流程
 
 
 

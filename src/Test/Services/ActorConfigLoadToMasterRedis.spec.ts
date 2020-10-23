@@ -42,7 +42,7 @@ describe('ActorConfigLoadToMasterRedis.spec', () => {
     });
 
     afterEach(async()=>{
-        await redisManager.quitAllDb();
+        await redisManager.closeAll();
     })
 
     it('Load config file to redis.', async () => {

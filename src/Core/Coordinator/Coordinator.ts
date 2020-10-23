@@ -67,17 +67,17 @@ export abstract class Coordinator{
         return this.queue;
     }
     public async close(){
-        return this.queue.close().then(()=>{
-            AppLogger.log(`(${this.actor.name}) queue closed.`,`Coordinator`)
-        });
+        await this.queue.close();
+        await this.queue.removeAllListeners();
+        AppLogger.log(`Coordinator closed...... (${this.actor.name}) `,`Coordinator`)
     }
 
     public async pause(){
-        AppLogger.log(`(${this.actor.name}) queue pause.`,`Coordinator`)
+        AppLogger.log(`Coordinator pause...... (${this.actor.name}) `,`Coordinator`)
         return this.queue.pause();
     }
     public async resume(){
-        AppLogger.log(`(${this.actor.name}) queue resume.`,`Coordinator`)
+        AppLogger.log(`Coordinator resume...... (${this.actor.name}) `,`Coordinator`)
         return this.queue.resume();
     }
     /**

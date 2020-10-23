@@ -10,7 +10,7 @@ import { JobOptions } from "bull";
 import { differenceBy, isArray } from "lodash";
 import IORedis = require("ioredis");
 import { BusinessException } from "../Exceptions/BusinessException";
-
+// import {AppLogger} from '../Handlers/AppLogger';
 
 
 export class ActorCleaner{
@@ -51,7 +51,6 @@ export class ActorCleaner{
 
         let message = `<${this.actor.name}> actor cleared message: ${doneMessageIds.length + canceldMessageIds.length}  process: ${watingClearProcessorIds.length}`;
         Logger.log(message,'ActorCleaner');
-        await this.clearSelfJob();
         return {cleardDoneMessageIds,cleardCanceldMessageIds,cleardProcessorIds,delay:false}
     }
 
@@ -87,6 +86,7 @@ export class ActorCleaner{
             // removeOnComplete:true,
             backoff: this.actor.options.clear_backoff
         }
+        // AppLogger.log(`${this.actor.name} clear job created.`,'ActorCleaner');
         return this.actor.coordinator.getQueue().add(jobName,data,options);
     }
 

@@ -39,7 +39,9 @@ export class ActorModelClass extends NohmModel<ActorProperties> {
             validations: ['notEmpty'],
         },
         status: {
-            type: 'string'
+            type: 'string',
+            index:true,
+            validations: ['notEmpty'],
         },
         protocol: {
             type: 'string'

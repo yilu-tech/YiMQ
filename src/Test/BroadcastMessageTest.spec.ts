@@ -65,8 +65,8 @@ describe('BroadcastMessage', () => {
     });
 
     afterEach(async()=>{
-        await actorManager.closeCoordinators();
-        await redisManager.quitAllDb();
+        await actorManager.shutdown();
+        await redisManager.closeAll();
     })
     
 
@@ -102,11 +102,14 @@ describe('BroadcastMessage', () => {
                 "broadcast_listeners": []
             })
  
-            await actorConfigManager.loadRemoteActorsConfig()
-            await actorManager.initActors()
+            // await actorConfigManager.loadRemoteActorsConfig()
+            // await actorManager.initActors()
+            await actorManager.bootstrap(false);
 
             let userProducer = actorManager.get(producerName);
             let contentProducer = actorManager.get('content');
+            await userProducer.prepare();
+            await contentProducer.prepare();
 
             process.env.SUBTASK_JOB_DELAY = '100';
             message = await messageService.create(producerName,MessageType.BROADCAST,topic,{
@@ -139,7 +142,10 @@ describe('BroadcastMessage', () => {
 
 
 
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+           
+            await userProducer.process();
+            await contentProducer.process();
         })
 
 
@@ -175,11 +181,14 @@ describe('BroadcastMessage', () => {
             })
 
 
-            await actorConfigManager.loadRemoteActorsConfig()
-            await actorManager.initActors()
+            await actorManager.bootstrap(false);
+
 
             let userProducer = actorManager.get(producerName);
             let contentProducer = actorManager.get('content');
+            await userProducer.prepare();
+            await contentProducer.prepare();
+
             message = await messageService.create(producerName,MessageType.TRANSACTION,topic,{
                 delay:0,
                 attempts:5,
@@ -250,7 +259,9 @@ describe('BroadcastMessage', () => {
                 }
 
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await userProducer.process();
+            await contentProducer.process();
 
 
             await message.confirm();

@@ -34,8 +34,11 @@ async function bootstrap() {
     );
 
   let config = await app.get<Config>(Config).loadConfig();
-
-  await app.listen(config.system.port,'0.0.0.0');
+  try {
+    await app.listen(config.system.port,'0.0.0.0'); 
+  } catch (error) {
+    console.error("main.ts",error)
+  }
   // console.info(`..........................................Port: ${config.system.port}..........................................`);
   Logger.log(`Port: ${config.system.port}`,'Main')
   

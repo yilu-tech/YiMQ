@@ -56,13 +56,14 @@ describe('MessageService', () => {
         
         messageService = app.get<MessageService>(MessageService);
         actorManager = app.get<ActorManager>(ActorManager);
-        await actorManager.initActors()
+        await actorManager.bootstrap(false)
     });
 
     afterEach(async()=>{
     
-        await actorManager.closeCoordinators();
-        await redisManager.quitAllDb();
+        await actorManager.shutdown();
+        await redisManager.closeAll();
+
     })
     
 
@@ -93,7 +94,8 @@ describe('MessageService', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+
+            await producer.process();
 
             let result = await messageService.confirm(producerName,message.id);
             console.log('--->',result)
@@ -148,7 +150,7 @@ describe('MessageService', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
         });
 
         it('.other db actor confirm test', async (done) => {
@@ -177,7 +179,7 @@ describe('MessageService', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
 
         });
 
@@ -214,7 +216,7 @@ describe('MessageService', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
             await messageService.cancel(producerName,message.id);
 
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
@@ -243,7 +245,7 @@ describe('MessageService', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
         });
 
 
@@ -276,7 +278,7 @@ describe('MessageService', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
 
         });
     });

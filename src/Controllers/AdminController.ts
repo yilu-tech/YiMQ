@@ -41,8 +41,8 @@ export class AdminController {
         return await actor.actorCleaner.clearFailedReTry(body.message_ids,body.process_ids);
     }
     @Get('reload')
-    public async reload(){
-        await this.application.reload();
+    public async reload(@Query() query){
+        await this.application.reload(query.name);
         return {message:'success'};
     }
 

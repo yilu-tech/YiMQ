@@ -8,6 +8,7 @@ import { ActorConfigManager } from './Core/ActorConfigManager';
 const { setQueues } = require('bull-board')
 import {AppLogger as Logger} from './Handlers/AppLogger';
 import { ApplicationStatus } from './Constants/ApplicationConstants';
+import { BusinessException } from './Exceptions/BusinessException';
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 @Injectable()
 export class Application implements OnApplicationShutdown,OnApplicationBootstrap,OnModuleInit{
@@ -40,9 +41,8 @@ export class Application implements OnApplicationShutdown,OnApplicationBootstrap
         this.status = ApplicationStatus.SHUTDOWN;
         this.shutdownTime = Date.now();
         console.info('..........................................Shutdown..........................................');
-        if(this.masterRedisClient.status == 'ready'){
-            await this.processShutdown()
-            await this.resourceShutdown();
+        if(this.masterRedisClient && this.masterRedisClient.status == 'ready'){
+            await this.shutdown()
             await timeout(50);
         }
         let costTime = (Date.now() - this.shutdownTime)/1000;
@@ -68,7 +68,6 @@ export class Application implements OnApplicationShutdown,OnApplicationBootstrap
     }
     async bootstrap(){
         await this.baseBootstrap();
-        await this.actorConfigManager.loadRemoteActorsConfig();
         await this.actorManagerBootstrap();
         await this.setUiQueue();
     }
@@ -86,33 +85,39 @@ export class Application implements OnApplicationShutdown,OnApplicationBootstrap
                 Logger.error(new Error(err.message));
             }
         })
-        subscribeRedisClient.on('message',async (channel, message)=>{
+        subscribeRedisClient.on('message',async (channel, actorName)=>{
             if(channel == 'ACTORS_CONFIG_UPDATED'){
                 Logger.log('........Actor Manager Restart........','Application');
-                await this.actorManager.closeCoordinators();
-                await this.actorManager.shutdown();
-                await this.actorManager.bootstrap();
+                this.status = ApplicationStatus.RELOADING;
+                try {
+                    await this.actorManager.reload(actorName);
+                } catch (error) {
+                    Logger.error(error.message,null,"Application Reload");
+                }
+        
                 await this.setUiQueue();
+                this.status = ApplicationStatus.RUNNING;
             }
         })
     }
-    async reload(){
+    async reload(actorName){
+        if(this.status == ApplicationStatus.RELOADING){
+            let message = 'applicaton is reloading...'
+            Logger.error(message,null,'Application');
+            throw new BusinessException(message);
+        }
         await this.config.load_actors_config();
         await this.actorConfigManager.saveConfigFileToMasterRedis();
-        await this.actorConfigManager.loadRemoteActorsConfig();
-        await this.publishGlobalEventActorsConfigChange();
+        await this.publishGlobalEventActorsConfigChange(actorName);
     }
 
-    async publishGlobalEventActorsConfigChange(){
-        this.masterRedisClient.publish('ACTORS_CONFIG_UPDATED',Date.now().toString());
+    async publishGlobalEventActorsConfigChange(actorName){
+        this.masterRedisClient.publish('ACTORS_CONFIG_UPDATED',actorName);
     }
 
-    async processShutdown(){
-        Logger.log('ActorManager coordinator close.......','Application');
-        await this.actorManager.closeCoordinators();//先关闭queue，不释放actor的资源，防止http server那边还在使用
-    }
 
-    async resourceShutdown(){
+
+    async shutdown(){
         Logger.log('ActorManager shutdown.......','Application');
         await this.actorManager.shutdown();
         Logger.log('MasterModels shutdown.......','Application');

@@ -64,7 +64,7 @@ export class Config {
     load_actors_config(){
         let actors = [];
         let fileContent = this.readConfig(this.paths.actors_config);
-        fileContent['actors'].forEach((actorConfig)=>{
+        fileContent['actors'] && fileContent['actors'].forEach((actorConfig)=>{
             let default_options = Object.assign({},actorDefaultOptions);
             let common_options = Object.assign(default_options,fileContent['common_options']);
             actorConfig.options = Object.assign(common_options,actorConfig.options);

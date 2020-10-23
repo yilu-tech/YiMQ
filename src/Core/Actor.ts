@@ -48,6 +48,21 @@ export class Actor{
     constructor(public actorManager:ActorManager,public redisManager:RedisManager){
 
     }
+
+    public async bootstrap() {
+        await this.prepare();
+        await this.actorCleaner.setClearJob(false);
+        await this.process();
+        
+    }
+    public async process(){
+        await this.coordinator.processBootstrap()
+        await this.coordinator.onCompletedBootstrap();
+    }
+    public async shutdown(){
+        AppLogger.log(`Actor shutdown...... （${this.name}).`,'Actor')
+        await this.coordinator.close()
+    }
     setModel(actorModel){
         this.id = actorModel.property('id');
         this.name = actorModel.property('name');
@@ -59,16 +74,28 @@ export class Actor{
         this.status = <ActorStatus>actorModel.property('status');
         this.model = actorModel;
     }
-    public async init(){
-        AppLogger.debug(`Init actor: ${this.name}.`,'Actor')
+    public async init(actorModel){
+        this.setModel(actorModel);
+        AppLogger.log(`Actor init...... （${this.name}).`,'Actor')
         this.redisClient = await this.redisManager.client(this.redis);
+        this.initNohm();
         this.messageManager = new MessageManager(this);
         this.actorCleaner = new ActorCleaner(this);
         this.jobManager = new JobManager(this);
         this.subtaskManager = new SubtaskManager(this);
         await this.initCoordinator();
-        this.initNohm();
+        return this;
     }
+    public async prepare(){
+        await this.loadRemoteConfig();
+        await this.actorCleaner.clearSelfJob();
+        return this;
+    }
+
+    public async loadRemoteConfig(){
+        await this.actorManager.actorConfigManager.loadRemoteConfigToDB(this)
+    }
+
     private initNohm(){
         this.nohm = new NohmClass({});
         this.nohm.setClient(this.redisClient);
@@ -90,15 +117,9 @@ export class Actor{
         await this.coordinator.initQueue();
     }
 
+    
 
 
-    // public async close(){
-    //     await this.coordinator.close();
-    //     // if(this.redisClient.status == 'ready'){//已经被单独关闭的情况下，避免发生错误(主要发生在单元测试中)
-    //     //     await this.redisClient.quit();
-    //     // }
-        
-    // }
 
     public suspend(){
 

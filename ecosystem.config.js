@@ -1,16 +1,16 @@
 var path = require('path');
-let mainFilePath = path.join(__dirname, './dist/main.js');
+let mainFilePath = path.join(__dirname, './dist/src/main.js');
 module.exports = {
   apps : [{
     name: 'yimq',
     script: mainFilePath,
-    instances: 2,
+    instances: 'auto',
     autorestart: true,
     watch: false,
-    max_memory_restart: '2G',
-    mergeLogs: false,
+    max_memory_restart: '1G',
+    merge_logs: true,
     wait_ready: true,
-    listen_timeout: 1000*10,
+    listen_timeout: 1000 * 30, //启动等待时间
     kill_timeout: 1000 * 30,//shutdown超时时间
     formatted: true,
     env: {

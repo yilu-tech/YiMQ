@@ -15,6 +15,7 @@ describe('Subtask', () => {
     let actorService:ActorService;
     let config:Config;
     let redisManager:RedisManager;
+    let actorManager:ActorManager;
     let actorConfigManager:ActorConfigManager;
 
 
@@ -27,6 +28,7 @@ describe('Subtask', () => {
             Config,
             RedisManager,
             MasterModels,
+            ActorManager,
             ActorConfigManager,
         ],
         }).compile();
@@ -42,13 +44,15 @@ describe('Subtask', () => {
         
         actorConfigManager = app.get<ActorConfigManager>(ActorConfigManager);
         await actorConfigManager.saveConfigFileToMasterRedis()
+
+        actorManager = app.get<ActorManager>(ActorManager);
         
         
         
     });
 
     afterEach(async()=>{
-        await redisManager.quitAllDb();
+        await redisManager.closeAll();
     })
     
 
@@ -77,7 +81,12 @@ describe('Subtask', () => {
                 }]
             })
            
-            await actorConfigManager.loadRemoteActorsConfig()
+            // await actorConfigManager.loadRemoteActorsConfig()
+            await actorManager.bootstrap(false);
+            let userActor = actorManager.get('user');
+            let contentActor = actorManager.get('content');
+            await userActor.loadRemoteConfig();
+            await contentActor.loadRemoteConfig();
             
             let listenerModels = await actorConfigManager.masterModels.ListenerModel.find({});
             expect(listenerModels.length).toBe(2);//确认添加成功
@@ -100,7 +109,10 @@ describe('Subtask', () => {
                 'actor_name':'content',
                 "broadcast_listeners": []
             })
-            await actorConfigManager.loadRemoteActorsConfig()
+
+            await userActor.loadRemoteConfig();
+            await contentActor.loadRemoteConfig();
+
             let userListeners = await actorConfigManager.masterModels.ListenerModel.findAndLoad({'actor_id':userActorConfig.id});
             expect(userListeners.length).toBe(2);//修改一个，添加一个，一个两个
             expect(userListeners[0].property('topic')).toBe(newTopic);//修改是否成功
