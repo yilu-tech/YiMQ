@@ -92,7 +92,7 @@ export class ActorConfigManager{
         } catch (error) {
             let errorMessage = `${error.message}`;
             if(error instanceof HttpCoordinatorRequestException){
-                errorMessage = `${error.message} ${error.response?.message} `;
+                errorMessage = `${error.message} ${error.response?.message || ''} `;
             }
             Logger.error(`Actor <${actor.name}> ${errorMessage}`,undefined,`ActorConfigManager`)
         }

@@ -46,7 +46,7 @@ export class RedisManager {
                 Logger.error(`redis client reconnecting (${name})`,null,`RedisManager`);
             })
             client.on('connect',()=>{
-                Logger.log(`redis client connect (${name})`,`RedisManager`);
+                Logger.debug(`redis client connect (${name})`,`RedisManager`);
             })
             // client.on('close',()=>{
             //     Logger.log(`redis client close (${name})`,`RedisManager`);
@@ -63,7 +63,7 @@ export class RedisManager {
                 // rej(new Error(error))
             });
             client.on('end', () => {
-                Logger.log(`redis client end (${name}).`,`RedisManager`);
+                Logger.debug(`redis client end (${name}).`,`RedisManager`);
             });
         })
     }
