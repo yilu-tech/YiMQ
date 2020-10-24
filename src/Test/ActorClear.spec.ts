@@ -212,10 +212,10 @@ describe('ActorClearTest', () => {
 
             await userActor.actorCleaner.saveSubtaskIdsToConsumer([message.id]);
 
-            let userWatingClearConsumeProcessorIds = await userActor.actorCleaner.getWatingClearConsumeProcessorIds();
-            let contentWatingClearConsumeProcessorIds = await contentActor.actorCleaner.getWatingClearConsumeProcessorIds();
-            expect(userWatingClearConsumeProcessorIds).toEqual([userSubtask.id]);
-            expect(contentWatingClearConsumeProcessorIds).toEqual([contentSubtask.id])
+            let userWaitingClearConsumeProcessorIds = await userActor.actorCleaner.getWaitingClearConsumeProcessorIds();
+            let contentWaitingClearConsumeProcessorIds = await contentActor.actorCleaner.getWaitingClearConsumeProcessorIds();
+            expect(userWaitingClearConsumeProcessorIds).toEqual([userSubtask.id]);
+            expect(contentWaitingClearConsumeProcessorIds).toEqual([contentSubtask.id])
         })
         it('clearLocalProcessorIds',async()=>{
             let userActor = actorManager.get('user'); 
@@ -261,13 +261,13 @@ describe('ActorClearTest', () => {
             await message2.setStatus(MessageStatus.DONE).save();
             await userActor.actorCleaner.saveSubtaskIdsToConsumer([message2.id]);
             
-            let userWatingClearConsumeProcessorIds = await userActor.actorCleaner.getWatingClearConsumeProcessorIds();
+            let userWaitingClearConsumeProcessorIds = await userActor.actorCleaner.getWaitingClearConsumeProcessorIds();
             let waittingClearProcessIds = [userSubtask1.id,userSubtask2.id,userSubtask3.id];
             let failedProcessIds = [userSubtask2.id,userSubtask3.id];
             //  1和2,3等待清理，2,3清理错误 ,1被正常清理，4还在等待清理
             await userActor.actorCleaner.clearLocalProcessorIds(waittingClearProcessIds,failedProcessIds)
             expect(await userActor.actorCleaner.getFailedClearProcessIds()).toEqual([userSubtask2.id,userSubtask3.id])
-            expect(await userActor.actorCleaner.getWatingClearConsumeProcessorIds()).toEqual([userSubtask4.id])
+            expect(await userActor.actorCleaner.getWaitingClearConsumeProcessorIds()).toEqual([userSubtask4.id])
         })
 
         it('remoteClearSuccess',async ()=>{

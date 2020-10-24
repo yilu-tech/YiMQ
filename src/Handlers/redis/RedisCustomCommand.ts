@@ -122,13 +122,13 @@ export function redisCustomCommand(client){
         local clear_status_key = 'nohm:index:message:clear_status:' .. KEYS[3];
         local limit = KEYS[4];
 
-        local wating_clear_message_tmp_key = 'actors:' .. KEYS[1] ..':wating_clear_done_messages';
+        local waiting_clear_message_tmp_key = 'actors:' .. KEYS[1] ..':waiting_clear_done_messages';
 
-        local wating_clear_done_messages = redis.call('SINTERSTORE',wating_clear_message_tmp_key, actor_key, message_status_key, clear_status_key)
+        local waiting_clear_done_messages = redis.call('SINTERSTORE',waiting_clear_message_tmp_key, actor_key, message_status_key, clear_status_key)
 
 
-        local result =  redis.call('SRANDMEMBER',wating_clear_message_tmp_key,limit)
-        redis.call('DEL',wating_clear_message_tmp_key);
+        local result =  redis.call('SRANDMEMBER',waiting_clear_message_tmp_key,limit)
+        redis.call('DEL',waiting_clear_message_tmp_key);
 
         return result;
         `

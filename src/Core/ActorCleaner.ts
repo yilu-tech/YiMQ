@@ -15,13 +15,13 @@ import { BusinessException } from "../Exceptions/BusinessException";
 
 export class ActorCleaner{
 
-    public db_key_wating_clear_processors:string;
+    public db_key_waiting_clear_processors:string;
     public db_key_failed_clear_processors:string;
     public db_key_clear_jobs:string;
 
     constructor(private actor:Actor){
 
-        this.db_key_wating_clear_processors = `actors:${this.actor.id}:wating_clear_processors`;
+        this.db_key_waiting_clear_processors = `actors:${this.actor.id}:waiting_clear_processors`;
         this.db_key_failed_clear_processors = `actors:${this.actor.id}:failed_clear_processors`;
         this.db_key_clear_jobs = `actors:${this.actor.id}:clear_jobs`;
 
@@ -35,8 +35,8 @@ export class ActorCleaner{
     public async run(){
         let doneMessageIds = await this.getMessageIds(MessageStatus.DONE,MessageClearStatus.WAITING);
         let canceldMessageIds = await this.getMessageIds(MessageStatus.CANCELED,MessageClearStatus.WAITING);
-        let watingClearProcessorIds = await this.getWatingClearConsumeProcessorIds();//获取等待清理的processers
-        let total = doneMessageIds.length + canceldMessageIds.length + watingClearProcessorIds.length;
+        let waitingClearProcessorIds = await this.getWaitingClearConsumeProcessorIds();//获取等待清理的processers
+        let total = doneMessageIds.length + canceldMessageIds.length + waitingClearProcessorIds.length;
 
         if(total < this.actor.options.clear_limit){
             let message = `<${this.actor.name}> actor not have enough message and process to clear ${total}`;
@@ -44,12 +44,12 @@ export class ActorCleaner{
             return {message,delay:true}
         }
     
-        let [failedDoneMessageIds,failedCanceledMessageIds,failed_process_ids] = await this.remoteClear(doneMessageIds,canceldMessageIds,watingClearProcessorIds);
+        let [failedDoneMessageIds,failedCanceledMessageIds,failed_process_ids] = await this.remoteClear(doneMessageIds,canceldMessageIds,waitingClearProcessorIds);
         let cleardDoneMessageIds = await this.clearLocalMessage(doneMessageIds,failedDoneMessageIds);
         let cleardCanceldMessageIds = await this.clearLocalMessage(canceldMessageIds,failedCanceledMessageIds);
-        let cleardProcessorIds = await this.clearLocalProcessorIds(watingClearProcessorIds,failed_process_ids);//清理掉本次已经远程清理了的processor的id
+        let cleardProcessorIds = await this.clearLocalProcessorIds(waitingClearProcessorIds,failed_process_ids);//清理掉本次已经远程清理了的processor的id
 
-        let message = `<${this.actor.name}> actor cleared message: ${doneMessageIds.length + canceldMessageIds.length}  process: ${watingClearProcessorIds.length}`;
+        let message = `<${this.actor.name}> actor cleared message: ${doneMessageIds.length + canceldMessageIds.length}  process: ${waitingClearProcessorIds.length}`;
         Logger.log(message,'ActorCleaner');
         return {cleardDoneMessageIds,cleardCanceldMessageIds,cleardProcessorIds,delay:false}
     }
@@ -180,7 +180,7 @@ export class ActorCleaner{
         let canCleardProcessorIds = this.getCanCleardIds(originProcessIds,failedProcessIds);
 
         if(canCleardProcessorIds.length > 0){
-            this.clearDbWatingProcessorIds(multi,canCleardProcessorIds); 
+            this.clearDbWaitingProcessorIds(multi,canCleardProcessorIds); 
         } 
         await multi.exec();
         return canCleardProcessorIds;
@@ -188,23 +188,23 @@ export class ActorCleaner{
     }
     public async moveFailedProcessIds(multi:IORedis.Pipeline,failedProcessIds){
          multi.sadd(this.db_key_failed_clear_processors,failedProcessIds); //加db_key_failed_clear_processors中
-         multi.srem(this.db_key_wating_clear_processors,failedProcessIds); //从db_key_wating_clear_processors中移除
+         multi.srem(this.db_key_waiting_clear_processors,failedProcessIds); //从db_key_waiting_clear_processors中移除
     }
 
     public async getFailedClearProcessIds():Promise<string[]>{
         return this.actor.redisClient.srandmember(this.db_key_failed_clear_processors,1000);
     }
-    public async clearDbWatingProcessorIds(multi:IORedis.Pipeline,processIds:number[]){
+    public async clearDbWaitingProcessorIds(multi:IORedis.Pipeline,processIds:number[]){
         if(processIds.length>0){
-             multi.srem(this.db_key_wating_clear_processors,processIds);
+             multi.srem(this.db_key_waiting_clear_processors,processIds);
         }    
     }
 
-    public async remoteClear(doneMessageIds,canceldMessageIds,watingClearProcessorIds){
+    public async remoteClear(doneMessageIds,canceldMessageIds,waitingClearProcessorIds){
         let body ={
             done_message_ids: doneMessageIds,
             canceled_message_ids: canceldMessageIds,
-            process_ids: watingClearProcessorIds
+            process_ids: waitingClearProcessorIds
         }
         // console.log('remoteClear-->body:',body)
         let result = await this.actor.coordinator.callActor(this,CoordinatorCallActorAction.ACTOR_CLEAR,body);
@@ -230,17 +230,17 @@ export class ActorCleaner{
             for (const subtask of message.subtasks) {
                 if(subtask instanceof ConsumerSubtask){
                     let consumerSubtask = <ConsumerSubtask>subtask;
-                    consumerSubtask.consumer.actorCleaner.addWatingClearConsumeProcessorToDb(subtask.id);
+                    consumerSubtask.consumer.actorCleaner.addWaitingClearConsumeProcessorToDb(subtask.id);
                 }
             }
         }
     }
 
-    private async addWatingClearConsumeProcessorToDb(subtask_id){
-        await this.actor.redisClient.sadd(this.db_key_wating_clear_processors,subtask_id);
+    private async addWaitingClearConsumeProcessorToDb(subtask_id){
+        await this.actor.redisClient.sadd(this.db_key_waiting_clear_processors,subtask_id);
     }
-    public async getWatingClearConsumeProcessorIds():Promise<string[]>{
-        return this.actor.redisClient.srandmember(this.db_key_wating_clear_processors,this.actor.options.clear_limit);
+    public async getWaitingClearConsumeProcessorIds():Promise<string[]>{
+        return this.actor.redisClient.srandmember(this.db_key_waiting_clear_processors,this.actor.options.clear_limit);
     }
     
 
@@ -266,7 +266,7 @@ export class ActorCleaner{
 
     public async clearFailedReTry(message_ids:Array<number|string>|string,processor_ids:Array<number|string>|string){
         let failedRetryMessage = {failedRetryDoneMessageIds:[],failedRetryCanceldMessageIds:[]};
-        let failedRetryWatingClearProcessorIds = processor_ids || [];
+        let failedRetryWaitingClearProcessorIds = processor_ids || [];
         
         if(message_ids == '*'){
             failedRetryMessage = await this.getFailedClearMessageIds();
@@ -274,18 +274,18 @@ export class ActorCleaner{
             failedRetryMessage = await this.separateMessageIdsByStatus(message_ids);
         }
 
-        if(failedRetryWatingClearProcessorIds == '*'){
-            failedRetryWatingClearProcessorIds = await this.getFailedClearProcessIds();
+        if(failedRetryWaitingClearProcessorIds == '*'){
+            failedRetryWaitingClearProcessorIds = await this.getFailedClearProcessIds();
         }
 
-        return await this.clearFailedRetryRun(failedRetryMessage.failedRetryDoneMessageIds,failedRetryMessage.failedRetryCanceldMessageIds,failedRetryWatingClearProcessorIds);        
+        return await this.clearFailedRetryRun(failedRetryMessage.failedRetryDoneMessageIds,failedRetryMessage.failedRetryCanceldMessageIds,failedRetryWaitingClearProcessorIds);        
 
     }
-    public async clearFailedRetryRun(failedRetryDoneMessageIds,failedRetryCanceldMessageIds,failedRetryWatingClearProcessorIds){
-        let [failedDoneMessageIds,failedCanceledMessageIds,failedProcessIds] = await this.remoteClear(failedRetryDoneMessageIds,failedRetryCanceldMessageIds,failedRetryWatingClearProcessorIds);
+    public async clearFailedRetryRun(failedRetryDoneMessageIds,failedRetryCanceldMessageIds,failedRetryWaitingClearProcessorIds){
+        let [failedDoneMessageIds,failedCanceledMessageIds,failedProcessIds] = await this.remoteClear(failedRetryDoneMessageIds,failedRetryCanceldMessageIds,failedRetryWaitingClearProcessorIds);
         let cleardDoneMessageIds = await this.clearLocalMessage(failedRetryDoneMessageIds,failedDoneMessageIds);
         let cleardCanceldMessageIds = await this.clearLocalMessage(failedRetryCanceldMessageIds,failedCanceledMessageIds);
-        let cleardProcessorIds = await this.clearFailedRetryLocalProcessorIds(failedRetryWatingClearProcessorIds,failedProcessIds);//清理掉本次已经远程清理了的processor的id
+        let cleardProcessorIds = await this.clearFailedRetryLocalProcessorIds(failedRetryWaitingClearProcessorIds,failedProcessIds);//清理掉本次已经远程清理了的processor的id
         
         return {
             cleardDoneMessageIds,
