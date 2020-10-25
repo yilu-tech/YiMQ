@@ -392,19 +392,19 @@ describe('ActorClearTest', () => {
     describe('.job:',() => {
 
 
-        it('.setJob',async(done)=>{
+        it('.repeat setup job',async(done)=>{
             let userActor = actorManager.get('user');
 
             
-            let job1 = await userActor.actorCleaner.setClearJob(false);
+            let job1 = await userActor.actorCleaner.setupClearJob();
             expect(job1).not.toBeNull();
             expect(job1.id).toBe(await userActor.actorCleaner.getActiveJobId())
-            let job2 = await userActor.actorCleaner.setClearJob(false);
+            let job2 = await userActor.actorCleaner.setupClearJob();
             expect(job2).toBeNull();//job1还没有完成，所有job设置失败
 
             userActor.coordinator.getQueue().on('completed',async (job)=>{
                 if(job.id == job1.id){
-                    let job3 = await userActor.actorCleaner.setClearJob(false);   
+                    let job3 = await userActor.actorCleaner.setupClearJob();   
                     // //job2已经处理完毕，设置job3成功
                     expect(job3).not.toBeNull(); 
                     expect(job3.id).toBe(await userActor.actorCleaner.getActiveJobId())
@@ -430,7 +430,7 @@ describe('ActorClearTest', () => {
             userActor.options.clear_interval = 500;
 
 
-            let clearJob1 = await userActor.actorCleaner.setClearJob(false)
+            let clearJob1 = await userActor.actorCleaner.setupClearJob()
 
             userActor.coordinator.getQueue().on('failed',async (error)=>{
                 done(error)
@@ -438,11 +438,10 @@ describe('ActorClearTest', () => {
             })
             let clearJob2:Job;
 
-            let clearJobIds = [];
+
             userActor.coordinator.getQueue().on('completed',async (job,result)=>{
-                if(job.data['type'] == JobType.ACTOR_CLEAR){
-                    clearJobIds.push(job.id);
-                }
+        
+                let doneClearJobIds = await userActor.actorCleaner.getDoneClearJobIds();
                 //clearJob1 完成后创建了，延迟300毫秒的clearJob2
                 if(clearJob1.id == job.id){
                     mock.onPost(userActor.api).replyOnce(async ()=>{
@@ -461,19 +460,17 @@ describe('ActorClearTest', () => {
                         });
                         await message.setStatus(MessageStatus.DONE).save();
                     }
-                    await timeout(100);//延迟，让ActorClearJob 在onCompleted完成job的创建
+
                     clearJob2 = await userActor.actorCleaner.getActiveClearJob();
-                    expect(clearJob2.context.opts.delay).toBe(500);
-            
+                    expect(doneClearJobIds.length).toBe(1);
                 }
-                let doneClearJobIds = await userActor.actorCleaner.getDoneClearJobIds();
-                //启动后，没完成一个clear就会清理一个
-                if(clearJobIds.length > 1 ){
-                    expect(doneClearJobIds.length).toBe(0);
-                }
+                
+           
 
                 // clearJob2完成后，创建不延迟的clearJob3
                 if(clearJob2 && clearJob2.id == job.id){
+                    let clearJob1_exists = await userActor.coordinator.getQueue().getJob(clearJob1.id)
+                    expect(clearJob1_exists).toBeNull() //第二个clear job 完成的时候，第一个job已经清理
                     userActor.options.clear_interval = 5000;
                     done();
                 }
@@ -482,7 +479,6 @@ describe('ActorClearTest', () => {
             })
 
             await userActor.coordinator.processBootstrap();
-            await userActor.coordinator.onCompletedBootstrap();
 
         })
 
@@ -503,13 +499,15 @@ describe('ActorClearTest', () => {
             await message.setStatus(MessageStatus.DONE).save();
 
             userActor.options.clear_backoff = 1
-            let clearJob1 = await userActor.actorCleaner.setClearJob(false)
+            let clearJob1 = await userActor.actorCleaner.setupClearJob()
 
             mock.onPost(userActor.api).replyOnce(500);
 
 
 
             userActor.coordinator.getQueue().on('failed',async (job, err)=>{
+                let failedMessageIds = await userActor.actorCleaner.getMessageIds(MessageStatus.DONE,MessageClearStatus.WAITING);
+                expect(failedMessageIds.length).toBe(1)
                 mock.onPost(userActor.api).replyOnce(200,{
                     failed_done_message_ids:[],
                     failed_canceled_message_ids:[],
@@ -520,12 +518,12 @@ describe('ActorClearTest', () => {
             })
 
             userActor.coordinator.getQueue().on('completed',async (job,result)=>{
-                await timeout(100);//等到结束，防止redis无法正常关闭
+                let failedMessageIds = await userActor.actorCleaner.getMessageIds(MessageStatus.DONE,MessageClearStatus.WAITING);
+                expect(failedMessageIds.length).toBe(0)
                 done()
             })
 
             await userActor.coordinator.processBootstrap();
-            await userActor.coordinator.onCompletedBootstrap();
         })
 
      

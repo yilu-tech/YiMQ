@@ -9,14 +9,11 @@ export class ActorClearJob extends Job{
         super(context);
     }
     async process() {
+        await this.actor.actorCleaner.clearSelfJob(); //清理除这个job以外的actor_clear_job
         let result =  await this.actor.actorCleaner.run();
         // await timeout(1000*10);
-        await this.actor.actorCleaner.clearSelfJob(); //清理除这个job以外的actor_clear_job
+        await this.actor.actorCleaner.setNextClearJob(this);
         return result;
-    }
-
-    async onCompleted(job,result){
-        await this.actor.actorCleaner.setClearJob(result.delay);
     }
 
     public toJson(full=false){

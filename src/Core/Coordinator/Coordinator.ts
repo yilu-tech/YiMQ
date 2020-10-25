@@ -38,6 +38,9 @@ export abstract class Coordinator{
         queueOptions.limiter = this.actor.options.coordinator_limiter ? this.actor.options.coordinator_limiter : defaultLimiter ;
 
         this.queue = new bull(String(this.actor.id),queueOptions);
+        //不能启用一下事件，否在在shutdown的时候，虽然会等待job执行完毕，但不会等待以下事件执行完毕，会造成不一致或者redis抛出断开连接的错误
+        // this.queue.on('completed',(job,result)=>{
+        // })
         // this.queue.on('error',(error)=>{
         //     AppLogger.log(`(${this.actor.name}) ${error.message}`,`Coordinator`)
         // })
@@ -60,7 +63,6 @@ export abstract class Coordinator{
     }
 
     public abstract async processBootstrap();
-    public abstract async onCompletedBootstrap();
     public abstract async callActor(producer,action,context?,options?);
 
     public getQueue():bull.Queue{

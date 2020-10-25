@@ -10,6 +10,7 @@ import { JobOptions } from "bull";
 import { differenceBy, isArray } from "lodash";
 import IORedis = require("ioredis");
 import { BusinessException } from "../Exceptions/BusinessException";
+import { ActorClearJob } from "./Job/ActorClearJob";
 // import {AppLogger} from '../Handlers/AppLogger';
 
 
@@ -56,25 +57,66 @@ export class ActorCleaner{
 
 
     
+    public async setNextClearJob(actorClearJob:ActorClearJob){
 
-
-    public async setClearJob(delay:boolean){
-        let data = {type:JobType.ACTOR_CLEAR};
-        let jobName = JobType.ACTOR_CLEAR;
 
     
         let clearJob = await this.getActiveClearJob();
-        if(clearJob && (await clearJob.getStatus()) == JobStatus.FAILED){
+
+        //如果clearJob 不是当前job，不能添加下一个job
+        if(clearJob.id != actorClearJob.id){
+            Logger.error(`${this.actor.name} has [${await clearJob.getStatus()}] clear job.`,'ActorCleaner');
+            return null;
+        }
+
+        let clearJobStatus = await clearJob.getStatus();
+        //当前job，且在active状态，添加下一个job
+        if(clearJobStatus == JobStatus.ACTIVE){
+            return await this.addClearJob(true);
+        }
+
+
+        //如果clearJob 就是当前job，状态为failed 尝试重试
+        if(clearJob && clearJobStatus == JobStatus.FAILED){
             await clearJob.context.retry();
             Logger.error(`${this.actor.name} has failed clear job retry.`,'ActorCleaner');
             return 
         }
-        if(clearJob){
-            // Logger.error(`${this.actor.name} has active clear job.`,'ActorCleaner');
-            return null;
+
+        //clearJob的其他状态一般是队列问题，等待队列恢复就可以
+        return null;
+    }
+
+    public async setupClearJob(){
+        await this.clearSelfJob();
+        let clearJob = await this.getActiveClearJob();
+
+        //不存在就添加
+        if(!clearJob){
+            return await this.addClearJob(false);
         }
 
+        let clearJobStatus = await clearJob.getStatus();
+        //活跃就报错
+        if(clearJobStatus == JobStatus.ACTIVE){
+            Logger.error(`${this.actor.name} has [${clearJobStatus}] clear job.`,'ActorCleaner.setupClearJob');
+            return;
+        }
 
+        //存在就
+        if(clearJobStatus == JobStatus.FAILED){
+            await clearJob.context.retry();
+            Logger.error(`${this.actor.name} has failed clear job retry.`,'ActorCleaner.setupClearJob');
+            return 
+        }
+        //clearJob的其他状态一般是队列问题，等待队列恢复就可以
+        return null;
+
+    }
+
+    public async addClearJob(delay){
+        let data = {type:JobType.ACTOR_CLEAR};
+        let jobName = JobType.ACTOR_CLEAR;
         let job_id = await this.actor.actorManager.getJobGlobalId();
 
         await this.actor.redisClient.lpush(this.db_key_clear_jobs,job_id);
@@ -97,9 +139,10 @@ export class ActorCleaner{
 
         for (const job_id of doneClearJobIds) {
             let job = await this.actor.coordinator.getQueue().getJob(job_id);
-            
-            job && await job.remove();
-            multi.lrem(this.db_key_clear_jobs,0,job.id);
+            if(job && (await job.getState()) != JobStatus.ACTIVE){
+                job && await job.remove();
+                multi.lrem(this.db_key_clear_jobs,0,job.id);
+            }
         }
         await multi.exec();
     }

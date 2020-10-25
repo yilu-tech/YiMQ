@@ -51,13 +51,12 @@ export class Actor{
 
     public async bootstrap() {
         await this.prepare();
-        await this.actorCleaner.setClearJob(false);
+        await this.actorCleaner.setupClearJob();
         await this.process();
         
     }
     public async process(){
         await this.coordinator.processBootstrap()
-        await this.coordinator.onCompletedBootstrap();
     }
     public async shutdown(){
         AppLogger.log(`Actor shutdown...... （${this.name}).`,'Actor')
@@ -88,7 +87,6 @@ export class Actor{
     }
     public async prepare(){
         await this.loadRemoteConfig();
-        await this.actorCleaner.clearSelfJob();
         return this;
     }
 

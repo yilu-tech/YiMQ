@@ -47,23 +47,6 @@ export class HttpCoordinator extends Coordinator{
         })
         AppLogger.log(`Coordinator <${this.actor.name}> bootstrap`,`HttpCoordinator`)
     };
-    //关闭队列的时候，如果completed还在执行会因为redis链接断开报错，所以这里只能执行非一致性的操作
-    public async onCompletedBootstrap(){
-        this.queue.on('completed',async (jobContext:bull.Job,result)=>{
-            let job:Job = null;
-            try{
-                job = await this.actor.jobManager.restoreByContext(jobContext);
-                return await job.onCompleted(job,result);
-
-            }catch(error){
-                let ext = {
-                    job: job.toJson()
-                }
-                Logger.error(Logger.message(error.message,ext),undefined,`HttpCoordinator.onCompleted.${this.actor.name}`)
-            }
-        })
-    }
-
     public async callActor(producer:Actor,action:CoordinatorCallActorAction,context:any={},options:any={}) {
         let config = {
             headers:{
