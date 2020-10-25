@@ -68,8 +68,11 @@ export class ActorService{
         let actorClearFailedLists:any = {};
         for (const actorModel of actorModels) {
             let actorClearFailedList = await this.getClearFailedList(actorModel.id);
-            let key = `${actorModel.id}-${actorModel.property('name')}   M:${actorClearFailedList.messages.length}  P:${actorClearFailedList.process_ids.length}`
-            actorClearFailedLists[key]= actorClearFailedList;
+            // let key = `${actorModel.id}-${actorModel.property('name')}   M:${actorClearFailedList.messages.length}  P:${actorClearFailedList.process_ids.length}`
+            let messageKey = `${actorModel.id}-${actorModel.property('name')}-messages`;
+            let processIdsKey = `${actorModel.id}-${actorModel.property('name')}-process_ids`;
+            actorClearFailedLists[messageKey]= actorClearFailedList.messages;
+            actorClearFailedLists[processIdsKey]= actorClearFailedList.process_ids;
         }
         let cost_time = (Date.now() - startingTime);
         actorClearFailedLists.cost_time = `${cost_time}ms`;
