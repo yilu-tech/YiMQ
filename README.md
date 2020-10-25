@@ -28,28 +28,30 @@
 
 2. /actor/clearfailed (获取清理失败的message和process)
    
-   query:
-   {
-       actor_id: 1
-   }
+    query:
+
+        {
+            actor_id: 1 //为空的情况下，返回所有actor的错误message和process_ids
+        }
    
 
 3. /admin/actor/clearfailed/retry (重试清理错误)
 
     body:
-    {
 
-        "actor_id":20,
-        "message_ids": "*",
-        "process_ids": "*"
-    }
+        {
 
-    {
+            "actor_id":20,
+            "message_ids": "*",
+            "process_ids": "*"
+        }
 
-        "actor_id":20,
-        "message_ids": [1,2],
-        "process_ids": [2,3]
-    }
+        {
+
+            "actor_id":20,
+            "message_ids": [1,2],
+            "process_ids": [2,3]
+        }
 
 
 

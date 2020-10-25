@@ -4,11 +4,12 @@ import { MessagesDto, MessageDetailDto, MessageClearFailedRetry, ClearFailedRetr
 import {ActorManager} from '../Core/ActorManager';
 import { Application } from '../Application';
 import { BusinessException } from '../Exceptions/BusinessException';
+import { ActorService } from '../Services/ActorService';
 
 
 @Controller('admin')
 export class AdminController {
-    constructor(private messageService:MessageService,private actorManager:ActorManager,private application:Application){
+    constructor(private messageService:MessageService,private actorManager:ActorManager,private application:Application,private actorService:ActorService){
 
     }
 
@@ -22,15 +23,11 @@ export class AdminController {
     }
 
     @Get('actor/clearfailed')
-    public async clearfailed(@Query() body:ClearFailedRetry){
-        let actor = this.actorManager.getById(body.actor_id);    
-        if(!actor){
-            throw new BusinessException(`actor_id ${body.actor_id} is not exists.`)
+    public async clearfailed(@Query() body){
+        if(!body.actor_id){
+            return await this.actorService.getAllClearFailedList();    
         }
-        return {
-            ...await actor.actorCleaner.getFailedClearMessageIds(),
-            process_ids: await actor.actorCleaner.getFailedClearProcessIds()
-        }
+      return this.actorService.getClearFailedList(body.actor_id)
     }
     @Post('actor/clearfailed/retry')
     public async messageClearFailedRetry(@Body() body:MessageClearFailedRetry){
