@@ -7,6 +7,7 @@ import { MasterModels } from '../../Models/MasterModels';
 import { join } from 'path';
 import { RedisClient } from '../../Handlers/redis/RedisClient';
 import { ActorConfigManager } from '../../Core/ActorConfigManager';
+import { ActorManager } from '../../Core/ActorManager';
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('ActorConfigLoadToMasterRedis.spec', () => {
     let actorService:ActorService;
@@ -23,6 +24,7 @@ describe('ActorConfigLoadToMasterRedis.spec', () => {
             Config,
             RedisManager,
             MasterModels,
+            ActorManager,
             ActorService,
             ActorConfigManager,
         ],
