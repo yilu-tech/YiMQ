@@ -21,6 +21,10 @@ export class AdminController {
     public async message(@Query('actor_id',new ParseIntPipe()) actor_id,@Query() query:MessageDetailDto){
         return (await this.messageService.get(actor_id,query.message_id)).toJson(true);
     }
+    @Get('actors')
+    public async actors(){
+       return this.actorService.list();
+    }
 
     @Get('actor/clearfailed')
     public async clearfailed(@Query() body){

@@ -45,17 +45,13 @@ export class ActorService{
         return actor.allProperties();
     }
 
-    public async list(page=null,pageSize=10){
-        let params = {}
-        if(page){
-            params['offset'] = (page - 1) * pageSize;
-            params['limit'] = pageSize;
+    public async list(){
+        let actors = [];
+        for (const [i,actor] of this.actorManager.actors) {
+            let actorJson = actor.toJson();
+            actorJson['job_counts'] = await actor.coordinator.getJobConuts();
+            actors.push(actorJson);
         }
-        let ids =  await this.masterModels.ActorModel.find({id:params});
-        let actorModels =  await this.masterModels.ActorModel.loadMany(ids);
-        let actors = actorModels.map((actorModel)=>{
-            return actorModel.allProperties();
-        })
         return actors;
     }
 

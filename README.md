@@ -53,6 +53,7 @@
             "process_ids": [2,3]
         }
 
+4. /admin/actors  (获取actor列表和actor各状态job数量)
 
 
 

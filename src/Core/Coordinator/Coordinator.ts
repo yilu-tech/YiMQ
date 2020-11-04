@@ -94,4 +94,8 @@ export abstract class Coordinator{
     public async getJob(id:bull.JobId):Promise<bull.Job>{
         return this.queue.getJob(id);
     };
+
+    public async getJobConuts(){
+        return this.queue.getJobCounts();
+    }
 }

@@ -131,6 +131,22 @@ export class Actor{
         
     }
 
+    /**
+     * 整理数据
+     */
+    public toJson(full=false){
+        return {
+            id: this.id,
+            name: this.name,
+            key: this.key,
+            api: this.api,
+            options: this.options,
+            redis: this.redis,
+            protocol: this.protocol,
+            status: this.status
+        }
+    }
+
 }
 
 
