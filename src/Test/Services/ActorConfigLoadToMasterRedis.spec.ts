@@ -50,7 +50,7 @@ describe('ActorConfigLoadToMasterRedis.spec', () => {
     it('Load config file to redis.', async () => {
        
         await actorConfigManager.saveConfigFileToMasterRedis()
-        let actors = await actorService.list();
+        let actors = await actorConfigManager.getAllActorModels();
         expect(actors.length).toBe(3);
     });
 });
