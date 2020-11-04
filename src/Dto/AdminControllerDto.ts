@@ -27,3 +27,16 @@ export class MessageClearFailedRetry{
     message_ids:[number];
     process_ids:[number]
 }
+
+export class ActorJobsDao{
+    @IsDefined()
+    actor_id:number;
+    @IsDefined()
+    types:[];
+    @IsDefined()
+    start:number;
+    @IsDefined()
+    end:number;
+    @IsDefined()
+    asc:boolean;
+}

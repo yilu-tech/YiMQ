@@ -53,7 +53,20 @@
             "process_ids": [2,3]
         }
 
+
 4. /admin/actors  (获取actor列表和actor各状态job数量)
+
+5. /admin/actor/jobs
+
+    query:
+
+        {
+            actor_id: '1',
+            types: 'completed,waiting,active,delayed,failed,paused',
+            start: '0',
+            end: '100',
+            asc: 'false'
+        }
 
 
 

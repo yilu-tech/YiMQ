@@ -3,10 +3,46 @@ import { JobType } from '../../Constants/JobConstants';
 export abstract class Job{
     public id:number;
     public type:JobType;
+    
+
+    opts: bull.JobOptions;
+
+    /**
+     * How many attempts where made to run this job
+     */
+    attemptsMade: number;
+
+    /**
+     * When this job was started (unix milliseconds)
+     */
+    processedOn?: number;
+
+    /**
+     * When this job was completed (unix milliseconds)
+     */
+    finishedOn?: number;
+    timestamp: number;
+    /**
+     * The stacktrace for any errors
+     */
+    stacktrace: string[];
+
+    returnvalue: any;
+
+    failedReason?: string;
 
     constructor(public readonly context:bull.Job){
         this.id = Number(this.context.id);
         this.type = this.context.data.type;
+        this.opts = this.context.opts;
+        this.attemptsMade = this.context.attemptsMade;
+        this.processedOn = this.context.processedOn;
+        this.finishedOn = this.context.finishedOn;
+        this.timestamp = this.context.timestamp;
+        this.stacktrace = this.context.stacktrace;
+        this.returnvalue = this.context.returnvalue;
+        this.failedReason = this.context.failedReason;
+
     }
 
     // abstract async cancel();

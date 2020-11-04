@@ -55,6 +55,20 @@ export class ActorService{
         return actors;
     }
 
+    public async jobs(actor_id,types:[], start?: number, end?: number, asc?: boolean){
+        let actor = this.actorManager.getById(actor_id);    
+        if(!actor){
+            throw new BusinessException(`actor_id ${actor_id} is not exists.`)
+        }
+        let jobs = await actor.coordinator.getJobs(types,start,end,asc)
+        let jobJsons=[];
+        for (const job of jobs) {
+            let jobJson = job.toJson();
+            jobJsons.push(jobJson)
+        }
+        return jobJsons;
+    }
+
 
 
 

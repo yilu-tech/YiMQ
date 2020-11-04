@@ -3,6 +3,7 @@ import { RedisOptions } from 'ioredis';
 import { Actor } from '../Actor';
 import {AppLogger} from '../../Handlers/AppLogger';
 import { RedisClient } from '../../Handlers/redis/RedisClient';
+import { Job } from '../Job/Job';
 export abstract class Coordinator{
     public clientRedisClient:RedisClient;
     public subscriberRedisClient:RedisClient;
@@ -97,5 +98,15 @@ export abstract class Coordinator{
 
     public async getJobConuts(){
         return this.queue.getJobCounts();
+    }
+
+    public async getJobs(types:[], start?: number, end?: number, asc?: boolean):Promise<Job[]>{
+        let  jobContexts = await this.queue.getJobs(types,start,end,asc);
+        let jobs = [];
+        for (const jobContext of jobContexts) {
+            let job = await this.actor.jobManager.restoreByContext(jobContext);
+            jobs.push(job);
+        }
+        return jobs;
     }
 }
