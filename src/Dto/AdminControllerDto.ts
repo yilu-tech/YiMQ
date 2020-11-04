@@ -40,3 +40,8 @@ export class ActorJobsDao{
     @IsDefined()
     asc:boolean;
 }
+
+export class ActorDao{
+    @IsDefined()
+    actor_id:number;
+}
