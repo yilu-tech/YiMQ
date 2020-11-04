@@ -68,6 +68,13 @@
             asc: 'false'
         }
 
+6. /admin/actor/status
+
+    query:
+
+        {
+            actor_id: 1
+        }
 
 
 ## boostrap流程
