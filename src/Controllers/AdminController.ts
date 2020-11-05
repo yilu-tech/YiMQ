@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Query, ParseIntPipe} from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, ParseIntPipe, ParseArrayPipe} from '@nestjs/common';
 import { MessageService } from '../Services/MessageService';
 import { MessagesDto, MessageDetailDto, MessageClearFailedRetry, ClearFailedRetry, ActorJobsDao ,ActorDao} from '../Dto/AdminControllerDto';
 import {ActorManager} from '../Core/ActorManager';
@@ -27,8 +27,11 @@ export class AdminController {
        return this.actorService.list();
     }
     @Get('actor/jobs')
-    public async actorJobs(@Query() query:ActorJobsDao){
-       return this.actorService.jobs(query.actor_id,query.types,query.start,query.end,query.asc);
+    public async actorJobs(
+        @Query() query:ActorJobsDao,
+        @Query('types', ParseArrayPipe) types: [],
+        ){
+       return this.actorService.jobs(query.actor_id,types,query.start,query.end,query.asc);
     }
     @Get('actor/status')
     public async actorStatus(@Query() query:ActorDao){

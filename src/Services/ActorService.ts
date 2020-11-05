@@ -71,8 +71,11 @@ export class ActorService{
         }
         let jobs = await actor.coordinator.getJobs(types,start,end,asc)
         let jobJsons=[];
-        for (const job of jobs) {
+        for (const job of jobs) {            
             let jobJson = job.toJson();
+            if(types.length > 1){
+                jobJson['status'] = await job.getStatus();   
+            }
             jobJsons.push(jobJson)
         }
         return jobJsons;

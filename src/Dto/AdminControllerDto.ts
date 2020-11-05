@@ -1,4 +1,6 @@
-import { IsDefined, IsInt,  } from "class-validator";
+import { IsDefined, Validate  } from "class-validator";
+import { JobStatus } from "../Constants/JobConstants";
+import { StringArrayIsIn } from "./CustromValidators";
 
 
 export class MessagesDto{
@@ -28,11 +30,14 @@ export class MessageClearFailedRetry{
     process_ids:[number]
 }
 
+
+
 export class ActorJobsDao{
     @IsDefined()
     actor_id:number;
     @IsDefined()
-    types:[];
+    @Validate(StringArrayIsIn,[JobStatus.ACTIVE,JobStatus.COMPLETED,JobStatus.DELAYED,JobStatus.FAILED,JobStatus.PAUSED,JobStatus.WAITING])
+    types:string[];
     @IsDefined()
     start:number;
     @IsDefined()
@@ -40,6 +45,7 @@ export class ActorJobsDao{
     @IsDefined()
     asc:boolean;
 }
+
 
 export class ActorDao{
     @IsDefined()

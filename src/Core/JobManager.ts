@@ -9,6 +9,7 @@ import * as bull from 'bull';
 import { TransactionMessage } from "./Messages/TransactionMessage";
 import { Subtask } from "./Subtask/BaseSubtask/Subtask";
 import { ActorClearJob } from "./Job/ActorClearJob";
+import { SystemException } from "../Exceptions/SystemException";
 export class JobManager{
     constructor(private actor:Actor){
     }
@@ -79,6 +80,9 @@ export class JobManager{
                 //由于subtask的job不一定和它的subjob在同一个actor，也就不一定在同一个redis，所以直接通过id无法查找
                 //拿到job的producer
                 let producer = this.actor.actorManager.getById(jobContext.data.producer_id);
+                if(!producer){
+                    throw new SystemException(`Job ${jobContext.id} of Actor ${this.actor.id} not found ${jobContext.data.producer_id} producer.`)
+                }
                 let subtask = await producer.subtaskManager.get(jobContext.data.subtask_id);
                 
                 //生成subtask实例

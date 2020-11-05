@@ -6,11 +6,14 @@ export enum JobType{
 }
 
 export enum JobStatus{
+    COMPLETED = 'completed',
+    WAITING = 'waiting',
     ACTIVE = 'active',
     DELAYED =  'delayed',
     FAILED = 'failed',
-    COMPLETED = 'completed',
-    STUCK = 'stuck'
+    PAUSED = 'paused',
+
+    // STUCK = 'stuck'
 }
 
 
