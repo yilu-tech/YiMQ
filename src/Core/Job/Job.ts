@@ -45,13 +45,13 @@ export abstract class Job{
     /**
      * The stacktrace for any errors
      */
-    @Expose()
+    @Expose({groups:['full']})
     stacktrace: string[];
 
-    @Expose()
+    @Expose({groups:['full']})
     returnvalue: any;
 
-    @Expose()
+    @Expose({groups:['full']})
     failedReason?: string;
 
     constructor(public readonly context:bull.Job){
@@ -91,9 +91,9 @@ export abstract class Job{
     /**
      * 整理数据
      */
-    public toJson(withDependence=false){
-        if(withDependence){
-            return classToPlain(this,{strategy:'excludeAll',groups:['withDependence']})
+    public toJson(full=false){
+        if(full){
+            return classToPlain(this,{strategy:'excludeAll',groups:['full']})
         }
         return classToPlain(this,{strategy:'excludeAll'})
     }

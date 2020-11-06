@@ -8,7 +8,7 @@ import { Expose } from "class-transformer";
 export class SubtaskJob extends Job{
     @Expose()
     public subtask_id:Number;
-    @Expose({groups:['withDependence']})
+    @Expose({groups:['full']})
     public subtask:Subtask;
     constructor(subtask:Subtask,public readonly context:bull.Job){
         super(context);

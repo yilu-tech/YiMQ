@@ -83,6 +83,17 @@ export class ActorService{
         return job.toJson(true);
     }
 
+    public async jobRetry(actor_id,job_ids){
+        let actor = this.actorManager.getById(actor_id);    
+        if(!actor){
+            throw new BusinessException(`actor_id ${actor_id} is not exists.`)
+        }
+
+        return await actor.coordinator.retry(job_ids);
+    }
+
+
+
 
 
 

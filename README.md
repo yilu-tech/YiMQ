@@ -92,6 +92,15 @@
         message_id: 38
     }
 
+9. /admin/actor/job/retry
+10. 
+
+    body
+    {
+        "actor_id":1,
+        "job_ids": [1] || "*"
+    }
+
 
 ## boostrap流程
 

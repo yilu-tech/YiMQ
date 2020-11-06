@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Get, Query, ParseIntPipe, ParseArrayPipe} from '@nestjs/common';
 import { MessageService } from '../Services/MessageService';
-import { MessagesDto, MessageDetailDto, MessageClearFailedRetry, ClearFailedRetry, ActorJobsDao ,ActorJobDto,ActorDao} from '../Dto/AdminControllerDto';
+import { MessagesDto, MessageDetailDto, MessageClearFailedRetry, ClearFailedRetry, ActorJobsDao ,ActorJobDto,ActorDao, ActorJobRetryDto} from '../Dto/AdminControllerDto';
 import {ActorManager} from '../Core/ActorManager';
 import { Application } from '../Application';
 import { BusinessException } from '../Exceptions/BusinessException';
@@ -32,6 +32,14 @@ export class AdminController {
         ){
        return this.actorService.job(query.actor_id,query.job_id);
     }
+
+    @Post('actor/job/retry')
+    public async actorJobRetry(
+        @Body() body:ActorJobRetryDto,
+        ){
+       return this.actorService.jobRetry(body.actor_id,body.job_ids);
+    }
+
     @Get('actor/jobs')
     public async actorJobs(
         @Query() query:ActorJobsDao,

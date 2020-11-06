@@ -54,6 +54,14 @@ export class ActorJobDto{
     job_id:number;
 }
 
+export class ActorJobRetryDto{
+    @IsDefined()
+    actor_id:number;
+    @IsDefined()
+    job_ids:string|number[];
+}
+
+
 
 export class ActorDao{
     @IsDefined()

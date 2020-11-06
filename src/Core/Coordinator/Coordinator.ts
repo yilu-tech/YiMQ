@@ -4,13 +4,17 @@ import { Actor } from '../Actor';
 import {AppLogger} from '../../Handlers/AppLogger';
 import { RedisClient } from '../../Handlers/redis/RedisClient';
 import { Job } from '../Job/Job';
+import { BusinessException } from '../../Exceptions/BusinessException';
+import { clamp } from 'lodash';
 export abstract class Coordinator{
     public clientRedisClient:RedisClient;
     public subscriberRedisClient:RedisClient;
     public bclientRedisClient:RedisClient;
+    private retry_local_key:string;
     
     protected queue:bull.Queue;
     constructor(public actor:Actor){
+        this.retry_local_key = `actor:${this.actor.id}:retry:lock`;
     }
 
     public async initQueue(){
@@ -30,6 +34,9 @@ export abstract class Coordinator{
                     default:
                         break;
                 }
+            },
+            defaultJobOptions:{
+                stackTraceLimit:3
             }
         };
         let defaultLimiter:bull.RateLimiter =  {
@@ -108,5 +115,35 @@ export abstract class Coordinator{
             jobs.push(job);
         }
         return jobs;
+    }
+
+    public async retry(job_ids:number[]|string){
+        let jobs:bull.Job[] = [];
+        if(job_ids == '*'){
+            let failedCount = await this.queue.getFailedCount();
+            let lockTime = clamp(failedCount * 0.05,10,60)
+            let getLock = await this.actor.redisClient.set(this.retry_local_key,1,"EX",lockTime,'NX')
+            if(!getLock){
+                let lockWatingTime = await this.actor.redisClient.ttl(this.retry_local_key);
+                throw new BusinessException(`Please try again in ${lockWatingTime} seconds.`);
+            }
+            
+            jobs = await this.queue.getFailed(0,5000)
+        }else{
+            for (const job_id of job_ids) {
+                let job = await this.queue.getJob(job_id);
+                if(!job){
+                    throw new BusinessException(`Job ${job_id} of actor ${this.actor.id} not exists.`);
+                }
+                jobs.push(job)
+            }
+        }
+
+        for (const job of jobs) {
+            await job.retry()
+        }
+        return {
+            total: jobs.length
+        }
     }
 }

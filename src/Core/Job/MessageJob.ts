@@ -8,7 +8,7 @@ import { Expose } from "class-transformer";
 export class MessageJob extends Job{
     @Expose()
     public message_id:number | string;
-    @Expose({groups:['withDependence']})
+    @Expose({groups:['full']})
     public message:TransactionMessage;//TransactionMessage ---> Message
     constructor(message:TransactionMessage,public readonly context:bull.Job){
         super(context)
