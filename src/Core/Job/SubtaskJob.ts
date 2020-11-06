@@ -4,8 +4,11 @@ import { Subtask } from "../Subtask/BaseSubtask/Subtask";
 import * as bull from 'bull';
 import { SubtaskStatus } from "../../Constants/SubtaskConstants";
 import { SystemException } from "../../Exceptions/SystemException";
+import { Expose } from "class-transformer";
 export class SubtaskJob extends Job{
+    @Expose()
     public subtask_id:Number;
+    @Expose({groups:['withDependence']})
     public subtask:Subtask;
     constructor(subtask:Subtask,public readonly context:bull.Job){
         super(context);
@@ -34,9 +37,9 @@ export class SubtaskJob extends Job{
         return result;
     }
 
-    public toJson(full=false){
-        let json = super.toJson(full);
-        delete json['subtask'];
-        return json;
-    }
+    // public toJson(){
+    //     let json = super.toJson();
+    //     delete json['subtask'];
+    //     return json;
+    // }
 }

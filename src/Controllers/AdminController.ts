@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Get, Query, ParseIntPipe, ParseArrayPipe} from '@nestjs/common';
 import { MessageService } from '../Services/MessageService';
-import { MessagesDto, MessageDetailDto, MessageClearFailedRetry, ClearFailedRetry, ActorJobsDao ,ActorDao} from '../Dto/AdminControllerDto';
+import { MessagesDto, MessageDetailDto, MessageClearFailedRetry, ClearFailedRetry, ActorJobsDao ,ActorJobDto,ActorDao} from '../Dto/AdminControllerDto';
 import {ActorManager} from '../Core/ActorManager';
 import { Application } from '../Application';
 import { BusinessException } from '../Exceptions/BusinessException';
@@ -19,12 +19,18 @@ export class AdminController {
         return this.messageService.list(actor_id,query);
     }
     @Get('message')
-    public async message(@Query('actor_id',new ParseIntPipe()) actor_id,@Query() query:MessageDetailDto){
-        return (await this.messageService.get(actor_id,query.message_id)).toJson(true);
+    public async message(@Query() query:MessageDetailDto){
+        return (await this.messageService.get(query.actor_id,query.message_id));
     }
     @Get('actors')
     public async actors(){
        return this.actorService.list();
+    }
+    @Get('actor/job')
+    public async actorJob(
+        @Query() query:ActorJobDto,
+        ){
+       return this.actorService.job(query.actor_id,query.job_id);
     }
     @Get('actor/jobs')
     public async actorJobs(

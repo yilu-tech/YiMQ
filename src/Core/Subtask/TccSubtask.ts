@@ -93,4 +93,10 @@ export class TccSubtask extends ConsumerSubtask{
     }
 
 
+    public toJson(){
+        let json:any = super.toJson();
+        json['prepareResult'] = this.prepareResult;
+        return json;
+    }
+
 }

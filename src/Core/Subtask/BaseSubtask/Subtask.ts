@@ -3,16 +3,32 @@ import { SubtaskModelClass } from "../../../Models/SubtaskModel";
 import { Job } from "../../Job/Job";
 import { TransactionMessage } from "../../Messages/TransactionMessage";
 import { MessageStatus } from "../../../Constants/MessageConstants";
+import { classToPlain, Expose, Transform } from "class-transformer";
+import { format } from "date-fns";
 export abstract class Subtask{
+    @Expose()
     id:Number;
+    @Expose()
     job_id:number;
+    @Expose()
     type:SubtaskType;
+    @Expose()
     status: SubtaskStatus;
-    data:any;
+
+    data:string|object;
+    @Expose()
     options:SubtaskOptions;
+
+    @Expose()
+    @Transform(value => format(Number(value),'yyyy-MM-dd HH:mm:ss'))
     created_at:Number;
+
+    @Expose()
+    @Transform(value => format(Number(value),'yyyy-MM-dd HH:mm:ss'))
     updated_at:Number;
+    @Expose()
     processor:string;
+    @Expose()
     message_id:string;
 
 
@@ -20,6 +36,7 @@ export abstract class Subtask{
 
     message:TransactionMessage;
     model:SubtaskModelClass
+    @Expose()
     job:Job;
     constructor(message:TransactionMessage){
         
@@ -58,7 +75,7 @@ export abstract class Subtask{
         await subtaskModel.save() 
         await this.initProperties(subtaskModel)
     }
-    async restore(subtaskModel){
+    async restore(subtaskModel,full=false){
         await this.initProperties(subtaskModel);
     };
     abstract async prepare();
@@ -122,11 +139,9 @@ export abstract class Subtask{
      * 整理数据
      */
     public toJson(){
-        let json:object = Object.assign({},this);
-        delete json['message'];
-        delete json['consumer'];
-        delete json['consumerprocessorName'];
-        delete json['model'];
+
+        let json:object = classToPlain(this,{strategy:'excludeAll'});
+        json['data'] = this.data;
         return json;
     }
     

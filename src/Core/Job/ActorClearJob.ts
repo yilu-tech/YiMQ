@@ -16,10 +16,10 @@ export class ActorClearJob extends Job{
         return result;
     }
 
-    public toJson(full=false){
-        let json = super.toJson(full);
-        delete json['actor'];
-        return json;
-    }
+    // public toJson(){
+    //     let json = super.toJson();
+    //     delete json['actor'];
+    //     return json;
+    // }
     
 }

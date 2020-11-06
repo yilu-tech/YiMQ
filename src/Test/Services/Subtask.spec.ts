@@ -592,7 +592,7 @@ describe('Subtask', () => {
 
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 updatedMessage = await producer.messageManager.get(message.id);
-                await updatedMessage.loadSubtasks();
+                await updatedMessage.loadSubtasks(true);
                 if(message.job.id == job.id){
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
                     //检查EcSubtask

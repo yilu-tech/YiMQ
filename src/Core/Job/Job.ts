@@ -1,34 +1,57 @@
 import * as bull from 'bull';
-import { JobType } from '../../Constants/JobConstants';
+import { classToPlain, Expose, Transform, Type } from 'class-transformer';
+import { format } from 'date-fns';
+import { JobStatus, JobType } from '../../Constants/JobConstants';
 export abstract class Job{
+    @Expose()
     public id:number;
-    public type:JobType;
-    
 
+    @Expose()
+    public type:JobType;
+
+    @Expose()
+    public status:JobStatus
+    
+    @Expose()
     opts: bull.JobOptions;
 
     /**
      * How many attempts where made to run this job
      */
+    @Expose()
     attemptsMade: number;
 
     /**
      * When this job was started (unix milliseconds)
      */
-    processedOn?: number;
+    @Expose()
+    @Transform(value => {
+        return value ? format(value,'yyyy-MM-dd HH:mm:ss') : null;
+    })
+    processed_at?: number;
 
     /**
      * When this job was completed (unix milliseconds)
      */
-    finishedOn?: number;
-    timestamp: number;
+    @Expose()
+    @Transform(value => {
+        return value ? format(value,'yyyy-MM-dd HH:mm:ss') : null;
+    })
+    finished_at?: number;
+
+    @Expose()
+    @Transform(value => format(value,'yyyy-MM-dd HH:mm:ss'))
+    created_at: number;
     /**
      * The stacktrace for any errors
      */
+    @Expose()
     stacktrace: string[];
 
+    @Expose()
     returnvalue: any;
 
+    @Expose()
     failedReason?: string;
 
     constructor(public readonly context:bull.Job){
@@ -36,13 +59,18 @@ export abstract class Job{
         this.type = this.context.data.type;
         this.opts = this.context.opts;
         this.attemptsMade = this.context.attemptsMade;
-        this.processedOn = this.context.processedOn;
-        this.finishedOn = this.context.finishedOn;
-        this.timestamp = this.context.timestamp;
+        this.processed_at = this.context.processedOn;
+        this.finished_at = this.context.finishedOn;
+        this.created_at = this.context.timestamp;
         this.stacktrace = this.context.stacktrace;
         this.returnvalue = this.context.returnvalue;
         this.failedReason = this.context.failedReason;
 
+    }
+    public async restore(full=false){
+        if(full){
+            this.status = await this.getStatus();
+        }
     }
 
     // abstract async cancel();
@@ -56,32 +84,18 @@ export abstract class Job{
         return await this.context.remove();
     }
 
-    public async getStatus(){
-        return await this.context.getState();
+    public async getStatus():Promise<JobStatus>{
+        let status:any =  await this.context.getState();
+        return status;
     }
     /**
      * 整理数据
      */
-    public toJson(full=false){
-        let json:object = Object.assign({},this);
-        delete json['context'];
-        delete json['message'];
-        if(full){
-            json['context'] = this.getContextJson();
+    public toJson(withDependence=false){
+        if(withDependence){
+            return classToPlain(this,{strategy:'excludeAll',groups:['withDependence']})
         }
-
-        return json;
-    }
-    
-
-    public getContextJson(){
-        let context = this.context.toJSON();
-        try{
-            context['failedReason'] = JSON.parse(context['failedReason'])
-        }catch(e){
-            context['failedReason'] = context['failedReason'];
-        }
-        return context;
+        return classToPlain(this,{strategy:'excludeAll'})
     }
 
     // public async retry():Promise<void>{

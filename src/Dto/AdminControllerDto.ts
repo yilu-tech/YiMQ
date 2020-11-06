@@ -47,6 +47,14 @@ export class ActorJobsDao{
 }
 
 
+export class ActorJobDto{
+    @IsDefined()
+    actor_id:number;
+    @IsDefined()
+    job_id:number;
+}
+
+
 export class ActorDao{
     @IsDefined()
     actor_id:number;

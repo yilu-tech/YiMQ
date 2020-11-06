@@ -8,6 +8,7 @@ import { SubtaskType } from "../Constants/SubtaskConstants";
 import { SystemException } from "../Exceptions/SystemException";
 import { MessagesDto } from "../Dto/AdminControllerDto";
 import e = require("express");
+import { TransactionMessage } from "../Core/Messages/TransactionMessage";
 @Injectable()
 export class MessageService {
     constructor(private actorManger:ActorManager){
@@ -56,7 +57,8 @@ export class MessageService {
         if(!producer){
             throw new SystemException(`Actor <${actor_id}> not exists.`)
         }
-        return producer.messageManager.get(message_id);
+        let message:TransactionMessage = await producer.messageManager.get(message_id,true);
+        return message.toJson();
     }
 
     async list(actor_id:number,query:MessagesDto):Promise<any>{

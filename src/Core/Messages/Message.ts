@@ -5,6 +5,8 @@ import { JobType } from "../../Constants/JobConstants";
 import { MessageModelClass } from "../../Models/MessageModel";
 import * as bull from 'bull';
 import { Subtask } from "../Subtask/BaseSubtask/Subtask";
+import { classToPlain, Expose, Transform } from "class-transformer";
+import { format } from "date-fns";
 
 export interface SubtaskContext{
     consumer_id:number
@@ -13,22 +15,52 @@ export interface SubtaskContext{
 }
 
 export abstract class Message{
+    @Expose()
     id:string;
+
+    @Expose()
     actor_id:number;
+
+    @Expose()
     topic: string;
+
+    @Expose()
     full_topic:string;
+
+    @Expose()
     status: MessageStatus;
+
+    @Expose()
     data:any;
+
+    @Expose()
     job_id: number;
+
+    @Expose()
+    @Transform(value => format(Number(value),'yyyy-MM-dd HH:mm:ss'))
     updated_at: Number;
+
+    @Expose()
+    @Transform(value => format(Number(value),'yyyy-MM-dd HH:mm:ss'))
     created_at: Number;
+
+    @Expose()
     public type: MessageType; //普通消息，事物消息
+
     public producer:Actor;
+    
+    @Expose()
     public job:Job;
     public model:MessageModelClass
     public subtask_contexts:Array<SubtaskContext>;
+
+    @Expose()
     public subtasks:Array<Subtask> = [];  //事物的子项目
+
+    @Expose()
     public pending_subtask_total:number;
+
+    @Expose()
     public clear_status:string;
 
     constructor(producer:Actor){
@@ -88,12 +120,14 @@ export abstract class Message{
 
  
 
-    async restore(messageModel){
+    async restore(messageModel,full=false){
         this.model = messageModel;
         await this.initProperties();
     };
 
-    public abstract async loadSubtasks();
+    public  async loadSubtasks(full=false){
+        return this;
+    };
 
     abstract async toDoing():Promise<Message>;
 
@@ -135,12 +169,12 @@ export abstract class Message{
      /**
      * 整理数据
      */
-    public toJson(full=false){
-        let json:object = Object.assign({},this);
-        delete json['actorManger'];
-        delete json['model'];
-        json['producer'] = this.producer.name;
-        json['job'] = this.job.toJson(full);
+    public toJson(){
+        let json:object  = classToPlain(this,{strategy:'excludeAll'});
+        json['producer'] = {
+            id: this.producer.id,
+            name: this.producer.name
+        }
         return json;
     }
 }

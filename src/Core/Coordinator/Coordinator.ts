@@ -100,11 +100,11 @@ export abstract class Coordinator{
         return this.queue.getJobCounts();
     }
 
-    public async getJobs(types:[], start?: number, end?: number, asc?: boolean):Promise<Job[]>{
+    public async getJobs(types:[], start?: number, end?: number, asc?: boolean,full=false):Promise<Job[]>{
         let  jobContexts = await this.queue.getJobs(types,start,end,asc);
         let jobs = [];
         for (const jobContext of jobContexts) {
-            let job = await this.actor.jobManager.restoreByContext(jobContext);
+            let job = await this.actor.jobManager.restoreByContext(jobContext,full);
             jobs.push(job);
         }
         return jobs;

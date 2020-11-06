@@ -20,9 +20,12 @@ import { SystemException } from "../Exceptions/SystemException";
 import { ActorOptions } from "../Config/ActorConfig";
 import { ActorCleaner } from "./ActorCleaner";
 import { AppLogger } from "../Handlers/AppLogger";
+import { Expose } from "class-transformer";
 
 export class Actor{
+    @Expose()
     public id:number;
+    @Expose()
     public name:string;
     public key:string;
     public api:string;

@@ -76,6 +76,22 @@
             actor_id: 1
         }
 
+7. /admin/actor/job
+
+    query
+    {
+        actor_id: 1,
+        job_id: 38
+    }
+
+8. /admin/message
+
+    query
+    {
+        actor_id: 1,
+        message_id: 38
+    }
+
 
 ## boostrap流程
 

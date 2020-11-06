@@ -53,7 +53,7 @@ export class TransactionMessage extends Message{
 
     async cancel():Promise<MessageControlResult>{
         let result:MessageControlResult=<MessageControlResult>{};
-
+        await this.loadJob();
         if([MessageStatus.CANCELED,MessageStatus.CANCELLING].includes(this.status)){
             result.message = `Message already ${this.status}.`;
         }else if([MessageStatus.DOING,MessageStatus.DONE].includes(this.status)){
@@ -72,7 +72,7 @@ export class TransactionMessage extends Message{
 
     async confirm():Promise<MessageControlResult>{
         let result:MessageControlResult=<MessageControlResult>{};
-
+        await this.loadJob();
         if([MessageStatus.DOING,MessageStatus.DONE].includes(this.status)){
             result.message = `Message already ${this.status}.`;
         }else if([MessageStatus.DOING,MessageStatus.DONE].includes(this.status)){
@@ -107,20 +107,29 @@ export class TransactionMessage extends Message{
     /**
      * 用于MessageManager get的时候重建信息
      */
-    async restore(messageModel){
-        await super.restore(messageModel);
-        let jobContext = await this.producer.coordinator.getJob(this.job_id);
-        this.job = new MessageJob(this,jobContext);
+    async restore(messageModel,full=false){
+        await super.restore(messageModel,full);
+        if(full){
+            await this.loadJob(full);
+            await this.loadSubtasks(full);
+        }
     }
 
-    public async loadSubtasks(){
+    public async loadJob(full=false){
+        //this.job = await this.producer.jobManager.get(this.job_id,true); 不用这句的原因是，get会再去查一次this
+        let jobContext = await this.producer.coordinator.getJob(this.job_id);
+        this.job = new MessageJob(this,jobContext);
+        await this.job.restore(full);
+    }
+
+    public async loadSubtasks(full=false){
         let subtaskIds = await this.model.getAll(SubtaskModelClass.modelName)
         let subtaskModels = await this.producer.subtaskModel.loadMany(subtaskIds)
         let subtasks:Array<Subtask> = [];
         for(var i in subtaskModels){
             let subtaskModel = subtaskModels[i];
             let subtask:Subtask = this.producer.subtaskManager.factory(this,subtaskModel.property('type'));//TODO use sutaskmanager methdo
-            await subtask.restore(subtaskModel)
+            await subtask.restore(subtaskModel,full)
             subtasks.push(subtask);
         }
         this.subtasks = subtasks;
@@ -159,16 +168,16 @@ export class TransactionMessage extends Message{
         return Number(await this.producer.redisClient.hget(this.getMessageHash(),'pending_subtask_total'));
     }
 
-    private subtasksToJson(){
-        let subtasks = {};
-        this.subtasks.forEach((subtask,index)=>{
-            subtasks[`${index}`] = subtask.toJson();
-        })
-        return subtasks;
-    }
-    toJson(full=false){
-        let json = super.toJson(full);
-        json['subtasks'] = this.subtasksToJson();
-        return json;
-    }
+    // private subtasksToJson(){
+    //     let subtasks = {};
+    //     this.subtasks.forEach((subtask,index)=>{
+    //         subtasks[`${index}`] = subtask.toJson();
+    //     })
+    //     return subtasks;
+    // }
+    // toJson(){
+    //     let json = super.toJson();
+    //     json['subtasks'] = this.subtasksToJson();
+    //     return json;
+    // }
 }
