@@ -103,6 +103,9 @@ export class JobManager{
             return null;
         }
         let jobContext = await this.actor.coordinator.getJob(id);
+        if(!jobContext){
+            return null;
+        }
         return this.restoreByContext(jobContext,full);
     }
 }

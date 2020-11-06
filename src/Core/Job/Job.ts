@@ -12,7 +12,6 @@ export abstract class Job{
     @Expose()
     public status:JobStatus
     
-    @Expose()
     opts: bull.JobOptions;
 
     /**
@@ -92,10 +91,16 @@ export abstract class Job{
      * 整理数据
      */
     public toJson(full=false){
+        let json:any;
         if(full){
-            return classToPlain(this,{strategy:'excludeAll',groups:['full']})
+            json =  classToPlain(this,{strategy:'excludeAll',groups:['full']})
+            json['opts'] = this.opts;
+        }else{
+            json = classToPlain(this,{strategy:'excludeAll'})
         }
-        return classToPlain(this,{strategy:'excludeAll'})
+
+        return json;
+        
     }
 
     // public async retry():Promise<void>{

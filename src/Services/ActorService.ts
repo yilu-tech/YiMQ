@@ -80,6 +80,9 @@ export class ActorService{
             throw new BusinessException(`actor_id ${actor_id} is not exists.`)
         }
         let job = await actor.jobManager.get(job_id,true);
+        if(!job){
+            throw new BusinessException(`job ${job_id} of actor ${actor_id} is not exists.`)
+        }
         return job.toJson(true);
     }
 

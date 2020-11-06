@@ -19,7 +19,8 @@ async function bootstrap() {
     AppModule,
     new FastifyAdapter({ logger: false }));
     app.enableShutdownHooks();
-
+  
+    app.enableCors();
   app.useGlobalPipes(new ValidationPipe({
     transform:true,
     exceptionFactory:(errors)=>{
