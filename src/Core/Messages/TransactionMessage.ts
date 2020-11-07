@@ -112,6 +112,7 @@ export class TransactionMessage extends Message{
         let jobContext = await this.producer.coordinator.getJob(this.job_id);
         this.job = new MessageJob(this,jobContext);
         await this.job.restore();
+        return this;
     }
 
     public async loadSubtasks(full=false){

@@ -13,7 +13,7 @@ import { services } from '../app.module';
 import { Application } from '../Application';
 import { MessageStatus, MessageType, MessageClearStatus } from '../Constants/MessageConstants';
 import { EcSubtask } from '../Core/Subtask/EcSubtask';
-import { SubtaskType } from '../Constants/SubtaskConstants';
+import { SubtaskStatus, SubtaskType } from '../Constants/SubtaskConstants';
 import { TccSubtask } from '../Core/Subtask/TccSubtask';
 import { TransactionMessage } from '../Core/Messages/TransactionMessage';
 import { Message } from '../Core/Messages/Message';
@@ -174,7 +174,16 @@ describe('ActorClearTest', () => {
                 let message:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
                     delay:10,
                 });
-                await message.setStatus(MessageStatus.DONE).save();
+                // await message.setStatus(MessageStatus.DONE).save();
+                let subtask:EcSubtask =  await message.addSubtask(SubtaskType.EC,{
+                    processor:userActor.name,
+                    data:{
+                        'name':1
+                    }
+                }) 
+                await message.confirm();
+                await message.toDoing();//创建subtask的job
+                await subtask.completeAndSetMeesageStatus(SubtaskStatus.DONE,MessageStatus.DONE)
             }
 
             //验证待删除message数量
@@ -187,6 +196,10 @@ describe('ActorClearTest', () => {
             
             let canCleardMessageIds =  await userActor.actorCleaner.clearLocalMessage(userDoneMessageIds,failedCleardMessageIds);
             expect(canCleardMessageIdsForVerify).toEqual(canCleardMessageIdsForVerify);
+            let total = await userActor.coordinator.getJobConuts();
+            console.log(total);
+            //剩下的job数量应该等于 failedCleardMessageIds + failedCleardMessageIds对应的ecsubtak的job数量
+            expect(total.waiting).toBe(failedCleardMessageIds.length * 2)
         })
 
         it('saveSubtaskIdsToConsumer',async()=>{

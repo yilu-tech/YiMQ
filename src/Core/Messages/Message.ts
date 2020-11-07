@@ -129,9 +129,13 @@ export abstract class Message{
         this.subtasks_total = await this.model.numLinks('subtask');
     }
 
-    public  async loadSubtasks(){
+    public  async loadSubtasks(full=false){
         return this;
     };
+
+    public async loadJob(){
+        return this;
+    }
 
     abstract async toDoing():Promise<Message>;
 
@@ -162,10 +166,11 @@ export abstract class Message{
     }
 
     public async delete() {
-        await this.loadSubtasks();
+        await this.loadSubtasks(true);
         for (const subtask of this.subtasks) {
             await subtask.delete();
         }
+        await this.loadJob()
         this.job && await this.job.remove();   
         await this.model.remove();
     }
