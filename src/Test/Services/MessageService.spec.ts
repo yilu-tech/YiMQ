@@ -103,6 +103,28 @@ describe('MessageService', () => {
             expect(updatedMessage.status).toBe(MessageStatus.DOING);
         });
 
+        it('.cancel after confirm',async (done) => {
+            let userActor = actorManager.get('user');
+            let message:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'test',{},{delay:5000});
+            userActor.coordinator.getQueue().on('completed',async (job)=>{
+                if(message.job.id == job.id){
+                    //process后
+                    let updatedMessage:TransactionMessage = await userActor.messageManager.get(message.id);
+                    await expect(updatedMessage.confirm()).rejects.toThrow(`The status of this message is ${MessageStatus.CANCELED}.`)
+                    done()
+                }
+            })
+            
+            
+            await message.cancel();
+            expect(await message.getStatus()).toBe(MessageStatus.CANCELLING)
+            
+            //未process前    (需要重新查询一次message，否则状态未更新)
+            let updatedMessage:TransactionMessage = await userActor.messageManager.get(message.id);
+            await expect(updatedMessage.confirm()).rejects.toThrow(`The status of this message is ${MessageStatus.CANCELLING}.`)
+            await userActor.process();
+        })
+
         it('.remote status pending after done', async (done) => {
             process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
             message = await messageService.create(producerName,messageType,topic,{},{
@@ -222,6 +244,28 @@ describe('MessageService', () => {
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
             expect(updatedMessage.status).toBe(MessageStatus.CANCELLING);
         });
+
+        it('.confirm after cancel',async (done) => {
+            let userActor = actorManager.get('user');
+            let message:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'test',{},{delay:5000});
+            userActor.coordinator.getQueue().on('completed',async (job)=>{
+                if(message.job.id == job.id){
+                    //process后
+                    let updatedMessage:TransactionMessage = await userActor.messageManager.get(message.id);
+                    await expect(updatedMessage.cancel()).rejects.toThrow(`The status of this message is ${MessageStatus.DONE}.`)
+                    done()
+                }
+            })
+            
+            
+            await message.confirm();
+            expect(await message.getStatus()).toBe(MessageStatus.DOING)
+            
+            //未process前    (需要重新查询一次message，否则状态未更新)
+            let updatedMessage:TransactionMessage = await userActor.messageManager.get(message.id);
+            await expect(updatedMessage.cancel()).rejects.toThrow(`The status of this message is ${MessageStatus.DOING}.`)
+            await userActor.process();
+        })
 
         it('.timeout check cancel', async (done) => {
             process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';

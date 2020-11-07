@@ -54,13 +54,12 @@ export class TransactionMessage extends Message{
     async cancel():Promise<MessageControlResult>{
         let result:MessageControlResult=<MessageControlResult>{};
         await this.loadJob();
-        if([MessageStatus.CANCELED,MessageStatus.CANCELLING].includes(this.status)){
-            result.message = `Message already ${this.status}.`;
-        }else if([MessageStatus.DOING,MessageStatus.DONE].includes(this.status)){
+        if([MessageStatus.DOING,MessageStatus.DONE].includes(this.status)){
             throw new BusinessException(`The status of this message is ${this.status}.`);
-        }
-        else if(await this.job.getStatus() != JobStatus.DELAYED ){
-            result.message = `Message job timeout check ${await this.job.getStatus()}.`;
+        }else if([MessageStatus.CANCELED,MessageStatus.CANCELLING].includes(this.status)){
+            result.message = `Message already ${this.status}.`;
+        }else if(await this.job.getStatus() != JobStatus.DELAYED ){
+            result.message = `Message job status is ${await this.job.getStatus()} for timeout check.`;
         }else{
             await this.setStatus(MessageStatus.CANCELLING).save();
             await this.job.context.promote();//立即执行job
@@ -73,12 +72,14 @@ export class TransactionMessage extends Message{
     async confirm():Promise<MessageControlResult>{
         let result:MessageControlResult=<MessageControlResult>{};
         await this.loadJob();
-        if([MessageStatus.DOING,MessageStatus.DONE].includes(this.status)){
-            result.message = `Message already ${this.status}.`;
-        }else if([MessageStatus.DOING,MessageStatus.DONE].includes(this.status)){
+
+        if([MessageStatus.CANCELLING,MessageStatus.CANCELED].includes(this.status)){
             throw new BusinessException(`The status of this message is ${this.status}.`);
+        }
+        else if([MessageStatus.DOING,MessageStatus.DONE].includes(this.status)){
+            result.message = `Message already ${this.status}.`;
         }else if(await this.job.getStatus() != JobStatus.DELAYED ){
-            result.message = `Message job timeout check ${await this.job.getStatus()}.`;
+            result.message = `Message job status is ${await this.job.getStatus()} for timeout check.`;
         }else{
             await this.setStatus(MessageStatus.DOING).save();
             await this.job.context.promote();//立即执行job
