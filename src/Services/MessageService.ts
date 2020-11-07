@@ -9,6 +9,7 @@ import { SystemException } from "../Exceptions/SystemException";
 import { MessagesDto } from "../Dto/AdminControllerDto";
 import e = require("express");
 import { TransactionMessage } from "../Core/Messages/TransactionMessage";
+import { BeforeToJsonSwitch } from "../Constants/ToJsonConstants";
 @Injectable()
 export class MessageService {
     constructor(private actorManger:ActorManager){
@@ -57,8 +58,14 @@ export class MessageService {
         if(!producer){
             throw new SystemException(`Actor <${actor_id}> not exists.`)
         }
-        let message:TransactionMessage = await producer.messageManager.get(message_id,true);
-        return message.toJson();
+        let message:TransactionMessage = await producer.messageManager.get(message_id);
+        return await message.toJson({
+            switchs: [
+                BeforeToJsonSwitch.MESSAGE_SUBTASKS_TOTAL,
+                BeforeToJsonSwitch.MESSAGE_SUBTASKS
+            ],
+            groups:[]
+        });
     }
 
     async list(actor_id:number,query:MessagesDto):Promise<any>{

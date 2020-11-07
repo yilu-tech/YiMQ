@@ -7,6 +7,7 @@ import * as bull from 'bull';
 import { Subtask } from "../Subtask/BaseSubtask/Subtask";
 import { classToPlain, Expose, Transform } from "class-transformer";
 import { format } from "date-fns";
+import { BeforeToJsonSwitch, ExposeGroups, ToJsonOptions } from "../../Constants/ToJsonConstants";
 
 export interface SubtaskContext{
     consumer_id:number
@@ -46,7 +47,7 @@ export abstract class Message{
 
     @Expose()
     public type: MessageType; //普通消息，事物消息
-
+    @Expose()
     public producer:Actor;
     
     @Expose()
@@ -56,7 +57,8 @@ export abstract class Message{
 
     @Expose()
     public subtasks:Array<Subtask> = [];  //事物的子项目
-
+    @Expose()
+    public subtasks_total:number;
     @Expose()
     public pending_subtask_total:number;
 
@@ -118,14 +120,16 @@ export abstract class Message{
 
     }
 
- 
-
-    async restore(messageModel,full=false){
+    async restore(messageModel){
         this.model = messageModel;
         await this.initProperties();
     };
 
-    public  async loadSubtasks(full=false){
+    public async loadSubtasksTotal(){
+        this.subtasks_total = await this.model.numLinks('subtask');
+    }
+
+    public  async loadSubtasks(){
         return this;
     };
 
@@ -166,15 +170,22 @@ export abstract class Message{
         await this.model.remove();
     }
 
+    public async beforeToJson(switchs:BeforeToJsonSwitch[]=[]){
+        if(switchs.includes(BeforeToJsonSwitch.MESSAGE_SUBTASKS_TOTAL)){
+            await this.loadSubtasksTotal();
+        }
+        if(switchs.includes(BeforeToJsonSwitch.MESSAGE_SUBTASKS)){
+            await this.loadSubtasks();
+        }
+    }
+
      /**
      * 整理数据
      */
-    public toJson(){
-        let json:object  = classToPlain(this,{strategy:'excludeAll'});
-        json['producer'] = {
-            id: this.producer.id,
-            name: this.producer.name
-        }
+    public async toJson(options:ToJsonOptions = new ToJsonOptions()){
+        await this.beforeToJson(options.switchs);
+        let json:any;
+        json = classToPlain(this,{strategy:'excludeAll',groups:options.groups})
         return json;
     }
 }

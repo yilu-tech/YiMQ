@@ -20,12 +20,13 @@ import { SystemException } from "../Exceptions/SystemException";
 import { ActorOptions } from "../Config/ActorConfig";
 import { ActorCleaner } from "./ActorCleaner";
 import { AppLogger } from "../Handlers/AppLogger";
-import { Expose } from "class-transformer";
+import { classToPlain, Expose } from "class-transformer";
+import { BeforeToJsonSwitch, ExposeGroups } from "../Constants/ToJsonConstants";
 
 export class Actor{
-    @Expose()
+    @Expose({groups:[ExposeGroups.ACTOR_BASIC]})
     public id:number;
-    @Expose()
+    @Expose({groups:[ExposeGroups.ACTOR_BASIC]})
     public name:string;
     public key:string;
     public api:string;
@@ -137,17 +138,10 @@ export class Actor{
     /**
      * 整理数据
      */
-    public toJson(full=false){
-        return {
-            id: this.id,
-            name: this.name,
-            key: this.key,
-            api: this.api,
-            options: this.options,
-            redis: this.redis,
-            protocol: this.protocol,
-            status: this.status
-        }
+    public async toJson(switchs:BeforeToJsonSwitch[]=[],groups:ExposeGroups[]=[]){
+        let json:any;
+        json = classToPlain(this,{strategy:'excludeAll',groups:groups})
+        return json;
     }
 
 }

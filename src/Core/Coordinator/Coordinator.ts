@@ -1,5 +1,4 @@
 import * as bull from 'bull';
-import { RedisOptions } from 'ioredis';
 import { Actor } from '../Actor';
 import {AppLogger} from '../../Handlers/AppLogger';
 import { RedisClient } from '../../Handlers/redis/RedisClient';
@@ -107,11 +106,11 @@ export abstract class Coordinator{
         return this.queue.getJobCounts();
     }
 
-    public async getJobs(types:[], start?: number, end?: number, asc?: boolean,full=false):Promise<Job[]>{
+    public async getJobs(types:[], start?: number, end?: number, asc?: boolean):Promise<Job[]>{
         let  jobContexts = await this.queue.getJobs(types,start,end,asc);
         let jobs = [];
         for (const jobContext of jobContexts) {
-            let job = await this.actor.jobManager.restoreByContext(jobContext,full);
+            let job = await this.actor.jobManager.restoreByContext(jobContext);
             jobs.push(job);
         }
         return jobs;

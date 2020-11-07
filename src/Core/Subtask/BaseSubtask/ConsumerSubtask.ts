@@ -8,11 +8,12 @@ import { JobType } from "../../../Constants/JobConstants";
 import { Expose } from "class-transformer";
 
 export abstract class ConsumerSubtask extends Subtask{
+    @Expose()
     public consumer:Actor;
     @Expose()
     consumer_id:number;
-    @Expose()
-    consumerprocessorName:string;
+    // @Expose()
+    // consumerprocessorName:string;
 
     constructor(message:TransactionMessage){
         super(message);
@@ -36,12 +37,16 @@ export abstract class ConsumerSubtask extends Subtask{
     public async restore(subtaskModel,full=false){
         await super.restore(subtaskModel);
         if(full){
-            if(this.job_id > -1){
-                let jobContext = await this.consumer.coordinator.getJob(this.job_id);
-                this.job = new SubtaskJob(this,jobContext);
-                await this.job.restore(full);
-                //this.job = await this.consumer.jobManager.get(this.job_id); //不用这句的原因是这句又要重新去查this
-            }
+            await this.loadJob();
+        }
+    }
+
+    public async loadJob(){
+        if(this.job_id > -1){
+            let jobContext = await this.consumer.coordinator.getJob(this.job_id);
+            this.job = new SubtaskJob(this,jobContext);
+            await this.job.restore();
+            //this.job = await this.consumer.jobManager.get(this.job_id); //不用这句的原因是这句又要重新去查this
         }
     }
 

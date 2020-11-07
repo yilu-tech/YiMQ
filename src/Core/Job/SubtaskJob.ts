@@ -5,10 +5,11 @@ import * as bull from 'bull';
 import { SubtaskStatus } from "../../Constants/SubtaskConstants";
 import { SystemException } from "../../Exceptions/SystemException";
 import { Expose } from "class-transformer";
+import { BeforeToJsonSwitch, ExposeGroups } from "../../Constants/ToJsonConstants";
 export class SubtaskJob extends Job{
     @Expose()
     public subtask_id:Number;
-    @Expose({groups:['full']})
+    @Expose({groups:[ExposeGroups.JOB_PARENT]})
     public subtask:Subtask;
     constructor(subtask:Subtask,public readonly context:bull.Job){
         super(context);
@@ -37,9 +38,8 @@ export class SubtaskJob extends Job{
         return result;
     }
 
-    // public toJson(){
-    //     let json = super.toJson();
-    //     delete json['subtask'];
-    //     return json;
-    // }
+    public async beforeToJson(switchs:BeforeToJsonSwitch[]=[]){
+        await super.beforeToJson(switchs);
+        await this.subtask.beforeToJson(switchs);
+    }
 }

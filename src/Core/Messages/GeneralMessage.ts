@@ -2,7 +2,7 @@ import { Message, MessageControlResult } from "./Message";
 
 
 export class GeneralMessage extends Message{
-    public async loadSubtasks(full=false) {
+    public async loadSubtasks() {
         return this;
     }
     toDoing(): Promise<Message> {

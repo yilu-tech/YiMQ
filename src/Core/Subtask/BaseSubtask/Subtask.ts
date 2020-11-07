@@ -5,6 +5,7 @@ import { TransactionMessage } from "../../Messages/TransactionMessage";
 import { MessageStatus } from "../../../Constants/MessageConstants";
 import { classToPlain, Expose, Transform } from "class-transformer";
 import { format } from "date-fns";
+import { BeforeToJsonSwitch, ExposeGroups } from "../../../Constants/ToJsonConstants";
 export abstract class Subtask{
     @Expose()
     id:Number;
@@ -33,7 +34,7 @@ export abstract class Subtask{
 
 
 
-
+    @Expose({groups:[ExposeGroups.SUBTASK_PARENT]})
     message:TransactionMessage;
     model:SubtaskModelClass
     @Expose()
@@ -134,7 +135,9 @@ export abstract class Subtask{
         this.job && await this.job.remove()    
         await this.model.remove();
     }
-
+    public async beforeToJson(switchs:BeforeToJsonSwitch[]=[]){
+        await this.message.beforeToJson(switchs);
+    }
       /**
      * 整理数据
      */

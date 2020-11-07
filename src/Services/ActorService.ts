@@ -7,6 +7,7 @@ import { BusinessException } from "../Exceptions/BusinessException";
 import { NohmModel } from "nohm";
 import { ActorModelClass } from "../Models/ActorModel";
 import { ActorManager } from "../Core/ActorManager";
+import { BeforeToJsonSwitch, ExposeGroups } from "../Constants/ToJsonConstants";
 
 
 
@@ -48,7 +49,7 @@ export class ActorService{
     public async list(){
         let actors = [];
         for (const [i,actor] of this.actorManager.actors) {
-            let actorJson = actor.toJson();
+            let actorJson = await actor.toJson([],[ExposeGroups.ACTOR_BASIC]);
             actorJson['job_counts'] = await actor.coordinator.getJobConuts();
             actors.push(actorJson);
         }
@@ -59,7 +60,7 @@ export class ActorService{
         if(!actor){
             throw new BusinessException(`actor_id ${actor_id} is not exists.`)
         }
-        let actorJson = actor.toJson();
+        let actorJson = await actor.toJson([],[ExposeGroups.ACTOR_BASIC]);
         actorJson['job_counts'] = await actor.coordinator.getJobConuts();
         return actorJson;
     }
@@ -69,9 +70,26 @@ export class ActorService{
         if(!actor){
             throw new BusinessException(`actor_id ${actor_id} is not exists.`)
         }
-        let full = types.length > 1;
-        let jobs = await actor.coordinator.getJobs(types,start,end,asc,full)
-        return jobs.map((job)=>{return job.toJson()});
+        let jobs = await actor.coordinator.getJobs(types,start,end,asc)
+
+        let beforeToJsonSwitchs = [BeforeToJsonSwitch.MESSAGE_SUBTASKS_TOTAL]
+
+        if(types.length > 1){ //如果两个查询两个状态以上，返回job是status
+            beforeToJsonSwitchs.push(BeforeToJsonSwitch.JOB_STATUS)
+        }
+
+        let items = [];
+        for (const job of jobs) {
+            let item = await job.toJson({
+                switchs: beforeToJsonSwitchs,
+                groups: [
+                    ExposeGroups.JOB_PARENT,ExposeGroups.ACTOR_BASIC
+                ]
+            });
+            
+            items.push(item);
+        }
+        return items;
     }
 
     public async job(actor_id,job_id){
@@ -79,11 +97,15 @@ export class ActorService{
         if(!actor){
             throw new BusinessException(`actor_id ${actor_id} is not exists.`)
         }
-        let job = await actor.jobManager.get(job_id,true);
+        let job = await actor.jobManager.get(job_id);
         if(!job){
             throw new BusinessException(`job ${job_id} of actor ${actor_id} is not exists.`)
         }
-        return job.toJson(true);
+
+        return await job.toJson({
+            switchs:[BeforeToJsonSwitch.JOB_STATUS,BeforeToJsonSwitch.MESSAGE_SUBTASKS_TOTAL],
+            groups: [ExposeGroups.JOB_PARENT,ExposeGroups.ACTOR_BASIC,ExposeGroups.SUBTASK_PARENT]
+        });
     }
 
     public async jobRetry(actor_id,job_ids){

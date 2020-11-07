@@ -68,7 +68,7 @@ export class JobManager{
         return job;
 
     }
-    public async restoreByContext(jobContext:bull.Job,full=false){
+    public async restoreByContext(jobContext:bull.Job){
         let job:Job;
         let message;
         switch (jobContext.data.type) {
@@ -94,11 +94,11 @@ export class JobManager{
             default:
                 throw new Error('JobType is not exists.');
         }
-        await job.restore(full);      
+        await job.restore();      
         return job;
     }
 
-    public async get(id,full=false){
+    public async get(id){
         if(id == null){
             return null;
         }
@@ -106,6 +106,6 @@ export class JobManager{
         if(!jobContext){
             return null;
         }
-        return this.restoreByContext(jobContext,full);
+        return this.restoreByContext(jobContext);
     }
 }

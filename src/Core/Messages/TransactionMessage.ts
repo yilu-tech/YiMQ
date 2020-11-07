@@ -104,22 +104,13 @@ export class TransactionMessage extends Message{
         }
         return prepareSubtasksResult;
     }
-    /**
-     * 用于MessageManager get的时候重建信息
-     */
-    async restore(messageModel,full=false){
-        await super.restore(messageModel,full);
-        if(full){
-            await this.loadJob(full);
-            await this.loadSubtasks(full);
-        }
-    }
 
-    public async loadJob(full=false){
+
+    public async loadJob(){
         //this.job = await this.producer.jobManager.get(this.job_id,true); 不用这句的原因是，get会再去查一次this
         let jobContext = await this.producer.coordinator.getJob(this.job_id);
         this.job = new MessageJob(this,jobContext);
-        await this.job.restore(full);
+        await this.job.restore();
     }
 
     public async loadSubtasks(full=false){
@@ -167,17 +158,4 @@ export class TransactionMessage extends Message{
     async getPendingSubtaskTotal(){
         return Number(await this.producer.redisClient.hget(this.getMessageHash(),'pending_subtask_total'));
     }
-
-    // private subtasksToJson(){
-    //     let subtasks = {};
-    //     this.subtasks.forEach((subtask,index)=>{
-    //         subtasks[`${index}`] = subtask.toJson();
-    //     })
-    //     return subtasks;
-    // }
-    // toJson(){
-    //     let json = super.toJson();
-    //     json['subtasks'] = this.subtasksToJson();
-    //     return json;
-    // }
 }

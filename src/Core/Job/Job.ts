@@ -1,6 +1,7 @@
 import * as bull from 'bull';
 import { classToPlain, Expose, Transform, Type } from 'class-transformer';
 import { format } from 'date-fns';
+import { ExposeGroups ,BeforeToJsonSwitch, ToJsonOptions } from '../../Constants/ToJsonConstants';
 import { JobStatus, JobType } from '../../Constants/JobConstants';
 export abstract class Job{
     @Expose()
@@ -44,13 +45,13 @@ export abstract class Job{
     /**
      * The stacktrace for any errors
      */
-    @Expose({groups:['full']})
+    @Expose({groups:[ExposeGroups.JOB_FULL]})
     stacktrace: string[];
 
-    @Expose({groups:['full']})
+    @Expose({groups:[ExposeGroups.JOB_FULL]})
     returnvalue: any;
 
-    @Expose({groups:['full']})
+    @Expose({groups:[ExposeGroups.JOB_FULL]})
     failedReason?: string;
 
     constructor(public readonly context:bull.Job){
@@ -66,14 +67,14 @@ export abstract class Job{
         this.failedReason = this.context.failedReason;
 
     }
-    public async restore(full=false){
-        if(full){
-            this.status = await this.getStatus();
-        }
+    public async restore(){
     }
 
     // abstract async cancel();
-
+    public async loadStatus(){
+        this.status = await this.getStatus();
+        return this;
+    }
     abstract async process();
 
     private async update(){
@@ -87,20 +88,20 @@ export abstract class Job{
         let status:any =  await this.context.getState();
         return status;
     }
+
+    public async beforeToJson(switchs:BeforeToJsonSwitch[]=[]){
+        if(switchs.includes(BeforeToJsonSwitch.JOB_STATUS)){
+            await this.loadStatus();
+        }
+    }
     /**
      * 整理数据
      */
-    public toJson(full=false){
+    public async toJson(options:ToJsonOptions = new ToJsonOptions()){
+        await this.beforeToJson(options.switchs);
         let json:any;
-        if(full){
-            json =  classToPlain(this,{strategy:'excludeAll',groups:['full']})
-            json['opts'] = this.opts;
-        }else{
-            json = classToPlain(this,{strategy:'excludeAll'})
-        }
-
+        json = classToPlain(this,{strategy:'excludeAll',groups:options.groups})
         return json;
-        
     }
 
     // public async retry():Promise<void>{

@@ -20,7 +20,7 @@ export class MessageManager {
         await (<Message>message).create(topic,jobOptions);//创建job
         return message;
     }
-    async get(id,full=false):Promise<any>{
+    async get(id):Promise<any>{
         try{
             //TODO 这里要添加一个添加查询 producer.id  = message.producer_id
             var messageModel = await this.producer.messageModel.load(id);
@@ -36,7 +36,7 @@ export class MessageManager {
         
 
         let message = this.messageFactory(messageModel.property('type'),this.producer); 
-        await (<Message>message).restore(messageModel,full);
+        await (<Message>message).restore(messageModel);
         return message;
     }
 

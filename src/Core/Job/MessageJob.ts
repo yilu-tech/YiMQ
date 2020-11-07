@@ -5,10 +5,11 @@ import { TransactionMessage } from "../Messages/TransactionMessage";
 import * as bull from 'bull';
 import { SystemException } from "../../Exceptions/SystemException";
 import { Expose } from "class-transformer";
+import { BeforeToJsonSwitch, ExposeGroups } from "../../Constants/ToJsonConstants";
 export class MessageJob extends Job{
     @Expose()
     public message_id:number | string;
-    @Expose({groups:['full']})
+    @Expose({groups:[ExposeGroups.JOB_PARENT]})
     public message:TransactionMessage;//TransactionMessage ---> Message
     constructor(message:TransactionMessage,public readonly context:bull.Job){
         super(context)
@@ -61,6 +62,11 @@ export class MessageJob extends Job{
                 throw new SystemException(`ActorMessageStatus ${result.status} is not exists.`);
         }
         return result;
+    }
+
+    public async beforeToJson(switchs:BeforeToJsonSwitch[]=[]){
+        await super.beforeToJson(switchs);
+        await this.message.beforeToJson(switchs);
     }
 
 }
