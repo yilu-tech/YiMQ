@@ -104,7 +104,7 @@ export class ActorService{
 
         return await job.toJson({
             switchs:[BeforeToJsonSwitch.JOB_STATUS,BeforeToJsonSwitch.MESSAGE_SUBTASKS_TOTAL],
-            groups: [ExposeGroups.JOB_PARENT,ExposeGroups.ACTOR_BASIC,ExposeGroups.SUBTASK_PARENT]
+            groups: [ExposeGroups.JOB_PARENT,ExposeGroups.ACTOR_BASIC,ExposeGroups.SUBTASK_PARENT,ExposeGroups.JOB_FULL]
         });
     }
 

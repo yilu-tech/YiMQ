@@ -48,7 +48,7 @@ export abstract class Job{
     @Expose({groups:[ExposeGroups.JOB_FULL]})
     stacktrace: string[];
 
-    @Expose({groups:[ExposeGroups.JOB_FULL]})
+    // @Expose({groups:[ExposeGroups.JOB_FULL]})
     returnvalue: any;
 
     @Expose({groups:[ExposeGroups.JOB_FULL]})
@@ -101,6 +101,9 @@ export abstract class Job{
         await this.beforeToJson(options.switchs);
         let json:any;
         json = classToPlain(this,{strategy:'excludeAll',groups:options.groups})
+        if(options.groups.includes(ExposeGroups.JOB_FULL)){
+            json['returnvalue'] = this.returnvalue;
+        }
         return json;
     }
 
