@@ -1,13 +1,44 @@
-import { IsDefined, Validate  } from "class-validator";
+import { Transform } from "class-transformer";
+import { IsDefined, IsIn, Validate  } from "class-validator";
 import { JobStatus } from "../Constants/JobConstants";
+import { MessageStatus } from "../Constants/MessageConstants";
 import { StringArrayIsIn } from "./CustromValidators";
 
 
+
+export function isFullMessagesSearch(properties:MessagesDto){
+    let exists =  ['message_id','topic','subtask_id','job_id','status'].find((property)=>{
+        if(properties[property]){
+            return true;
+        }
+    })
+    return exists? false: true;
+}
 export class MessagesDto{
     @IsDefined()
     actor_id:number;
+
     message_id:number;
     topic:string;
+    subtask_id:number;
+    job_id:number;
+
+    @Validate(StringArrayIsIn,[MessageStatus.CANCELED,MessageStatus.CANCELLING,MessageStatus.DOING,MessageStatus.DONE,MessageStatus.PENDING])
+    status:MessageStatus[];
+
+    // @ValidateIf(isFullMessagesSearch)
+    @IsDefined()
+    start:number;
+
+    // @ValidateIf(isFullMessagesSearch)
+    @IsDefined()
+    size:number;
+
+    // @ValidateIf(isFullMessagesSearch)
+    @IsDefined()
+    @IsIn(['ASC','DESC'])
+    @Transform((value:String) => value.toLocaleUpperCase())
+    sort:'ASC' | 'DESC';
 }
 
 export class MessageDetailDto{

@@ -15,8 +15,13 @@ export class AdminController {
     }
 
     @Get('messages')
-    public async messages(@Query('actor_id',new ParseIntPipe()) actor_id,@Query() query:MessagesDto){
-        return this.messageService.list(actor_id,query);
+    public async messages(
+        @Query('actor_id',new ParseIntPipe()) actor_id,
+        @Query('status' ,new ParseArrayPipe({optional:true})) status:[],
+        @Query() query:MessagesDto
+        ){
+            query.status = status;
+            return this.messageService.search(actor_id,query);
     }
     @Get('message')
     public async message(@Query() query:MessageDetailDto){

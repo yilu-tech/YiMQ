@@ -9,6 +9,7 @@ interface SubtaskProperties {
     status: SubtaskStatus;
     data: any;
     options:any;
+    producer_id:number;
     consumer_id:number;
     processor:string;
     context:string;
@@ -47,6 +48,11 @@ export class SubtaskModelClass extends NohmModel<SubtaskProperties> {
         },
         options: {
             type: 'json',
+        },
+        producer_id:{
+            type:'integer',
+            index:true,
+            validations: ['notEmpty']
         },
         consumer_id:{
             type:'integer',

@@ -93,13 +93,20 @@
     }
 
 9. /admin/actor/job/retry
-10. 
+    
+10. /admin/messages
 
-    body
-    {
-        "actor_id":1,
-        "job_ids": [1] || "*"
-    }
+    query
+
+    actor_id:1
+    start:0
+    size:1
+    sort:asc
+    topic:user.create
+    status: CANCELED,CANCELLING,DOING,DONE,PENDING
+    message_id:23
+    subtask_id:25
+    job_id:2180
 
 
 ## boostrap流程

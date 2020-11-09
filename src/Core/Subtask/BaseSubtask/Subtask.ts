@@ -6,6 +6,7 @@ import { MessageStatus } from "../../../Constants/MessageConstants";
 import { Expose, Transform } from "class-transformer";
 import { format } from "date-fns";
 import { ExposeGroups } from "../../../Constants/ToJsonConstants";
+import { Actor } from "../../Actor";
 export abstract class Subtask{
     @Expose()
     id:Number;
@@ -33,6 +34,12 @@ export abstract class Subtask{
     @Expose()
     message_id:string;
 
+    @Expose()
+    public producer_id:number
+
+    @Expose({groups:[ExposeGroups.RELATION_ACTOR]})
+    public producer:Actor;
+
 
 
     @Expose({groups:[ExposeGroups.SUBTASK_MESSAGE]})
@@ -44,6 +51,7 @@ export abstract class Subtask{
     constructor(message:TransactionMessage){
         
         this.message = message;
+        this.producer = message.producer;
     }
     protected async initProperties(subtaskModel){
         this.model = subtaskModel;
@@ -56,12 +64,14 @@ export abstract class Subtask{
         this.created_at = subtaskModel.property('created_at');
         this.updated_at = subtaskModel.property('updated_at');
         this.message_id = subtaskModel.property('message_id');
+        this.producer_id = subtaskModel.property('producer_id');
     }
     public async createSubtaskModel(body){
         
         let subtaskModel = new this.message.producer.subtaskModel();
         subtaskModel.id = body.subtask_id; 
 
+        subtaskModel.property('producer_id',this.producer.id);
         subtaskModel.property('message_id',this.message.id);//rename message_id
         subtaskModel.property('job_id',-1);//默认值必须手动设置，否则在重新设置值的时候，不会从默认值中删除索引
         subtaskModel.property('type',this.type);
