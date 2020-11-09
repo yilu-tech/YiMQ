@@ -1,5 +1,4 @@
-import { Injectable, Logger, UnprocessableEntityException } from "@nestjs/common";
-import { ActorStatus } from "../Constants/ActorConstants";
+import { Injectable } from "@nestjs/common";
 import { MasterModels } from "../Models/MasterModels";
 import { Config } from "../Config";
 
@@ -7,7 +6,8 @@ import { BusinessException } from "../Exceptions/BusinessException";
 import { NohmModel } from "nohm";
 import { ActorModelClass } from "../Models/ActorModel";
 import { ActorManager } from "../Core/ActorManager";
-import { BeforeToJsonSwitch, ExposeGroups } from "../Constants/ToJsonConstants";
+import { ExposeGroups, OnDemandSwitch } from "../Constants/ToJsonConstants";
+import { OnDemandRun, OnDemandToJson } from "../Decorators/OnDemand";
 
 
 
@@ -49,7 +49,7 @@ export class ActorService{
     public async list(){
         let actors = [];
         for (const [i,actor] of this.actorManager.actors) {
-            let actorJson = await actor.toJson([],[ExposeGroups.ACTOR_BASIC]);
+            let actorJson = OnDemandToJson(actor,[]);
             actorJson['job_counts'] = await actor.coordinator.getJobConuts();
             actors.push(actorJson);
         }
@@ -60,7 +60,7 @@ export class ActorService{
         if(!actor){
             throw new BusinessException(`actor_id ${actor_id} is not exists.`)
         }
-        let actorJson = await actor.toJson([],[ExposeGroups.ACTOR_BASIC]);
+        let actorJson = OnDemandToJson(actor,[]);
         actorJson['job_counts'] = await actor.coordinator.getJobConuts();
         return actorJson;
     }
@@ -72,20 +72,16 @@ export class ActorService{
         }
         let jobs = await actor.coordinator.getJobs(types,start,end,asc)
 
-        let beforeToJsonSwitchs = [BeforeToJsonSwitch.MESSAGE_SUBTASKS_TOTAL]
+        let OnDemandSwitchs = [OnDemandSwitch.MESSAGE_SUBTASKS_TOTAL]
 
         if(types.length > 1){ //如果两个查询两个状态以上，返回job是status
-            beforeToJsonSwitchs.push(BeforeToJsonSwitch.JOB_STATUS)
+            OnDemandSwitchs.push(OnDemandSwitch.JOB_STATUS)
         }
+        await OnDemandRun(jobs,OnDemandSwitchs)
 
         let items = [];
         for (const job of jobs) {
-            let item = await job.toJson({
-                switchs: beforeToJsonSwitchs,
-                groups: [
-                    ExposeGroups.JOB_PARENT,ExposeGroups.ACTOR_BASIC
-                ]
-            });
+            let item = OnDemandToJson(job,[ExposeGroups.JOB_PARENT,ExposeGroups.RELATION_ACTOR])
             
             items.push(item);
         }
@@ -101,11 +97,26 @@ export class ActorService{
         if(!job){
             throw new BusinessException(`job ${job_id} of actor ${actor_id} is not exists.`)
         }
+        // console.time('OnDemandRun');
+        await OnDemandRun(job,[
+            OnDemandSwitch.JOB_STATUS,
+            OnDemandSwitch.MESSAGE_SUBTASKS_TOTAL,
+            OnDemandSwitch.MESSAGE_SUBTASKS
+        ])
+        // console.timeEnd('OnDemandRun');
+        // console.time('OnDemandToJson');
+        let result =  OnDemandToJson(job,[
+            ExposeGroups.JOB_PARENT,
+            ExposeGroups.SUBTASK_MESSAGE,
+            ExposeGroups.JOB_FULL,
+            ExposeGroups.RELATION_ACTOR
+        ]);
+        // console.timeEnd('OnDemandToJson');
+        // console.time('OnDemandFastTOJson');
+        // let json = OnDemandFastTOJson(job,[ExposeGroups.ACTOR_BASIC,ExposeGroups.SUBTASK_PARENT,ExposeGroups.JOB_FULL]);
+        // console.timeEnd('OnDemandFastTOJson');
 
-        return await job.toJson({
-            switchs:[BeforeToJsonSwitch.JOB_STATUS,BeforeToJsonSwitch.MESSAGE_SUBTASKS_TOTAL],
-            groups: [ExposeGroups.JOB_PARENT,ExposeGroups.ACTOR_BASIC,ExposeGroups.SUBTASK_PARENT,ExposeGroups.JOB_FULL]
-        });
+        return result;
     }
 
     public async jobRetry(actor_id,job_ids){

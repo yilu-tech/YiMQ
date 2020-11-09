@@ -6,6 +6,9 @@ import { BusinessException } from "../../Exceptions/BusinessException";
 import { SubtaskModelClass } from "../../Models/SubtaskModel"
 import { MessageJob } from "../Job/MessageJob";
 import {JobStatus} from "../../Constants/JobConstants"
+import { OnDemandFastToJson } from "../../Decorators/OnDemand";
+import { Exclude } from "class-transformer";
+@Exclude()
 export class TransactionMessage extends Message{
     type = MessageType.TRANSACTION;
 
@@ -100,8 +103,8 @@ export class TransactionMessage extends Message{
     private async prepareSubtasks(prepareSubtasksBody){
         let prepareSubtasksResult = [];
         for (const subtaskBody of prepareSubtasksBody) {
-            let subtask = await this.addSubtask(subtaskBody.type,subtaskBody);
-            prepareSubtasksResult.push(subtask.toJson());
+            let subtask:Subtask = await this.addSubtask(subtaskBody.type,subtaskBody);
+            prepareSubtasksResult.push(OnDemandFastToJson(subtask));
         }
         return prepareSubtasksResult;
     }

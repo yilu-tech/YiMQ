@@ -6,9 +6,19 @@ import { MessageStatus } from '../../Constants/MessageConstants';
 import { ConsumerSubtask } from './BaseSubtask/ConsumerSubtask';
 import { HttpCoordinatorRequestException } from '../../Exceptions/HttpCoordinatorRequestException';
 import { Logger} from '../../Handlers/Logger';
+import { OnDemandFastToJson } from '../../Decorators/OnDemand';
+import { Exclude, Expose } from 'class-transformer';
+
+export class TccSubtaskPrepareResult{
+    constructor(public status:any=null,public message:any=null, public data:any=null){
+        
+    }
+}
+@Exclude()
 export class TccSubtask extends ConsumerSubtask{
     public type:SubtaskType = SubtaskType.TCC;
-    public prepareResult;
+    @Expose()
+    public prepareResult:TccSubtaskPrepareResult;
  
     constructor(message:TransactionMessage){
         super(message);
@@ -31,13 +41,13 @@ export class TccSubtask extends ConsumerSubtask{
             data: this.data,
             options:options
         }
-        this.prepareResult = {};
+        this.prepareResult = new TccSubtaskPrepareResult();
         try {
             this.prepareResult.status = 200;
          
             this.prepareResult.data = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.TRY,callContext,options);     
             if((await this.getStatus()) == SubtaskStatus.CANCELLING){
-                Logger.warn(Logger.message(`Subtask ${this.id} status is CANCELLING after prepared.`,this.toJson()),`TccSubtask ${this.type}`)
+                Logger.warn(Logger.message(`Subtask ${this.id} status is CANCELLING after prepared.`,OnDemandFastToJson(this)),`TccSubtask ${this.type}`)
             }else{
                 this.setStatus(SubtaskStatus.PREPARED);
             }
@@ -91,12 +101,4 @@ export class TccSubtask extends ConsumerSubtask{
         this.model.property('prepareResult',this.prepareResult);
         return this;
     }
-
-
-    public toJson(){
-        let json:any = super.toJson();
-        json['prepareResult'] = this.prepareResult;
-        return json;
-    }
-
 }

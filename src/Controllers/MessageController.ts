@@ -3,6 +3,8 @@ import { CreateMessageDto, AddSubtaskDto } from '../Dto/MessageDto';
 
 import { MessageService } from '../Services/MessageService';
 import { TransactionMessage } from '../Core/Messages/TransactionMessage';
+import { OnDemandFastToJson } from '../Decorators/OnDemand';
+import { Subtask } from '../Core/Subtask/BaseSubtask/Subtask';
 
 
 
@@ -21,7 +23,7 @@ export class MessagesController {
         let message = await this.messageService.create<TransactionMessage>(createMessageDto.actor, createMessageDto.type, createMessageDto.topic,createMessageDto.data,{
             delay: createMessageDto.delay
         });
-        return message.toJson();
+        return OnDemandFastToJson(message);
     }
 
     /**
@@ -29,13 +31,13 @@ export class MessagesController {
      */
     @Post('subtask')
     async jobs(@Body() addSubtaskDto: AddSubtaskDto): Promise<any> {
-        let subtask = await this.messageService.addSubtask(
+        let subtask:Subtask = await this.messageService.addSubtask(
             addSubtaskDto.actor,
             addSubtaskDto.message_id,
             addSubtaskDto.type,
             addSubtaskDto
             );
-        return subtask.toJson();
+        return OnDemandFastToJson(subtask)
     }
 
 

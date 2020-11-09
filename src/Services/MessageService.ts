@@ -1,15 +1,15 @@
 import { MessageType } from "../Constants/MessageConstants";
 import { Injectable } from "@nestjs/common";
 import { ActorManager } from "../Core/ActorManager";
-import { BusinessException } from "../Exceptions/BusinessException";
 import * as bull from 'bull';
-import { Message, MessageControlResult } from "../Core/Messages/Message";
+import { MessageControlResult } from "../Core/Messages/Message";
 import { SubtaskType } from "../Constants/SubtaskConstants";
 import { SystemException } from "../Exceptions/SystemException";
 import { MessagesDto } from "../Dto/AdminControllerDto";
 import e = require("express");
 import { TransactionMessage } from "../Core/Messages/TransactionMessage";
-import { BeforeToJsonSwitch } from "../Constants/ToJsonConstants";
+import { ExposeGroups, OnDemandSwitch } from "../Constants/ToJsonConstants";
+import { OnDemandRun, OnDemandToJson } from "../Decorators/OnDemand";
 @Injectable()
 export class MessageService {
     constructor(private actorManger:ActorManager){
@@ -59,13 +59,16 @@ export class MessageService {
             throw new SystemException(`Actor <${actor_id}> not exists.`)
         }
         let message:TransactionMessage = await producer.messageManager.get(message_id);
-        return await message.toJson({
-            switchs: [
-                BeforeToJsonSwitch.MESSAGE_SUBTASKS_TOTAL,
-                BeforeToJsonSwitch.MESSAGE_SUBTASKS
-            ],
-            groups:[]
-        });
+        await OnDemandRun(message,[
+            OnDemandSwitch.MESSAGE_SUBTASKS_TOTAL,
+            OnDemandSwitch.MESSAGE_SUBTASKS,
+            OnDemandSwitch.SUBTASK_JOB
+        ])
+        let result = OnDemandToJson(message,[
+            ExposeGroups.RELATION_ACTOR,
+            ExposeGroups.SUBTASK_JOB
+        ])
+        return result;
     }
 
     async list(actor_id:number,query:MessagesDto):Promise<any>{

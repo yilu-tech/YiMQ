@@ -4,8 +4,10 @@ import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
 import { TransactionMessage } from "../Messages/TransactionMessage";
 import * as bull from 'bull';
 import { SystemException } from "../../Exceptions/SystemException";
-import { Expose } from "class-transformer";
-import { BeforeToJsonSwitch, ExposeGroups } from "../../Constants/ToJsonConstants";
+import { Exclude, Expose } from "class-transformer";
+import { ExposeGroups } from "../../Constants/ToJsonConstants";
+
+@Exclude()
 export class MessageJob extends Job{
     @Expose()
     public message_id:number | string;
@@ -63,10 +65,4 @@ export class MessageJob extends Job{
         }
         return result;
     }
-
-    public async beforeToJson(switchs:BeforeToJsonSwitch[]=[]){
-        await super.beforeToJson(switchs);
-        await this.message.beforeToJson(switchs);
-    }
-
 }

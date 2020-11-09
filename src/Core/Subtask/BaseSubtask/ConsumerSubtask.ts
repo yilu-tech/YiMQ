@@ -6,9 +6,11 @@ import { SubtaskStatus } from "../../../Constants/SubtaskConstants";
 import * as bull from 'bull';
 import { JobType } from "../../../Constants/JobConstants";
 import { Expose } from "class-transformer";
+import { OnDemand } from "../../../Decorators/OnDemand";
+import { ExposeGroups, OnDemandSwitch } from "../../../Constants/ToJsonConstants";
 
 export abstract class ConsumerSubtask extends Subtask{
-    @Expose()
+    @Expose({groups:[ExposeGroups.RELATION_ACTOR]})
     public consumer:Actor;
     @Expose()
     consumer_id:number;
@@ -40,7 +42,7 @@ export abstract class ConsumerSubtask extends Subtask{
             await this.loadJob();
         }
     }
-
+    @OnDemand(OnDemandSwitch.SUBTASK_JOB)
     public async loadJob(){
         if(this.job_id > -1){
             let jobContext = await this.consumer.coordinator.getJob(this.job_id);

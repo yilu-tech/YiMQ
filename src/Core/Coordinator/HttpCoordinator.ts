@@ -8,6 +8,7 @@ import { Actor } from '../Actor';
 import { HttpCoordinatorRequestException } from '../../Exceptions/HttpCoordinatorRequestException';
 import { Job } from '../Job/Job';
 import {AppLogger} from '../../Handlers/AppLogger';
+import { OnDemandFastToJson } from '../../Decorators/OnDemand';
 export class HttpCoordinator extends Coordinator{
     
     public async processBootstrap(){
@@ -28,7 +29,7 @@ export class HttpCoordinator extends Coordinator{
                     actor_response: {}
                 }
                 if(job){
-                    message.job = job.toJson();
+                    message.job = OnDemandFastToJson(job);
                 }
                 
 

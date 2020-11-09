@@ -3,7 +3,8 @@ import { SubtaskStatus, SubtaskType } from '../../Constants/SubtaskConstants';
 import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
 import { MessageStatus } from '../../Constants/MessageConstants';
 import { ConsumerSubtask } from './BaseSubtask/ConsumerSubtask';
-
+import { Exclude } from 'class-transformer';
+@Exclude()
 export class EcSubtask extends ConsumerSubtask{
     public type:SubtaskType = SubtaskType.EC;
 

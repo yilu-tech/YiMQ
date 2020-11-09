@@ -10,23 +10,19 @@ import { MessageManager } from "./MessageManager";
 import { JobManager } from "./JobManager";
 import { ActorManager } from "./ActorManager";
 import { SubtaskModelClass } from "../Models/SubtaskModel";
-import { CoordinatorCallActorAction } from "../Constants/Coordinator";
-import {differenceBy} from 'lodash';
 import { ActorStatus } from "../Constants/ActorConstants";
-import { HttpCoordinatorRequestException } from "../Exceptions/HttpCoordinatorRequestException";
 import {SubtaskManager} from './SubtaskManager';
 import { ActorModelClass } from "../Models/ActorModel";
-import { SystemException } from "../Exceptions/SystemException";
 import { ActorOptions } from "../Config/ActorConfig";
 import { ActorCleaner } from "./ActorCleaner";
 import { AppLogger } from "../Handlers/AppLogger";
-import { classToPlain, Expose } from "class-transformer";
-import { BeforeToJsonSwitch, ExposeGroups } from "../Constants/ToJsonConstants";
-
+import { Exclude, Expose } from "class-transformer";
+import { ExposeGroups } from "../Constants/ToJsonConstants";
+@Exclude()
 export class Actor{
-    @Expose({groups:[ExposeGroups.ACTOR_BASIC]})
+    @Expose()
     public id:number;
-    @Expose({groups:[ExposeGroups.ACTOR_BASIC]})
+    @Expose()
     public name:string;
     public key:string;
     public api:string;
@@ -134,16 +130,7 @@ export class Actor{
     public delete(force:boolean = false){
         
     }
-
-    /**
-     * 整理数据
-     */
-    public async toJson(switchs:BeforeToJsonSwitch[]=[],groups:ExposeGroups[]=[]){
-        let json:any;
-        json = classToPlain(this,{strategy:'excludeAll',groups:groups})
-        return json;
-    }
-
+    
 }
 
 

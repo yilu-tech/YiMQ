@@ -1,8 +1,10 @@
 import * as bull from 'bull';
-import { classToPlain, Expose, Transform, Type } from 'class-transformer';
+import { Exclude, Expose, Transform } from 'class-transformer';
 import { format } from 'date-fns';
-import { ExposeGroups ,BeforeToJsonSwitch, ToJsonOptions } from '../../Constants/ToJsonConstants';
+import { ExposeGroups ,OnDemandSwitch} from '../../Constants/ToJsonConstants';
 import { JobStatus, JobType } from '../../Constants/JobConstants';
+import { OnDemand } from '../../Decorators/OnDemand';
+
 export abstract class Job{
     @Expose()
     public id:number;
@@ -48,13 +50,17 @@ export abstract class Job{
     @Expose({groups:[ExposeGroups.JOB_FULL]})
     stacktrace: string[];
 
-    // @Expose({groups:[ExposeGroups.JOB_FULL]})
+    @Expose({groups:[ExposeGroups.JOB_FULL]})
     returnvalue: any;
 
     @Expose({groups:[ExposeGroups.JOB_FULL]})
     failedReason?: string;
-
-    constructor(public readonly context:bull.Job){
+    
+    @Exclude()
+    public readonly context:bull.Job;
+    
+    constructor(context:bull.Job){
+        this.context = context;
         this.id = Number(this.context.id);
         this.type = this.context.data.type;
         this.opts = this.context.opts;
@@ -71,15 +77,16 @@ export abstract class Job{
     }
 
     // abstract async cancel();
+    @OnDemand(OnDemandSwitch.JOB_STATUS)
     public async loadStatus(){
         this.status = await this.getStatus();
-        return this;
+        return true;
     }
     abstract async process();
 
-    private async update(){
-        await this.context.update(this.toJson());
-    }
+    // private async update(){
+    //     await this.context.update(this.toJson());
+    // }
     public async remove(){
         return await this.context.remove();
     }
@@ -87,24 +94,6 @@ export abstract class Job{
     public async getStatus():Promise<JobStatus>{
         let status:any =  await this.context.getState();
         return status;
-    }
-
-    public async beforeToJson(switchs:BeforeToJsonSwitch[]=[]){
-        if(switchs.includes(BeforeToJsonSwitch.JOB_STATUS)){
-            await this.loadStatus();
-        }
-    }
-    /**
-     * 整理数据
-     */
-    public async toJson(options:ToJsonOptions = new ToJsonOptions()){
-        await this.beforeToJson(options.switchs);
-        let json:any;
-        json = classToPlain(this,{strategy:'excludeAll',groups:options.groups})
-        if(options.groups.includes(ExposeGroups.JOB_FULL)){
-            json['returnvalue'] = this.returnvalue;
-        }
-        return json;
     }
 
     // public async retry():Promise<void>{

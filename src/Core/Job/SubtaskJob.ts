@@ -1,11 +1,11 @@
 import { Job } from "./Job";
-import { TransactionMessage } from "../Messages/TransactionMessage";
 import { Subtask } from "../Subtask/BaseSubtask/Subtask";
 import * as bull from 'bull';
 import { SubtaskStatus } from "../../Constants/SubtaskConstants";
 import { SystemException } from "../../Exceptions/SystemException";
-import { Expose } from "class-transformer";
-import { BeforeToJsonSwitch, ExposeGroups } from "../../Constants/ToJsonConstants";
+import { Exclude, Expose } from "class-transformer";
+import { ExposeGroups } from "../../Constants/ToJsonConstants";
+@Exclude()
 export class SubtaskJob extends Job{
     @Expose()
     public subtask_id:Number;
@@ -36,10 +36,5 @@ export class SubtaskJob extends Job{
                 throw new SystemException(`SubtaskStatus <${this.subtask.status}> is not exists.`);
         }
         return result;
-    }
-
-    public async beforeToJson(switchs:BeforeToJsonSwitch[]=[]){
-        await super.beforeToJson(switchs);
-        await this.subtask.beforeToJson(switchs);
     }
 }
