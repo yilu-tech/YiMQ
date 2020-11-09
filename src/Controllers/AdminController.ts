@@ -48,9 +48,9 @@ export class AdminController {
     @Get('actor/jobs')
     public async actorJobs(
         @Query() query:ActorJobsDao,
-        @Query('types', ParseArrayPipe) types: [],
+        @Query('status', ParseArrayPipe) status: [],
         ){
-       return this.actorService.jobs(query.actor_id,types,query.start,query.end,query.asc);
+       return this.actorService.jobs(query.actor_id,status,query.start,query.size,query.sort);
     }
     @Get('actor/status')
     public async actorStatus(@Query() query:ActorDao){

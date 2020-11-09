@@ -75,16 +75,19 @@ export class ActorService{
         return actorJson;
     }
 
-    public async jobs(actor_id,types:[], start?: number, end?: number, asc?: boolean){
+    public async jobs(actor_id,status:[], start?: number, size?: number, sort?: 'ASC'|'DESC'){
         let actor = this.actorManager.getById(actor_id);    
         if(!actor){
             throw new BusinessException(`actor_id ${actor_id} is not exists.`)
         }
-        let jobs = await actor.coordinator.getJobs(types,start,end,asc)
+        let asc = sort == 'ASC' ? true : false;
+        let end = start + size - 1;
+
+        let jobs = await actor.coordinator.getJobs(status,start,end,asc)
 
         let OnDemandSwitchs = [OnDemandSwitch.MESSAGE_SUBTASKS_TOTAL]
 
-        if(types.length > 1){ //如果两个查询两个状态以上，返回job是status
+        if(status.length > 1){ //如果两个查询两个状态以上，返回job是status
             OnDemandSwitchs.push(OnDemandSwitch.JOB_STATUS)
         }
         await OnDemandRun(jobs,OnDemandSwitchs)
@@ -95,7 +98,20 @@ export class ActorService{
             
             items.push(item);
         }
-        return items;
+
+        let job_counts = await actor.coordinator.getJobConuts();
+        let total = 0;
+        for (const item of status) {
+            total += job_counts[item];
+        }
+
+        return {
+            total: total,
+            start: start,
+            size: size,
+            sort: sort, 
+            jobs: items,
+        };
     }
 
     public async job(actor_id,job_id){

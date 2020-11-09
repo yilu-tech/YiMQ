@@ -26,15 +26,15 @@ export class MessagesDto{
     @Validate(StringArrayIsIn,[MessageStatus.CANCELED,MessageStatus.CANCELLING,MessageStatus.DOING,MessageStatus.DONE,MessageStatus.PENDING])
     status:MessageStatus[];
 
-    // @ValidateIf(isFullMessagesSearch)
+
     @IsDefined()
     start:number;
 
-    // @ValidateIf(isFullMessagesSearch)
+
     @IsDefined()
     size:number;
 
-    // @ValidateIf(isFullMessagesSearch)
+
     @IsDefined()
     @IsIn(['ASC','DESC'])
     @Transform((value:String) => value.toLocaleUpperCase())
@@ -66,15 +66,26 @@ export class MessageClearFailedRetry{
 export class ActorJobsDao{
     @IsDefined()
     actor_id:number;
+
     @IsDefined()
     @Validate(StringArrayIsIn,[JobStatus.ACTIVE,JobStatus.COMPLETED,JobStatus.DELAYED,JobStatus.FAILED,JobStatus.PAUSED,JobStatus.WAITING])
-    types:string[];
+    status:JobStatus[];
+
+    
     @IsDefined()
+    @Transform(value => Number(value))
     start:number;
+
+
     @IsDefined()
-    end:number;
+    @Transform(value => Number(value))
+    size:number;
+
+
     @IsDefined()
-    asc:boolean;
+    @IsIn(['ASC','DESC'])
+    @Transform((value:String) => value.toLocaleUpperCase())
+    sort:'ASC' | 'DESC';
 }
 
 

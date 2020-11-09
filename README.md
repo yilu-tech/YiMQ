@@ -60,13 +60,11 @@
 
     query:
 
-        {
-            actor_id: '1',
-            types: 'completed,waiting,active,delayed,failed,paused',
-            start: '0',
-            end: '100',
-            asc: 'false'
-        }
+    actor_id:1
+    status: 'completed,waiting,active,delayed,failed,paused',
+    start:0
+    size:2
+    sort: asc|desc
 
 6. /admin/actor/status
 
@@ -93,6 +91,13 @@
     }
 
 9. /admin/actor/job/retry
+
+    body
+    
+    {
+        "actor_id":1,
+        "job_ids": "*"
+    }
     
 10. /admin/messages
 
