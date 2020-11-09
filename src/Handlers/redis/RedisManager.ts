@@ -38,7 +38,7 @@ export class RedisManager {
             ...this.getReconnectOptions(name),
             connectionName: name
         }
-        let client = new Ioredis(opionts);
+        let client = new RedisClient(opionts);
         await redisCustomCommand(client);
 
         return new Promise((res,rej)=>{

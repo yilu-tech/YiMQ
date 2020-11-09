@@ -9,9 +9,11 @@ const { setQueues } = require('bull-board')
 import {AppLogger as Logger} from './Handlers/AppLogger';
 import { ApplicationStatus } from './Constants/ApplicationConstants';
 import { BusinessException } from './Exceptions/BusinessException';
-const timeout = ms => new Promise(res => setTimeout(res, ms))
+import { timeout } from './Handlers';
+let pacakage = require('../../package.json');
 @Injectable()
 export class Application implements OnApplicationShutdown,OnApplicationBootstrap,OnModuleInit{
+    public version:string;
     public masterRedisClient:RedisClient;
     public status:ApplicationStatus;
     private startingUpTime:number;
@@ -19,6 +21,7 @@ export class Application implements OnApplicationShutdown,OnApplicationBootstrap
     constructor(public redisManager:RedisManager, public masterModels:MasterModels, public actorConfigManager:ActorConfigManager,public actorManager:ActorManager,public config:Config){
         this.actorManager.setApplication(this);
         this.redisManager.setApplication(this);
+        this.version = pacakage.version;
     }
     async onModuleInit() {
         this.startingUpTime = Date.now();
@@ -134,5 +137,9 @@ export class Application implements OnApplicationShutdown,OnApplicationBootstrap
             queues.push(actor.coordinator.getQueue());
         })
         setQueues(queues);
+    }
+
+    getVersion(){
+        return this.version;
     }
 }

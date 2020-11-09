@@ -24,6 +24,16 @@
 
 ##管理接口
 
+1. /admin  获取各种基础信息
+
+        response
+        {
+            "version": "0.1.9",
+            "master_redis": {},
+            "servers": [],
+            "actors": []
+        }
+
 1. /admin/reload (重新加载配置文件)
 
 2. /actor/clearfailed (获取清理失败的message和process)
@@ -53,10 +63,7 @@
             "process_ids": [2,3]
         }
 
-
-4. /admin/actors  (获取actor列表和actor各状态job数量)
-
-5. /admin/actor/jobs
+4. /admin/actor/jobs
 
     query:
 
@@ -66,7 +73,7 @@
     size:2
     sort: asc|desc
 
-6. /admin/actor/status
+5. /admin/actor/status
 
     query:
 
@@ -74,7 +81,7 @@
             actor_id: 1
         }
 
-7. /admin/actor/job
+6. /admin/actor/job
 
     query
     {
@@ -82,7 +89,7 @@
         job_id: 38
     }
 
-8. /admin/message
+7. /admin/message
 
     query
     {
@@ -90,7 +97,7 @@
         message_id: 38
     }
 
-9. /admin/actor/job/retry
+8.  /admin/actor/job/retry
 
     body
     
@@ -99,7 +106,7 @@
         "job_ids": "*"
     }
     
-10. /admin/messages
+9.  /admin/messages
 
     query
 

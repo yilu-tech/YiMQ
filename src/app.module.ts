@@ -13,12 +13,14 @@ import { ActorService } from './Services/ActorService';
 import { MessageService } from './Services/MessageService';
 import { JobService } from './Services/JobService';
 import { ActorConfigManager } from './Core/ActorConfigManager';
+import { AdminService } from './Services/AdminService';
 
 
 export const services = [
   ActorService,
   MessageService,
-  JobService
+  JobService,
+  AdminService
 ] 
 
 
