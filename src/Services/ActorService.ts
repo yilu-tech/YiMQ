@@ -8,6 +8,7 @@ import { ActorModelClass } from "../Models/ActorModel";
 import { ActorManager } from "../Core/ActorManager";
 import { ExposeGroups, OnDemandSwitch } from "../Constants/ToJsonConstants";
 import { OnDemandRun, OnDemandToJson } from "../Decorators/OnDemand";
+import { MessageStatus } from "../Constants/MessageConstants";
 
 
 
@@ -62,6 +63,15 @@ export class ActorService{
         }
         let actorJson = OnDemandToJson(actor,[]);
         actorJson['job_counts'] = await actor.coordinator.getJobConuts();
+
+        actorJson['message_counts']={};
+        for (const messageStatus of [MessageStatus.CANCELED,MessageStatus.CANCELLING,MessageStatus.DOING,MessageStatus.DONE,MessageStatus.PENDING]) {
+            let ids = await actor.messageModel.find({
+                actor_id: actor.id,
+                status: messageStatus
+            })
+            actorJson['message_counts'][messageStatus] = ids.length;
+        }
         return actorJson;
     }
 
