@@ -3,10 +3,10 @@
 import { NestFactory } from '@nestjs/core';
 import { CommandModule } from './CommandModule'
 import { INestApplicationContext } from '@nestjs/common';
-import { Config } from '../src/Config';
-import { ActorManager } from '../src/Core/ActorManager';
-import { MasterModels } from '../src/Models/MasterModels';
-import { RedisManager } from '../src/Handlers/redis/RedisManager';
+import { Config } from '../Config';
+import { ActorManager } from '../Core/ActorManager';
+import { MasterModels } from '../Models/MasterModels';
+import { RedisManager } from '../Handlers/redis/RedisManager';
 
 
 export class App{

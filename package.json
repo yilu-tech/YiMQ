@@ -9,7 +9,7 @@
     "url": "https://github.com/yilu-tech/YiMQ"
   },
   "bin": {
-    "yimq": "./dist/commands/index.js"
+    "yimq": "./dist/Commands/index.js"
   },
   "scripts": {
     "prebuild": "rimraf dist",

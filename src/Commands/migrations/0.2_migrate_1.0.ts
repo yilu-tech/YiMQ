@@ -1,9 +1,9 @@
 
 import {App} from "../CommandApp";
-import { MessageStatus, MessageClearStatus } from "../../src/Constants/MessageConstants";
-import { Actor } from "../../src/Core/Actor";
+import { MessageStatus, MessageClearStatus } from "../../Constants/MessageConstants";
+import { Actor } from "../../Core/Actor";
 import { id } from "date-fns/locale";
-import { ActorStatus } from "../../src/Constants/ActorConstants";
+import { ActorStatus } from "../../Constants/ActorConstants";
 
 export async function run_02_migrate_10(){
     console.log('migrate to v1.0')

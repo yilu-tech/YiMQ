@@ -10,7 +10,7 @@ import {AppLogger as Logger} from './Handlers/AppLogger';
 import { ApplicationStatus } from './Constants/ApplicationConstants';
 import { BusinessException } from './Exceptions/BusinessException';
 import { timeout } from './Handlers';
-let pacakage = require('../../package.json');
+let pacakage = require('../package.json');
 @Injectable()
 export class Application implements OnApplicationShutdown,OnApplicationBootstrap,OnModuleInit{
     public version:string;

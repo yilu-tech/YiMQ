@@ -1,5 +1,5 @@
 var path = require('path');
-let mainFilePath = path.join(__dirname, './dist/src/main.js');
+let mainFilePath = path.join(__dirname, './dist/main.js');
 module.exports = {
   apps : [{
     name: 'yimq',

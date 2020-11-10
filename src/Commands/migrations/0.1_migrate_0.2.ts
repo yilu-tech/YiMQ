@@ -1,7 +1,7 @@
 
 import {App} from "../CommandApp";
-import { MessageStatus, MessageClearStatus } from "../../src/Constants/MessageConstants";
-import { Actor } from "../../src/Core/Actor";
+import { MessageStatus, MessageClearStatus } from "../../Constants/MessageConstants";
+import { Actor } from "../../Core/Actor";
 
 export async function run_01_migrate_02(){
     console.log('migrate to v2')
