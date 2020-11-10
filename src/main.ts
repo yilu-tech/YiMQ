@@ -11,8 +11,6 @@ import { ValidationException } from './Exceptions/ValidationException';
 import { CoordinatorRequestExceptionFilter } from './ExceptionFilters/CoordinatorRequestExceptionFilter';
 import { Config } from './Config';
 
-const { UI } = require('bull-board');
-
 const port = 7379;
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -42,15 +40,6 @@ async function bootstrap() {
   }
   // console.info(`..........................................Port: ${config.system.port}..........................................`);
   Logger.log(`Port: ${config.system.port}`,'Main')
-  
-
-
-  //TODO remove
-  var express = require('express');
-  var uiApp = express();
-  uiApp.use('/',UI);
-  uiApp.listen(7380, function () {
-  });
   
 }
 bootstrap();

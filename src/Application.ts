@@ -5,7 +5,6 @@ import { RedisManager } from './Handlers/redis/RedisManager';
 import { RedisClient } from './Handlers/redis/RedisClient';
 import { Config } from './Config';
 import { ActorConfigManager } from './Core/ActorConfigManager';
-const { setQueues } = require('bull-board')
 import {AppLogger as Logger} from './Handlers/AppLogger';
 import { ApplicationStatus } from './Constants/ApplicationConstants';
 import { BusinessException } from './Exceptions/BusinessException';
@@ -72,7 +71,6 @@ export class Application implements OnApplicationShutdown,OnApplicationBootstrap
     async bootstrap(){
         await this.baseBootstrap();
         await this.actorManagerBootstrap();
-        await this.setUiQueue();
     }
     async actorManagerBootstrap(){
         await this.actorManager.bootstrap();
@@ -98,7 +96,6 @@ export class Application implements OnApplicationShutdown,OnApplicationBootstrap
                     Logger.error(error.message,null,"Application Reload");
                 }
         
-                await this.setUiQueue();
                 this.status = ApplicationStatus.RUNNING;
             }
         })
@@ -128,15 +125,6 @@ export class Application implements OnApplicationShutdown,OnApplicationBootstrap
         Logger.log('RedisManager shutdown.......','Application');
         await this.redisManager.shutdown();
 
-    }
-    
-    async setUiQueue(){//TODO 自己开发ui后移除
-        
-        let queues = [];
-        this.actorManager.actors.forEach((actor)=>{
-            queues.push(actor.coordinator.getQueue());
-        })
-        setQueues(queues);
     }
 
     getVersion(){
