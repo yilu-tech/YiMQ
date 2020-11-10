@@ -1,13 +1,13 @@
 import { Transform } from "class-transformer";
-import { IsDefined, IsIn, Validate  } from "class-validator";
+import { IsDefined, IsEmpty, IsIn, Validate, ValidateIf  } from "class-validator";
 import { JobStatus } from "../Constants/JobConstants";
-import { MessageStatus } from "../Constants/MessageConstants";
+import { MessageClearStatus, MessageStatus } from "../Constants/MessageConstants";
 import { StringArrayIsIn } from "./CustromValidators";
 
 
 
 export function isFullMessagesSearch(properties:MessagesDto){
-    let exists =  ['message_id','topic','subtask_id','job_id','status'].find((property)=>{
+    let exists =  ['message_id','topic','subtask_id','job_id','status','clear_status'].find((property)=>{
         if(properties[property]){
             return true;
         }
@@ -24,7 +24,15 @@ export class MessagesDto{
     job_id:number;
 
     @Validate(StringArrayIsIn,[MessageStatus.CANCELED,MessageStatus.CANCELLING,MessageStatus.DOING,MessageStatus.DONE,MessageStatus.PENDING])
+    @ValidateIf(properties => properties.clear_status)
+    @IsEmpty({message:'one of status and clear_status to search'})
     status:MessageStatus[];
+
+    @IsIn([undefined,MessageClearStatus.WAITING,MessageClearStatus.FAILED])
+    @Transform((value:String) => value.toLocaleUpperCase())
+    @ValidateIf(properties => properties.status)
+    @IsEmpty({message:'one of status and clear_status to search'})
+    clear_status:MessageClearStatus;
 
 
     @IsDefined()

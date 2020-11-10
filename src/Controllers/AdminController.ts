@@ -66,6 +66,7 @@ export class AdminController {
         return this.actorService.getStatus(query.actor_id);
     }
 
+    //todo: remove
     @Get('actor/clearfailed')
     public async clearfailed(@Query() body){
         if(!body.actor_id){

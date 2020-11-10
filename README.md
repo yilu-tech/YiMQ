@@ -116,6 +116,7 @@
     sort:asc
     topic:user.create
     status: CANCELED,CANCELLING,DOING,DONE,PENDING
+    clear_status: WAITING|FAILED
     message_id:23
     subtask_id:25
     job_id:2180
