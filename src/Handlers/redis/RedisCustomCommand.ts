@@ -133,4 +133,41 @@ export function redisCustomCommand(client){
         return result;
         `
     })
+
+    client.defineCommand('getWaitingClearMessageTotal',{
+        numberOfKeys:1,
+        lua:`
+        local actor_id = KEYS[1];
+        local clear_status = ARGV[1];
+
+        -- actor_id 索引
+        local message_actor_index_key = 'nohm:index:message:actor_id:' .. actor_id;
+        -- done status message索引
+        local done_message_status_index_key = 'nohm:index:message:status:DONE';
+        -- canceled message索引
+        local canceled_message_status_index_key = 'nohm:index:message:status:CANCELED';
+
+        -- clear status索引
+        local clear_status_index_key = 'nohm:index:message:clear_status:' .. clear_status;
+
+        local waiting_clear_done_messages_tmp_key = 'actors:' .. KEYS[1] ..':waiting_clear_done_messages_tmp';
+        local waiting_clear_canceled_messages_tmp_key = 'actors:' .. KEYS[1] ..':waiting_clear_canceled_messages_tmp';
+
+        -- actor_id   done clear_status 取交集
+        redis.call('SINTERSTORE',waiting_clear_done_messages_tmp_key, message_actor_index_key, done_message_status_index_key, clear_status_index_key)
+        local done_total = redis.call('SCARD',waiting_clear_done_messages_tmp_key);
+
+        -- actor_id   canceled clear_status 取交集
+        redis.call('SINTERSTORE',waiting_clear_canceled_messages_tmp_key, message_actor_index_key, canceled_message_status_index_key, clear_status_index_key)
+        local canceld_total = redis.call('SCARD',waiting_clear_canceled_messages_tmp_key);
+
+
+        local total = done_total + canceld_total;
+
+        redis.call('DEL',waiting_clear_done_messages_tmp_key);
+        redis.call('DEL',waiting_clear_canceled_messages_tmp_key);
+
+        return total;
+        `
+    })
 }

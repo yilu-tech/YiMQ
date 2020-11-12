@@ -11,9 +11,9 @@ export class AdminService{
 
     }
 
-    async home(){
+    async home(full){
 
-        let actors = await this.actorService.list();
+        let actors = await this.actorService.getAllStatus(full);
 
         let master_redis = await this.application.masterRedisClient.getInfo();
 

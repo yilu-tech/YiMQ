@@ -1,5 +1,5 @@
 import { Transform } from "class-transformer";
-import { IsDefined, IsEmpty, IsIn, Validate, ValidateIf  } from "class-validator";
+import { IsBooleanString, IsDefined, IsEmpty, IsIn, Validate, ValidateIf  } from "class-validator";
 import { JobStatus } from "../Constants/JobConstants";
 import { MessageClearStatus, MessageStatus } from "../Constants/MessageConstants";
 import { StringArrayIsIn } from "./CustromValidators";
@@ -116,4 +116,9 @@ export class ActorJobRetryDto{
 export class ActorDao{
     @IsDefined()
     actor_id:number;
+}
+
+export class AdminHomeDao{
+    @IsBooleanString()
+    full:boolean;
 }

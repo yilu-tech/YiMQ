@@ -1,6 +1,6 @@
-import { Controller, Post, Body, Get, Query, ParseIntPipe, ParseArrayPipe} from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, ParseIntPipe, ParseArrayPipe, ParseBoolPipe} from '@nestjs/common';
 import { MessageService } from '../Services/MessageService';
-import { MessagesDto, MessageDetailDto, MessageClearFailedRetry, ClearFailedRetry, ActorJobsDao ,ActorJobDto,ActorDao, ActorJobRetryDto} from '../Dto/AdminControllerDto';
+import { MessagesDto, MessageDetailDto, MessageClearFailedRetry, ClearFailedRetry, ActorJobsDao ,ActorJobDto,ActorDao, ActorJobRetryDto, AdminHomeDao} from '../Dto/AdminControllerDto';
 import {ActorManager} from '../Core/ActorManager';
 import { Application } from '../Application';
 import { BusinessException } from '../Exceptions/BusinessException';
@@ -22,8 +22,8 @@ export class AdminController {
     }
 
     @Get('/')
-    public async home(){
-       return this.adminService.home();
+    public async home(@Query('full', ParseBoolPipe) full:boolean){
+       return this.adminService.home(full);
     }
 
     @Get('messages')
@@ -63,7 +63,7 @@ export class AdminController {
     }
     @Get('actor/status')
     public async actorStatus(@Query() query:ActorDao){
-        return this.actorService.getStatus(query.actor_id);
+        return this.actorService.getStatus(query.actor_id,true);
     }
 
     //todo: remove

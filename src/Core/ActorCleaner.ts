@@ -361,4 +361,19 @@ export class ActorCleaner{
 
     }
 
+    public async getCounts(){
+        let pipeline = this.actor.redisClient.pipeline();
+        pipeline['getWaitingClearMessageTotal'](this.actor.id,MessageClearStatus.WAITING);
+        pipeline['getWaitingClearMessageTotal'](this.actor.id,MessageClearStatus.FAILED);
+        pipeline.scard(this.actor.actorCleaner.db_key_waiting_clear_processors)
+        pipeline.scard(this.actor.actorCleaner.db_key_failed_clear_processors)
+        let result = await pipeline.exec()
+        return {
+            message_waiting : result[0][1],
+            message_failed : result[1][1],
+            process_waiting : result[2][1],
+            process_failed : result[3][1]
+        }
+    }
+
 }

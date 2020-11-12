@@ -22,7 +22,17 @@ export class SubtaskManager{
     }
 
     async get(subtask_id):Promise<any>{
-        let subtaskModel = await this.actor.subtaskModel.load(subtask_id);
+        
+        try{
+            var subtaskModel = await this.actor.subtaskModel.load(subtask_id);
+        }catch(error){
+            if(error && error.message === 'not found'){
+                return null;
+            }
+            throw error;
+        }
+
+        // let subtaskModel = await this.actor.subtaskModel.load(subtask_id);
 
         let message = await this.actor.messageManager.get(subtaskModel.property('message_id'));
         

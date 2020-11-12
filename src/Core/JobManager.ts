@@ -84,6 +84,9 @@ export class JobManager{
                     throw new SystemException(`Job ${jobContext.id} of Actor ${this.actor.id} not found ${jobContext.data.producer_id} producer.`)
                 }
                 let subtask = await producer.subtaskManager.get(jobContext.data.subtask_id);
+                if(!subtask){
+                    throw new SystemException(`Actor [${this.actor.name}-${this.actor.id}] Job ${jobContext.id} not found Subtask ${jobContext.data.subtask_id}.`)
+                }
                 
                 //生成subtask实例
                 job = new SubtaskJob(subtask,jobContext);

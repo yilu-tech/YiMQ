@@ -10,6 +10,7 @@ import { ExposeGroups, OnDemandSwitch } from "../Constants/ToJsonConstants";
 import { OnDemandRun, OnDemandToJson } from "../Decorators/OnDemand";
 import { MessageStatus } from "../Constants/MessageConstants";
 import { sortBy } from "lodash";
+import { Actor } from "../Core/Actor";
 
 
 
@@ -48,35 +49,70 @@ export class ActorService{
         return actor.allProperties();
     }
 
-    public async list(){
-        let actors = [];
+    // public async list(){
+    //     let actors = [];
+    //     for (const [i,actor] of this.actorManager.actors) {
+    //         let actorJson = OnDemandToJson(actor,[]);
+    //         actorJson['job_counts'] = await actor.coordinator.getJobConuts();
+    //         actors.push(actorJson);
+    //     }
+    //     actors = sortBy(actors,(actor)=>{
+    //         return actor.id;
+    //     })
+    //     return actors;
+    // }
+
+    public async getAllStatus(full:boolean){
+
+        let actorPromises = []
         for (const [i,actor] of this.actorManager.actors) {
-            let actorJson = OnDemandToJson(actor,[]);
-            actorJson['job_counts'] = await actor.coordinator.getJobConuts();
-            actors.push(actorJson);
+
+            actorPromises.push(this.getStatus(actor.id,full));
         }
-        actors = sortBy(actors,(actor)=>{
+        let actors = await Promise.all(actorPromises);
+        actors = sortBy(actors,(actor:Actor)=>{
             return actor.id;
         })
         return actors;
     }
-    public async getStatus(actor_id){
+
+    public async getStatus(actor_id,full){
         let actor = this.actorManager.getById(actor_id);    
         if(!actor){
             throw new BusinessException(`actor_id ${actor_id} is not exists.`)
         }
+        let promises = [];
         let actorJson = OnDemandToJson(actor,[]);
-        actorJson['job_counts'] = await actor.coordinator.getJobConuts();
+        promises.push(actor.coordinator.getJobConuts());
 
-        actorJson['message_counts']={};
+        if(full){
+            promises.push(this.getMessageCounts(actor));
+        }
+        promises.push(actor.actorCleaner.getCounts());
+        let result = await Promise.all(promises)
+        actorJson['job_counts'] = result[0];
+        if(full){
+            actorJson['message_counts'] = result[1];
+            actorJson['clear_counts'] = result[2];
+        }else{
+            actorJson['clear_counts'] = result[1];
+        }
+        return actorJson;
+    }
+    /**
+     * todo: 优化为lua脚本
+     * @param actor 
+     */
+    public async getMessageCounts(actor:Actor){
+        let message_counts = {};
         for (const messageStatus of [MessageStatus.CANCELED,MessageStatus.CANCELLING,MessageStatus.DOING,MessageStatus.DONE,MessageStatus.PENDING]) {
             let ids = await actor.messageModel.find({
                 actor_id: actor.id,
                 status: messageStatus
             })
-            actorJson['message_counts'][messageStatus] = ids.length;
+            message_counts[messageStatus] = ids.length;
         }
-        return actorJson;
+        return message_counts;
     }
 
     public async jobs(actor_id,status:[], start?: number, size?: number, sort?: 'ASC'|'DESC'){
