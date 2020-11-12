@@ -9,6 +9,7 @@ import {AppLogger as Logger} from './Handlers/AppLogger';
 import { ApplicationStatus } from './Constants/ApplicationConstants';
 import { BusinessException } from './Exceptions/BusinessException';
 import { timeout } from './Handlers';
+import { ContextLogger } from './Handlers/ContextLogger';
 let pacakage = require('../package.json');
 @Injectable()
 export class Application implements OnApplicationShutdown,OnApplicationBootstrap,OnModuleInit{
@@ -17,7 +18,14 @@ export class Application implements OnApplicationShutdown,OnApplicationBootstrap
     public status:ApplicationStatus;
     private startingUpTime:number;
     private shutdownTime:number;
-    constructor(public redisManager:RedisManager, public masterModels:MasterModels, public actorConfigManager:ActorConfigManager,public actorManager:ActorManager,public config:Config){
+    constructor(
+        public redisManager:RedisManager, 
+        public masterModels:MasterModels, 
+        public actorConfigManager:ActorConfigManager,
+        public actorManager:ActorManager,
+        public config:Config,
+        public contextLogger:ContextLogger
+        ){
         this.actorManager.setApplication(this);
         this.redisManager.setApplication(this);
         this.version = pacakage.version;

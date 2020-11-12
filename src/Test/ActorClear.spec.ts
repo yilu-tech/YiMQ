@@ -23,6 +23,7 @@ import { SystemException } from '../Exceptions/SystemException';
 import { ActorClearJob } from '../Core/Job/ActorClearJob';
 import { Job } from '../Core/Job/Job';
 import { BusinessException } from '../Exceptions/BusinessException';
+import { ContextLogger } from '../Handlers/ContextLogger';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('ActorClearTest', () => {
@@ -44,6 +45,7 @@ describe('ActorClearTest', () => {
             RedisManager,
             MasterModels,
             Application,
+            ContextLogger,
             ActorConfigManager,
             ActorManager,
             ...services,

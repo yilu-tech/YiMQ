@@ -1,6 +1,5 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpStatus } from '@nestjs/common';
 import { CoordinatorRequestException } from '../Exceptions/HttpCoordinatorRequestException';
-import { Logger} from '../Handlers/Logger';
 
 
 @Catch(CoordinatorRequestException)
@@ -13,7 +12,6 @@ export class CoordinatorRequestExceptionFilter implements ExceptionFilter {
     if(exception.response){
       message = `${message} -> response message: ${exception.response.message}`
     }
-    Logger.error(message,exception.stack,'CoordinatorRequestException')
     response
       .code(HttpStatus.INTERNAL_SERVER_ERROR)
       .send({

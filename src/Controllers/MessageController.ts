@@ -1,15 +1,17 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, UseInterceptors } from '@nestjs/common';
 import { CreateMessageDto, AddSubtaskDto } from '../Dto/MessageDto';
 
 import { MessageService } from '../Services/MessageService';
 import { TransactionMessage } from '../Core/Messages/TransactionMessage';
 import { OnDemandFastToJson } from '../Decorators/OnDemand';
 import { Subtask } from '../Core/Subtask/BaseSubtask/Subtask';
+import { ContextLoggingInterceptor } from '../Interceptors/ContextLoggingInterceptor';
 
 
 
 
 @Controller('message')
+@UseInterceptors(ContextLoggingInterceptor)
 export class MessagesController {
     constructor(private messageService:MessageService){
 
@@ -30,7 +32,7 @@ export class MessagesController {
      * 创建事物任务
      */
     @Post('subtask')
-    async jobs(@Body() addSubtaskDto: AddSubtaskDto): Promise<any> {
+    async subtask(@Body() addSubtaskDto: AddSubtaskDto): Promise<any> {
         let subtask:Subtask = await this.messageService.addSubtask(
             addSubtaskDto.actor,
             addSubtaskDto.message_id,

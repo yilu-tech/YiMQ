@@ -5,13 +5,12 @@ import { SystemException } from "../Exceptions/SystemException";
 import { Message } from "./Messages/Message";
 import { ConsumerSubtask } from "./Subtask/BaseSubtask/ConsumerSubtask";
 import { JobType, JobStatus } from "../Constants/JobConstants";
-import { Logger } from "../Handlers/Logger";
 import { JobOptions } from "bull";
 import { differenceBy, isArray } from "lodash";
 import IORedis = require("ioredis");
 import { BusinessException } from "../Exceptions/BusinessException";
 import { ActorClearJob } from "./Job/ActorClearJob";
-// import {AppLogger} from '../Handlers/AppLogger';
+import { Logger } from "@nestjs/common";
 
 
 export class ActorCleaner{
@@ -50,9 +49,16 @@ export class ActorCleaner{
         let cleardCanceldMessageIds = await this.clearLocalMessage(canceldMessageIds,failedCanceledMessageIds);
         let cleardProcessorIds = await this.clearLocalProcessorIds(waitingClearProcessorIds,failed_process_ids);//清理掉本次已经远程清理了的processor的id
 
-        let message = `<${this.actor.name}> actor cleared message: ${doneMessageIds.length + canceldMessageIds.length}  process: ${waitingClearProcessorIds.length}`;
-        Logger.log(message,'ActorCleaner');
-        return {cleardDoneMessageIds,cleardCanceldMessageIds,cleardProcessorIds,delay:false}
+        return {
+            counts:{
+                cleardDoneMessageCount: cleardDoneMessageIds.length,
+                cleardCanceldMessageCount: cleardCanceldMessageIds.length,
+                cleardProcessorCount: cleardProcessorIds.length
+            },
+            cleardDoneMessageIds,
+            cleardCanceldMessageIds,
+            cleardProcessorIds,
+            delay:false}
     }
 
 
@@ -65,7 +71,7 @@ export class ActorCleaner{
 
         //如果clearJob 不是当前job，不能添加下一个job
         if(clearJob.id != actorClearJob.id){
-            Logger.error(`${this.actor.name} has [${await clearJob.getStatus()}] clear job.`,'ActorCleaner');
+            Logger.error(`${this.actor.name} has [${await clearJob.getStatus()}] clear job.`,null,'ActorCleaner');
             return null;
         }
 
@@ -79,7 +85,7 @@ export class ActorCleaner{
         //如果clearJob 就是当前job，状态为failed 尝试重试
         if(clearJob && clearJobStatus == JobStatus.FAILED){
             await clearJob.context.retry();
-            Logger.error(`${this.actor.name} has failed clear job retry.`,'ActorCleaner');
+            Logger.error(`${this.actor.name} has failed clear job retry.`,null,'ActorCleaner');
             return 
         }
 
@@ -99,14 +105,14 @@ export class ActorCleaner{
         let clearJobStatus = await clearJob.getStatus();
         //活跃就报错
         if(clearJobStatus == JobStatus.ACTIVE){
-            Logger.error(`${this.actor.name} has [${clearJobStatus}] clear job.`,'ActorCleaner.setupClearJob');
+            Logger.error(`${this.actor.name} has [${clearJobStatus}] clear job.`,null,'ActorCleaner.setupClearJob');
             return;
         }
 
         //存在就
         if(clearJobStatus == JobStatus.FAILED){
             await clearJob.context.retry();
-            Logger.error(`${this.actor.name} has failed clear job retry.`,'ActorCleaner.setupClearJob');
+            Logger.error(`${this.actor.name} has failed clear job retry.`,null,'ActorCleaner.setupClearJob');
             return 
         }
         //clearJob的其他状态一般是队列问题，等待队列恢复就可以

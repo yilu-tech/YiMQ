@@ -54,7 +54,14 @@ export abstract class Job{
     returnvalue: any;
 
     @Expose({groups:[ExposeGroups.JOB_FULL]})
-    failedReason?: string;
+    @Transform((value) => {
+        try {
+            return JSON.parse(value);
+        } catch (error) {
+            return value
+        }
+    } )
+    failedReason?: string|object;
     
     @Exclude()
     public readonly context:bull.Job;

@@ -5,9 +5,9 @@ import { TransactionMessage } from '../Messages/TransactionMessage';
 import { MessageStatus } from '../../Constants/MessageConstants';
 import { ConsumerSubtask } from './BaseSubtask/ConsumerSubtask';
 import { HttpCoordinatorRequestException } from '../../Exceptions/HttpCoordinatorRequestException';
-import { Logger} from '../../Handlers/Logger';
 import { OnDemandFastToJson } from '../../Decorators/OnDemand';
 import { Exclude, Expose } from 'class-transformer';
+import { Logger } from '@nestjs/common';
 
 export class TccSubtaskPrepareResult{
     constructor(public status:any=null,public message:any=null, public data:any=null){
@@ -47,7 +47,7 @@ export class TccSubtask extends ConsumerSubtask{
          
             this.prepareResult.data = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.TRY,callContext,options);     
             if((await this.getStatus()) == SubtaskStatus.CANCELLING){
-                Logger.warn(Logger.message(`Subtask ${this.id} status is CANCELLING after prepared.`,OnDemandFastToJson(this)),`TccSubtask ${this.type}`)
+                Logger.warn(`Subtask ${this.id} status is CANCELLING after prepared.`,`TccSubtask ${this.type}`)
             }else{
                 this.setStatus(SubtaskStatus.PREPARED);
             }
@@ -63,7 +63,7 @@ export class TccSubtask extends ConsumerSubtask{
                 data: error.response,
             };
 
-            Logger.debug(Logger.message(`Subtask ${this.id} ${error.message}`,this.prepareResult),`TccSubtask ${this.type}`)
+            // Logger.debug(`Subtask ${this.id} ${error.message}`,`TccSubtask ${this.type}`)
         }
         
         await this.setPrepareResult(this.prepareResult)

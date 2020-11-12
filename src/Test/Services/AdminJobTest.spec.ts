@@ -18,6 +18,7 @@ import { JobService } from '../../Services/JobService';
 import { MasterModels } from '../../Models/MasterModels';
 import { Application } from '../../Application';
 import { ActorConfigManager } from '../../Core/ActorConfigManager';
+import { ContextLogger } from '../../Handlers/ContextLogger';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('Subtask', () => {
@@ -41,6 +42,7 @@ describe('Subtask', () => {
             ActorConfigManager,
             ActorManager,
             Application,
+            ContextLogger,
             ...services,
         ],
         }).compile();

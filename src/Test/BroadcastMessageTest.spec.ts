@@ -20,6 +20,7 @@ import { async } from 'rxjs/internal/scheduler/async';
 import { BroadcastMessage } from '../Core/Messages/BroadcastMessage';
 import { Application } from '../Application';
 import { ActorConfigManager } from '../Core/ActorConfigManager';
+import { ContextLogger } from '../Handlers/ContextLogger';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('BroadcastMessage', () => {
@@ -42,6 +43,7 @@ describe('BroadcastMessage', () => {
             RedisManager,
             MasterModels,
             Application,
+            ContextLogger,
             ActorConfigManager,
             ActorManager,
             ...services,

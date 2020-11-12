@@ -14,7 +14,7 @@ import { MessageService } from './Services/MessageService';
 import { JobService } from './Services/JobService';
 import { ActorConfigManager } from './Core/ActorConfigManager';
 import { AdminService } from './Services/AdminService';
-
+import { ContextLogger } from './Handlers/ContextLogger';
 
 export const services = [
   ActorService,
@@ -35,6 +35,7 @@ export const services = [
   providers: [
     Application,
     Config,
+    ContextLogger,
     RedisManager,
     MasterModels,
     ActorConfigManager,

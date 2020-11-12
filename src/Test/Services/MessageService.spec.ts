@@ -16,6 +16,7 @@ import {JobStatus} from '../../Constants/JobConstants'
 import { TransactionMessage } from '../../Core/Messages/TransactionMessage';
 import { Application } from '../../Application';
 import { ActorConfigManager } from '../../Core/ActorConfigManager';
+import { ContextLogger } from '../../Handlers/ContextLogger';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('MessageService', () => {
@@ -38,6 +39,7 @@ describe('MessageService', () => {
             ActorConfigManager,
             ActorManager,
             Application,
+            ContextLogger,
             ...services,
         ],
         }).compile();
