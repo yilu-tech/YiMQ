@@ -9,6 +9,7 @@ import { ActorManager } from "../Core/ActorManager";
 import { ExposeGroups, OnDemandSwitch } from "../Constants/ToJsonConstants";
 import { OnDemandRun, OnDemandToJson } from "../Decorators/OnDemand";
 import { MessageStatus } from "../Constants/MessageConstants";
+import { sortBy } from "lodash";
 
 
 
@@ -54,6 +55,9 @@ export class ActorService{
             actorJson['job_counts'] = await actor.coordinator.getJobConuts();
             actors.push(actorJson);
         }
+        actors = sortBy(actors,(actor)=>{
+            return actor.id;
+        })
         return actors;
     }
     public async getStatus(actor_id){
