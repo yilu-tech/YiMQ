@@ -29,6 +29,7 @@ export class Actor{
     public options:ActorOptions;
     public redis:string;
     public protocol:string;
+    @Expose()
     public status:ActorStatus
 
     
