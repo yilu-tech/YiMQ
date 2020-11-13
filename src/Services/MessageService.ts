@@ -12,6 +12,7 @@ import { ExposeGroups, OnDemandSwitch } from "../Constants/ToJsonConstants";
 import { OnDemandRun, OnDemandToJson } from "../Decorators/OnDemand";
 import { Actor } from "../Core/Actor";
 import { intersectionBy, unionBy } from "lodash";
+import { timestampToDateString } from "../Handlers";
 @Injectable()
 export class MessageService {
     constructor(private actorManger:ActorManager){
@@ -62,11 +63,13 @@ export class MessageService {
         }
         let message:TransactionMessage = await producer.messageManager.get(message_id);
         await OnDemandRun(message,[
+            OnDemandSwitch.MESSAGE_JOB,
             OnDemandSwitch.MESSAGE_SUBTASKS_TOTAL,
             OnDemandSwitch.MESSAGE_SUBTASKS,
             OnDemandSwitch.SUBTASK_JOB
         ])
         let result = OnDemandToJson(message,[
+            ExposeGroups.MESSAGE_JOB,
             ExposeGroups.RELATION_ACTOR,
             ExposeGroups.SUBTASK_JOB
         ])
@@ -134,6 +137,11 @@ export class MessageService {
             limit:[conditions.start,conditions.size]
         },ids);
         let messages = this.findResultToJson(await producer.messageModel.loadMany(sorIds));
+        for (const message of messages) {
+            console.log(message.created_at)
+            message.created_at = timestampToDateString(parseInt(message.created_at))
+            message.updated_at = timestampToDateString(parseInt(message.updated_at))
+        }
         return {
             total: ids.length,
             start: conditions.start,

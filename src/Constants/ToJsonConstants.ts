@@ -23,6 +23,8 @@ export enum ExposeGroups{
 
 export enum OnDemandSwitch{
     JOB_STATUS = 'JOB_STATUS',
+    
+    MESSAGE_JOB = 'MESSAGE_JOB',
     MESSAGE_SUBTASKS_TOTAL = 'MESSAGE_SUBTASKS_TOTAL',
     MESSAGE_SUBTASKS = 'MESSAGE_SUBTASKS',
 

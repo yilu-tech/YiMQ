@@ -134,7 +134,7 @@ export abstract class Message{
     public  async loadSubtasks(full=false){
         return this;
     };
-
+    @OnDemand(OnDemandSwitch.MESSAGE_JOB)
     public async loadJob(){
         return this;
     }
