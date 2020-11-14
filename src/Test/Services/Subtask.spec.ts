@@ -214,6 +214,7 @@ describe('Subtask', () => {
             let savedEcSubtask = updatedMessage.subtasks[0];;
             expect(savedEcSubtask.type).toBe(SubtaskType.EC);
             expect(savedEcSubtask.status).toBe(SubtaskStatus.PREPARED);
+            expect(updatedMessage.subtask_total).toBe(1);
             expect(updatedMessage.pending_subtask_total).toBe(1);
 
             mock.onPost(contentActor.api).reply(200,{
@@ -230,6 +231,7 @@ describe('Subtask', () => {
             await updatedMessage.loadSubtasks();
             let savedTccSubtask = updatedMessage.subtasks[1];
             expect(savedTccSubtask.type).toBe(SubtaskType.TCC);
+            expect(updatedMessage.subtask_total).toBe(2);
             expect(updatedMessage.pending_subtask_total).toBe(2);
             
         });
@@ -664,6 +666,7 @@ describe('Subtask', () => {
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
             await updatedMessage.loadSubtasks();
             expect(updatedMessage.status).toBe(MessageStatus.DOING);
+            expect(updatedMessage.subtask_total).toBe(2);
             expect(updatedMessage.pending_subtask_total).toBe(2);
             producer.coordinator.getQueue().on('failed',async(job,err)=>{
                 // console.log(job.toJSON(),err)

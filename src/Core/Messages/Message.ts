@@ -59,7 +59,7 @@ export abstract class Message{
     @Expose()
     public subtasks:Array<Subtask> = [];  //事物的子项目
     @Expose()
-    public subtasks_total:number;
+    public subtask_total:number;
     @Expose()
     public pending_subtask_total:number;
 
@@ -114,6 +114,7 @@ export abstract class Message{
         this.job_id = this.model.property('job_id')
         this.updated_at = this.model.property('updated_at');
         this.created_at = this.model.property('created_at');
+        this.subtask_total = this.model.property('subtask_total');
         this.pending_subtask_total = this.model.property('pending_subtask_total');
         this.subtask_contexts = <Array<SubtaskContext>>this.model.property('subtask_contexts');
         this.clear_status = this.model.property('clear_status');
@@ -125,10 +126,6 @@ export abstract class Message{
         this.model = messageModel;
         await this.initProperties();
     };
-    @OnDemand(OnDemandSwitch.MESSAGE_SUBTASKS_TOTAL)
-    public async loadSubtasksTotal(){
-        this.subtasks_total = await this.model.numLinks('subtask');
-    }
 
     @OnDemand(OnDemandSwitch.MESSAGE_SUBTASKS)
     public  async loadSubtasks(full=false){
@@ -142,7 +139,10 @@ export abstract class Message{
     abstract async toDoing():Promise<Message>;
 
     protected async incrPendingSubtaskTotal(){
-        return this.producer.redisClient.hincrby(this.getMessageHash(),'pending_subtask_total',1);
+        let multi = this.producer.redisClient.multi();
+        multi.hincrby(this.getMessageHash(),'subtask_total',1);
+        multi.hincrby(this.getMessageHash(),'pending_subtask_total',1);
+        await multi.exec();
     }
     public getMessageHash(){
         return `${this.model['nohmClass'].prefix.hash}${this.model.modelName}:${this.id}`;

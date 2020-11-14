@@ -9,6 +9,7 @@ interface MessageProperties {
     type:string;
     context:string;
     data:string;
+    subtask_total:number;
     pending_subtask_total: number;
     status: MessageStatus;
     job_id: number;
@@ -48,6 +49,9 @@ export class MessageModelClass extends NohmModel<MessageProperties> {
         },
         data: {
             type: 'json',
+        },
+        subtask_total: {
+            type: 'integer',
         },
         pending_subtask_total: {
             type: 'integer',

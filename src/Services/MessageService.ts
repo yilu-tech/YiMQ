@@ -64,7 +64,6 @@ export class MessageService {
         let message:TransactionMessage = await producer.messageManager.get(message_id);
         await OnDemandRun(message,[
             OnDemandSwitch.MESSAGE_JOB,
-            OnDemandSwitch.MESSAGE_SUBTASKS_TOTAL,
             OnDemandSwitch.MESSAGE_SUBTASKS,
             OnDemandSwitch.SUBTASK_JOB
         ])
@@ -138,7 +137,6 @@ export class MessageService {
         },ids);
         let messages = this.findResultToJson(await producer.messageModel.loadMany(sorIds));
         for (const message of messages) {
-            console.log(message.created_at)
             message.created_at = timestampToDateString(parseInt(message.created_at))
             message.updated_at = timestampToDateString(parseInt(message.updated_at))
         }

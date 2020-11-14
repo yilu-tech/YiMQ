@@ -199,7 +199,6 @@ describe('ActorClearTest', () => {
             let canCleardMessageIds =  await userActor.actorCleaner.clearLocalMessage(userDoneMessageIds,failedCleardMessageIds);
             expect(canCleardMessageIdsForVerify).toEqual(canCleardMessageIdsForVerify);
             let total = await userActor.coordinator.getJobConuts();
-            console.log(total);
             //剩下的job数量应该等于 failedCleardMessageIds + failedCleardMessageIds对应的ecsubtak的job数量
             expect(total.waiting).toBe(failedCleardMessageIds.length * 2)
         })

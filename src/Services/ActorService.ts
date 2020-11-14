@@ -125,7 +125,7 @@ export class ActorService{
 
         let jobs = await actor.coordinator.getJobs(status,start,end,asc)
 
-        let OnDemandSwitchs = [OnDemandSwitch.MESSAGE_SUBTASKS_TOTAL]
+        let OnDemandSwitchs = []
 
         if(status.length > 1){ //如果两个查询两个状态以上，返回job是status
             OnDemandSwitchs.push(OnDemandSwitch.JOB_STATUS)
@@ -166,7 +166,6 @@ export class ActorService{
         // console.time('OnDemandRun');
         await OnDemandRun(job,[
             OnDemandSwitch.JOB_STATUS,
-            OnDemandSwitch.MESSAGE_SUBTASKS_TOTAL,
             OnDemandSwitch.MESSAGE_SUBTASKS
         ])
         // console.timeEnd('OnDemandRun');
