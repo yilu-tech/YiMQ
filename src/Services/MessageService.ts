@@ -133,7 +133,7 @@ export class MessageService {
         let sorIds = await producer.messageModel.sort({
             field:'id',
             direction: conditions.sort,
-            limit:[conditions.start,conditions.size]
+            limit:[Number(conditions.start),Number(conditions.size)]
         },ids);
         let messages = this.findResultToJson(await producer.messageModel.loadMany(sorIds));
         for (const message of messages) {
