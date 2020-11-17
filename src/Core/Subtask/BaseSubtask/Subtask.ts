@@ -11,7 +11,7 @@ export abstract class Subtask{
     @Expose()
     id:Number;
     @Expose()
-    job_id:number;
+    job_id:string;
     @Expose()
     type:SubtaskType;
     @Expose()

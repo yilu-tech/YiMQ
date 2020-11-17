@@ -2,18 +2,17 @@ import { Job } from "./Job";
 import { ActorMessageStatus, MessageStatus } from "../../Constants/MessageConstants";
 import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
 import { TransactionMessage } from "../Messages/TransactionMessage";
-import * as bull from 'bull';
 import { SystemException } from "../../Exceptions/SystemException";
 import { Exclude, Expose } from "class-transformer";
 import { ExposeGroups } from "../../Constants/ToJsonConstants";
-
+import { Job as BullJob} from 'bullmq';
 @Exclude()
 export class MessageJob extends Job{
     @Expose()
     public message_id:number | string;
     @Expose({groups:[ExposeGroups.JOB_PARENT]})
     public message:TransactionMessage;//TransactionMessage ---> Message
-    constructor(message:TransactionMessage,public readonly context:bull.Job){
+    constructor(message:TransactionMessage,public readonly context:BullJob){
         super(context)
         this.message_id = message.id;
         this.message = message;

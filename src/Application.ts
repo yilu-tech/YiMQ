@@ -18,6 +18,7 @@ export class Application implements OnApplicationShutdown,OnApplicationBootstrap
     public status:ApplicationStatus;
     private startingUpTime:number;
     private shutdownTime:number;
+    // public redis_prefix:string = '';
     constructor(
         public redisManager:RedisManager, 
         public masterModels:MasterModels, 
@@ -122,6 +123,10 @@ export class Application implements OnApplicationShutdown,OnApplicationBootstrap
     async publishGlobalEventActorsConfigChange(actorName){
         this.masterRedisClient.publish('ACTORS_CONFIG_UPDATED',actorName);
     }
+
+    // public getRedisKey(key?){
+    //     return `${this.redis_prefix}${key}`
+    // }
 
 
 

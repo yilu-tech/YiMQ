@@ -12,7 +12,7 @@ import { MessageType, MessageStatus } from '../Constants/MessageConstants';
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
 import { TransactionMessage } from '../Core/Messages/TransactionMessage';
-import { SubtaskType, SubtaskStatus } from '../Constants/SubtaskConstants';
+import { SubtaskStatus } from '../Constants/SubtaskConstants';
 import { BcstSubtask } from '../Core/Subtask/BcstSubtask';
 import { MasterModels } from '../Models/MasterModels';
 import { services } from '../app.module';
@@ -124,8 +124,10 @@ describe('BroadcastMessage', () => {
             });
 
             mock.onPost(userProducer.api).replyOnce(200,{message:'subtask process succeed'})
+            await userProducer.process();
+            await contentProducer.process();
 
-            userProducer.coordinator.getQueue().on('completed',async (job)=>{
+            userProducer.coordinator.on('completed',async (job)=>{
                 updatedMessage = await userProducer.messageManager.get(message.id);
 
 
@@ -146,8 +148,7 @@ describe('BroadcastMessage', () => {
 
             // await actorManager.bootstrapActorsCoordinatorprocessor();
            
-            await userProducer.process();
-            await contentProducer.process();
+    
         })
 
 
@@ -225,7 +226,10 @@ describe('BroadcastMessage', () => {
                     
                 done();
             }
-            userProducer.coordinator.getQueue().on('completed',async (job)=>{
+
+            await userProducer.process();
+            await contentProducer.process();
+            userProducer.coordinator.on('completed',async (job)=>{
                 updatedMessage = await userProducer.messageManager.get(message.id);
                 await updatedMessage.loadSubtasks();
                 let bcstSubtask:BcstSubtask = <BcstSubtask>updatedMessage.subtasks[0];
@@ -247,7 +251,7 @@ describe('BroadcastMessage', () => {
                 }
             })
 
-            contentProducer.coordinator.getQueue().on('completed',async (job)=>{
+            contentProducer.coordinator.on('completed',async (job)=>{
                 updatedMessage = await userProducer.messageManager.get(message.id);
                 await updatedMessage.loadSubtasks();
                 let bcstSubtask:BcstSubtask = <BcstSubtask>updatedMessage.subtasks[0];
@@ -262,8 +266,7 @@ describe('BroadcastMessage', () => {
 
             })
             // await actorManager.bootstrapActorsCoordinatorprocessor();
-            await userProducer.process();
-            await contentProducer.process();
+         
 
 
             await message.confirm();

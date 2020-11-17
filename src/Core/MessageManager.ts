@@ -4,15 +4,15 @@ import { GeneralMessage } from './Messages/GeneralMessage';
 import { TransactionMessage } from './Messages/TransactionMessage';
 import { BusinessException } from '../Exceptions/BusinessException';
 import { Actor } from './Actor';
-import * as bull from 'bull';
 import { SystemException } from '../Exceptions/SystemException';
 import { BroadcastMessage } from './Messages/BroadcastMessage';
+import { JobsOptions } from 'bullmq';
 export class MessageManager {
     constructor(private producer:Actor){
 
     }
 
-    async create(type:MessageType, topic:string,data,jobOptions:bull.JobOptions={}):Promise<any> {
+    async create(type:MessageType, topic:string,data,jobOptions:JobsOptions={}):Promise<any> {
        
         
         let message:Message = this.messageFactory(type,this.producer);

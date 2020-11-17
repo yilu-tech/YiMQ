@@ -1,5 +1,6 @@
+import { BackoffOptions, RateLimiterOptions } from "bullmq";
 import { ConsumeTopic } from "./ConsumeTopic";
-import { RateLimiter, BackoffOptions } from "bull";
+
 
 
 
@@ -9,7 +10,7 @@ export interface ActorOptions{
     clear_limit:number;
     clear_backoff:number | BackoffOptions;
     subtask_force_attempts:number;
-    coordinator_limiter:RateLimiter;
+    coordinator_limiter:RateLimiterOptions;
 }
 
 export const actorDefaultOptions:ActorOptions = {

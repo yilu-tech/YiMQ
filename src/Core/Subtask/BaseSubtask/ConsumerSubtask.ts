@@ -3,11 +3,11 @@ import { Actor } from "../../Actor";
 import { TransactionMessage } from "../../Messages/TransactionMessage";
 import { SubtaskJob } from "../../Job/SubtaskJob";
 import { SubtaskStatus } from "../../../Constants/SubtaskConstants";
-import * as bull from 'bull';
 import { JobType } from "../../../Constants/JobConstants";
 import { Expose } from "class-transformer";
 import { OnDemand } from "../../../Decorators/OnDemand";
 import { ExposeGroups, OnDemandSwitch } from "../../../Constants/ToJsonConstants";
+import { JobsOptions } from "bullmq";
 
 export abstract class ConsumerSubtask extends Subtask{
     @Expose({groups:[ExposeGroups.RELATION_ACTOR]})
@@ -44,7 +44,7 @@ export abstract class ConsumerSubtask extends Subtask{
     }
     @OnDemand(OnDemandSwitch.SUBTASK_JOB)
     public async loadJob(){
-        if(this.job_id > -1){
+        if(Number(this.job_id) > -1){
             let jobContext = await this.consumer.coordinator.getJob(this.job_id);
             this.job = new SubtaskJob(this,jobContext);
             await this.job.restore();
@@ -63,7 +63,7 @@ export abstract class ConsumerSubtask extends Subtask{
 
     private async setStatusAddJobFor(status:SubtaskStatus.DOING|SubtaskStatus.CANCELLING){
         this.status = status;
-        let jobOptions:bull.JobOptions = {
+        let jobOptions:JobsOptions= {
             jobId: await this.message.producer.actorManager.getJobGlobalId()
         }
         await this.setJobId(jobOptions.jobId).save();//先保存job_id占位

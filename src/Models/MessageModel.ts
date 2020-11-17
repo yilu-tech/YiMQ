@@ -12,7 +12,7 @@ interface MessageProperties {
     subtask_total:number;
     pending_subtask_total: number;
     status: MessageStatus;
-    job_id: number;
+    job_id: string;
     subtask_contexts:object;//TODO change name to subtasks
     clear_status:string;
     updated_at: number;
@@ -62,7 +62,7 @@ export class MessageModelClass extends NohmModel<MessageProperties> {
             validations: ['notEmpty']
         },
         job_id: {
-            type: 'integer',
+            type: 'string',
             index: true
         },
         subtask_contexts:{

@@ -46,8 +46,9 @@ export class Actor{
     private model:ActorModelClass
     public actorCleaner:ActorCleaner;
 
-    constructor(public actorManager:ActorManager,public redisManager:RedisManager){
+    // public redis_prefix:string;
 
+    constructor(public actorManager:ActorManager,public redisManager:RedisManager){
     }
 
     public async bootstrap() {
@@ -77,6 +78,7 @@ export class Actor{
     public async init(actorModel){
         this.setModel(actorModel);
         AppLogger.log(`Actor init...... （${this.name}).`,'Actor')
+        // this.redis_prefix = this.actorManager.application.getRedisKey(`actor:${this.id}`);
         this.redisClient = await this.redisManager.client(this.redis);
         this.initNohm();
         this.messageManager = new MessageManager(this);
@@ -114,11 +116,7 @@ export class Actor{
                 break;
         }
         await this.coordinator.initQueue();
-    }
-
-    
-
-
+    } 
 
     public suspend(){
 

@@ -1,19 +1,20 @@
 
 import { Coordinator } from './Coordinator';
-import * as bull from 'bull';
 import axios from 'axios';
 import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
 import { Actor } from '../Actor';
 import { HttpCoordinatorRequestException } from '../../Exceptions/HttpCoordinatorRequestException';
 import { Job } from '../Job/Job';
-import {AppLogger} from '../../Handlers/AppLogger';
 import { OnDemandFastToJson } from '../../Decorators/OnDemand';
 import { format } from 'date-fns';
+import { Job as BullJob} from 'bullmq';
 
 export class HttpCoordinator extends Coordinator{
     
     public async processBootstrap(){
-        this.queue.process('*',1000,async (jobContext:bull.Job)=>{
+
+        await this.process(async (jobContext:BullJob) => {
+
             let job:Job = null;
             let start_time = Date.now();
             try {
@@ -32,7 +33,6 @@ export class HttpCoordinator extends Coordinator{
                 throw new Error(this.processExceptionContent(error));
             }
         })
-        AppLogger.log(`Coordinator <${this.actor.name}> bootstrap`,`HttpCoordinator`)
     };
 
     private logProcessSuccess(start_time,job:Job,result:any){

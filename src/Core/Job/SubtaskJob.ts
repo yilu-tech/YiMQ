@@ -1,17 +1,17 @@
 import { Job } from "./Job";
 import { Subtask } from "../Subtask/BaseSubtask/Subtask";
-import * as bull from 'bull';
 import { SubtaskStatus } from "../../Constants/SubtaskConstants";
 import { SystemException } from "../../Exceptions/SystemException";
 import { Exclude, Expose } from "class-transformer";
 import { ExposeGroups } from "../../Constants/ToJsonConstants";
+import { Job as BullJob} from 'bullmq';
 @Exclude()
 export class SubtaskJob extends Job{
     @Expose()
     public subtask_id:Number;
     @Expose({groups:[ExposeGroups.JOB_PARENT]})
     public subtask:Subtask;
-    constructor(subtask:Subtask,public readonly context:bull.Job){
+    constructor(subtask:Subtask,public readonly context:BullJob){
         super(context);
         this.subtask = subtask;
         this.subtask_id = subtask.id;

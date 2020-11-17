@@ -329,9 +329,9 @@ describe('Subtask', () => {
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
             await updatedMessage.loadSubtasks();
             expect(updatedMessage.subtasks['0'].data).toMatchObject(body.prepare_subtasks[0].data);
-            
+            await producer.process();
               //任务执行完毕
-              producer.coordinator.getQueue().on('completed',async (job)=>{
+              producer.coordinator.on('completed',async (job)=>{
                 updatedMessage = await producer.messageManager.get(message.id);
                 await updatedMessage.loadSubtasks();
                 await updatedMessage.loadSubtasks();
@@ -351,7 +351,7 @@ describe('Subtask', () => {
                 }
             })
             // await actorManager.bootstrapActorsCoordinatorprocessor();
-            await producer.process();
+            
              //把message确认
             await messageService.confirm(producerName,message.id);
         })
@@ -379,7 +379,7 @@ describe('Subtask', () => {
                 }
             });
             expect(message.status).toBe(MessageStatus.PENDING)
-            expect(message.job_id).toBe(1)
+            expect(message.job_id).toBe('1')
 
             
             let producer = actorManager.get(producerName); 
@@ -399,8 +399,8 @@ describe('Subtask', () => {
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
             await updatedMessage.loadSubtasks();
             expect(updatedMessage.status).toBe(MessageStatus.DOING);
-
-            producer.coordinator.getQueue().on('completed',async (job)=>{
+            await producer.process();
+            producer.coordinator.on('completed',async (job)=>{
                 if(message.job.id == job.id){
                     updatedMessage = await producer.messageManager.get(message.id);
                     await updatedMessage.loadSubtasks();
@@ -413,7 +413,7 @@ describe('Subtask', () => {
                 }
             })
             // await actorManager.bootstrapActorsCoordinatorprocessor();
-            await producer.process();
+            
 
         });
 
@@ -465,8 +465,8 @@ describe('Subtask', () => {
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
             await updatedMessage.loadSubtasks();
             expect(updatedMessage.status).toBe(MessageStatus.DOING);
-
-            producer.coordinator.getQueue().on('completed',async (job)=>{
+            await producer.process();
+            producer.coordinator.on('completed',async (job)=>{
                 if(message.job.id == job.id){
                     updatedMessage = await producer.messageManager.get(message.id);
                     await updatedMessage.loadSubtasks();
@@ -483,7 +483,6 @@ describe('Subtask', () => {
                 }
             })
             // await actorManager.bootstrapActorsCoordinatorprocessor();
-            await producer.process();
 
         });
 
@@ -566,7 +565,7 @@ describe('Subtask', () => {
                 }
             });
             expect(message.status).toBe(MessageStatus.PENDING)
-            expect(message.job_id).toBe(1)
+            expect(message.job_id).toBe('1')
 
             
             let producer = actorManager.get(producerName); 
@@ -594,8 +593,8 @@ describe('Subtask', () => {
             await updatedMessage.loadSubtasks();
             expect(updatedMessage.status).toBe(MessageStatus.DOING);
 
-
-            producer.coordinator.getQueue().on('completed',async (job)=>{
+            await producer.process();
+            producer.coordinator.on('completed',async (job)=>{
                 updatedMessage = await producer.messageManager.get(message.id);
                 await updatedMessage.loadSubtasks(true);
                 if(message.job.id == job.id){
@@ -614,7 +613,7 @@ describe('Subtask', () => {
                 }
             })
             // await actorManager.bootstrapActorsCoordinatorprocessor();
-            await producer.process();
+            
 
         
         })
@@ -668,13 +667,14 @@ describe('Subtask', () => {
             expect(updatedMessage.status).toBe(MessageStatus.DOING);
             expect(updatedMessage.subtask_total).toBe(2);
             expect(updatedMessage.pending_subtask_total).toBe(2);
-            producer.coordinator.getQueue().on('failed',async(job,err)=>{
+            await producer.process();
+            await contentActor.process();
+            producer.coordinator.on('failed',async(job,err)=>{
                 // console.log(job.toJSON(),err)
             })
-            
             mock.onPost(producer.api).reply(200,{message:'subtask process succeed'})
             //任务开始执行
-            producer.coordinator.getQueue().on('active',async (job)=>{
+            producer.coordinator.on('active',async (job)=>{
                 console.debug('Job active',job.id)
                 updatedMessage = await producer.messageManager.get(message.id);
                 await updatedMessage.loadSubtasks();
@@ -691,7 +691,7 @@ describe('Subtask', () => {
                 }
             })
             //任务执行完毕
-            producer.coordinator.getQueue().on('completed',async (job)=>{
+            producer.coordinator.on('completed',async (job)=>{
                 updatedMessage = await producer.messageManager.get(message.id);
                 await updatedMessage.loadSubtasks();
                 if(message.job.id == job.id){
@@ -720,8 +720,7 @@ describe('Subtask', () => {
                 }
             })
             // await actorManager.bootstrapActorsCoordinatorprocessor();
-            await producer.process();
-            await contentActor.process();
+            
 
         });
 
@@ -764,7 +763,8 @@ describe('Subtask', () => {
         
             process.env.SUBTASK_JOB_BACKOFF_DELAY = '100';//加快二次尝试，防止测试超时
             mock.onPost(producer.api).timeout()//模拟超时
-            producer.coordinator.getQueue().on('failed',async(job,err)=>{
+            await producer.process();
+            producer.coordinator.on('failed',async(job,err)=>{
                 updatedMessage = await producer.messageManager.get(message.id);
                 await updatedMessage.loadSubtasks();
                 if(updatedMessage.subtasks[0].job_id != job.id){
@@ -780,7 +780,7 @@ describe('Subtask', () => {
             })
             
             //任务执行完毕
-            producer.coordinator.getQueue().on('completed',async (job)=>{
+            producer.coordinator.on('completed',async (job)=>{
                 console.debug('Job completed',job.id)
 
 
@@ -797,7 +797,7 @@ describe('Subtask', () => {
                 }
             })
             // await actorManager.bootstrapActorsCoordinatorprocessor();
-            await producer.process();
+            
         });
 
     });
@@ -857,8 +857,8 @@ describe('Subtask', () => {
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
             await updatedMessage.loadSubtasks();
             expect(updatedMessage.status).toBe(MessageStatus.CANCELLING);
-
-            producer.coordinator.getQueue().on('failed',async(job,err)=>{
+            await producer.process();
+            producer.coordinator.on('failed',async(job,err)=>{
                 console.log(err)
             })
             
@@ -868,7 +868,7 @@ describe('Subtask', () => {
                 return [200,{message:'subtask process succeed'}];
             })
             //任务开始执行
-            producer.coordinator.getQueue().on('active',async (job)=>{
+            producer.coordinator.on('active',async (job)=>{
                 // console.debug('Job active',job.id)
                 let updatedMessage = await producer.messageManager.get(message.id);
                 await updatedMessage.loadSubtasks();
@@ -886,7 +886,7 @@ describe('Subtask', () => {
                 }
             })
             //任务执行完毕
-            producer.coordinator.getQueue().on('completed',async (job)=>{
+            producer.coordinator.on('completed',async (job)=>{
                 console.debug('Job completed',job.id)
                 let updatedMessage = await producer.messageManager.get(message.id); 
                 await updatedMessage.loadSubtasks();
@@ -924,8 +924,7 @@ describe('Subtask', () => {
                 }
             })
             // await actorManager.bootstrapActorsCoordinatorprocessor();
-            await producer.process();
-
+            
         });
 
 
@@ -963,15 +962,15 @@ describe('Subtask', () => {
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
             await updatedMessage.loadSubtasks();
             expect(updatedMessage.status).toBe(MessageStatus.CANCELLING);
-
-            producer.coordinator.getQueue().on('failed',async(job,err)=>{
+            await producer.process();
+            producer.coordinator.on('failed',async(job,err)=>{
                 console.log(err)
             })
             
 
 
             //任务执行完毕
-            producer.coordinator.getQueue().on('completed',async (job)=>{
+            producer.coordinator.on('completed',async (job)=>{
                 // console.debug('Job completed',job.id)
                 updatedMessage = await producer.messageManager.get(message.id);
                 await updatedMessage.loadSubtasks();
@@ -988,7 +987,7 @@ describe('Subtask', () => {
                 }
             })
             // await actorManager.bootstrapActorsCoordinatorprocessor();
-            await producer.process();
+            
 
         });
 
@@ -1031,7 +1030,8 @@ describe('Subtask', () => {
         
             process.env.SUBTASK_JOB_BACKOFF_DELAY = '100';//加快二次尝试，防止测试超时
             mock.onPost(producer.api).timeout()//模拟超时
-            producer.coordinator.getQueue().on('failed',async(job,err)=>{
+            await producer.process();
+            producer.coordinator.on('failed',async(job,err)=>{
                 
            
                 if(job.attemptsMade == 1){
@@ -1048,7 +1048,7 @@ describe('Subtask', () => {
             })
             
             //任务执行完毕
-            producer.coordinator.getQueue().on('completed',async (job)=>{
+            producer.coordinator.on('completed',async (job)=>{
                 // console.debug('Job completed',job.id)
                
 
@@ -1066,7 +1066,7 @@ describe('Subtask', () => {
                 //TODO 子任务完成后检查message状态为完成
             })
             // await actorManager.bootstrapActorsCoordinatorprocessor();
-            await producer.process();
+            
         });
         
 
@@ -1097,9 +1097,9 @@ describe('Subtask', () => {
                 return [200,{message: 'success'}];
             })
             
-        
+            await producer.process();
                // //任务执行完毕
-            producer.coordinator.getQueue().on('completed',async (job)=>{
+            producer.coordinator.on('completed',async (job)=>{
                 // console.debug('Job completed',job.id)
                 let updatedMessage = await producer.messageManager.get(message.id);
                 await updatedMessage.loadSubtasks();
@@ -1115,7 +1115,7 @@ describe('Subtask', () => {
                 }
             })
             // await actorManager.bootstrapActorsCoordinatorprocessor();
-            await producer.process();
+           
 
             process.env.SUBTASK_JOB_BACKOFF_DELAY = '10';
             //没有await，让其在cancel之后再返回数据

@@ -1,6 +1,5 @@
-import * as Ioredis from 'ioredis'
-
-export class RedisClient extends Ioredis{
+import Redis from 'ioredis'
+export class RedisClient extends Redis{
 
     async getInfo(){
         let info = await this.info();

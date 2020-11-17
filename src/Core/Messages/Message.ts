@@ -3,12 +3,12 @@ import { MessageStatus, MessageType, MessageClearStatus } from "../../Constants/
 import { Job } from "../Job/Job";
 import { JobType } from "../../Constants/JobConstants";
 import { MessageModelClass } from "../../Models/MessageModel";
-import * as bull from 'bull';
 import { Subtask } from "../Subtask/BaseSubtask/Subtask";
 import {  Expose, Transform } from "class-transformer";
 import { format } from "date-fns";
 import {  ExposeGroups, OnDemandSwitch } from "../../Constants/ToJsonConstants";
 import { OnDemand } from "../../Decorators/OnDemand";
+import { JobsOptions } from "bullmq";
 
 export interface SubtaskContext{
     consumer_id:number
@@ -36,7 +36,7 @@ export abstract class Message{
     data:any;
 
     @Expose()
-    job_id: number;
+    job_id: string;
 
     @Expose()
     @Transform(value => format(Number(value),'yyyy-MM-dd HH:mm:ss'))
@@ -94,7 +94,7 @@ export abstract class Message{
      * 创建message对应的job
      * @param options 
      */
-    async create(topic:string, jobOptions:bull.JobOptions):Promise<any>{
+    async create(topic:string, jobOptions:JobsOptions):Promise<any>{
         jobOptions.jobId = await this.producer.actorManager.getJobGlobalId();
         this.model.property('job_id',jobOptions.jobId);//先保存job_id，如果先创建job再保存id可能产生，message未记录job_id的情况
         await this.save();

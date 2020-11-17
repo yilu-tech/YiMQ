@@ -5,12 +5,13 @@ import { SystemException } from "../Exceptions/SystemException";
 import { Message } from "./Messages/Message";
 import { ConsumerSubtask } from "./Subtask/BaseSubtask/ConsumerSubtask";
 import { JobType, JobStatus } from "../Constants/JobConstants";
-import { JobOptions } from "bull";
 import { differenceBy, isArray } from "lodash";
 import IORedis = require("ioredis");
 import { BusinessException } from "../Exceptions/BusinessException";
 import { ActorClearJob } from "./Job/ActorClearJob";
 import { Logger } from "@nestjs/common";
+import { JobsOptions } from "bullmq";
+import { stringProperty } from "nohm";
 
 
 export class ActorCleaner{
@@ -127,10 +128,10 @@ export class ActorCleaner{
 
         await this.actor.redisClient.lpush(this.db_key_clear_jobs,job_id);
 
-        let options:JobOptions = {
+        let options:JobsOptions = {
             delay: delay ? this.actor.options.clear_interval : 0,
             attempts:3,
-            jobId: job_id,
+            jobId: String(job_id),
             // removeOnComplete:true,
             backoff: this.actor.options.clear_backoff
         }

@@ -1,11 +1,10 @@
 import { Job } from "./Job";
 import { Actor } from "../Actor";
-import Bull = require("bull");
 // const timeout = ms => new Promise(res => setTimeout(res, ms))
-
+import { Job as BullJob} from 'bullmq';
 export class ActorClearJob extends Job{
 
-    constructor(public actor:Actor,public readonly context:Bull.Job){
+    constructor(public actor:Actor,public readonly context:BullJob){
         super(context);
     }
     async process() {

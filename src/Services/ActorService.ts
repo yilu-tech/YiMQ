@@ -139,11 +139,7 @@ export class ActorService{
             items.push(item);
         }
 
-        let job_counts = await actor.coordinator.getJobConuts();
-        let total = 0;
-        for (const item of status) {
-            total += job_counts[item];
-        }
+        let total = await actor.coordinator.getJobCountByTypes.apply(actor.coordinator,status);
 
         return {
             total: total,

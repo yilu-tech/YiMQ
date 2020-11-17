@@ -1,10 +1,9 @@
-import * as bull from 'bull';
 import { Exclude, Expose, Transform } from 'class-transformer';
 import { format } from 'date-fns';
 import { ExposeGroups ,OnDemandSwitch} from '../../Constants/ToJsonConstants';
 import { JobStatus, JobType } from '../../Constants/JobConstants';
 import { OnDemand } from '../../Decorators/OnDemand';
-
+import { Job as BullJob, JobsOptions} from 'bullmq';
 export abstract class Job{
     @Expose()
     public id:number;
@@ -15,7 +14,7 @@ export abstract class Job{
     @Expose()
     public status:JobStatus
     
-    opts: bull.JobOptions;
+    opts: JobsOptions;
 
     /**
      * How many attempts where made to run this job
@@ -64,9 +63,9 @@ export abstract class Job{
     failedReason?: string|object;
     
     @Exclude()
-    public readonly context:bull.Job;
+    public readonly context:BullJob;
     
-    constructor(context:bull.Job){
+    constructor(context:BullJob){
         this.context = context;
         this.id = Number(this.context.id);
         this.type = this.context.data.type;

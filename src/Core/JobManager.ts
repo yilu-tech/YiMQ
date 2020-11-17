@@ -5,11 +5,11 @@ import { JobType } from "../Constants/JobConstants";
 import { MessageJob } from "./Job/MessageJob";
 import { SubtaskJob } from "./Job/SubtaskJob";
 import { Message } from "./Messages/Message";
-import * as bull from 'bull';
 import { TransactionMessage } from "./Messages/TransactionMessage";
 import { Subtask } from "./Subtask/BaseSubtask/Subtask";
 import { ActorClearJob } from "./Job/ActorClearJob";
 import { SystemException } from "../Exceptions/SystemException";
+import { Job as BullJob, JobsOptions} from 'bullmq';
 export class JobManager{
     constructor(private actor:Actor){
     }
@@ -19,12 +19,12 @@ export class JobManager{
     //     let jobContext = await this.actor.coordinator.getJob(id);
     //     return this.restore(jobContext);
     // }
-    public async add(from:Message|Subtask,type:JobType,jobOptions:bull.JobOptions={}){
+    public async add(from:Message|Subtask,type:JobType,jobOptions:JobsOptions={}){
         let job:Job;
         let message:any;
         let jobContext;
         let data;
-        let defaultOptions:bull.JobOptions = {
+        let defaultOptions:JobsOptions = {
             attempts:3,
             backoff:{
                 type:'exponential',
@@ -68,7 +68,7 @@ export class JobManager{
         return job;
 
     }
-    public async restoreByContext(jobContext:bull.Job){
+    public async restoreByContext(jobContext:BullJob){
         let job:Job;
         let message;
         switch (jobContext.data.type) {

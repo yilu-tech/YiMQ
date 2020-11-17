@@ -133,7 +133,7 @@ export class ActorManager{
 
     public async getJobGlobalId(){
         let masterRedisClient = await this.redisManager.client();
-        return masterRedisClient.incr('global:ids:job');
+        return String(await masterRedisClient.incr('global:ids:job'));
     }
     public async getMessageGlobalId(){
         let masterRedisClient = await this.redisManager.client();

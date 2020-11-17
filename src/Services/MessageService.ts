@@ -1,7 +1,6 @@
 import { MessageClearStatus, MessageStatus, MessageType } from "../Constants/MessageConstants";
 import { Injectable } from "@nestjs/common";
 import { ActorManager } from "../Core/ActorManager";
-import * as bull from 'bull';
 import { MessageControlResult } from "../Core/Messages/Message";
 import { SubtaskType } from "../Constants/SubtaskConstants";
 import { SystemException } from "../Exceptions/SystemException";
@@ -13,12 +12,13 @@ import { OnDemandRun, OnDemandToJson } from "../Decorators/OnDemand";
 import { Actor } from "../Core/Actor";
 import { intersectionBy, unionBy } from "lodash";
 import { timestampToDateString } from "../Handlers";
+import { JobsOptions } from "bullmq";
 @Injectable()
 export class MessageService {
     constructor(private actorManger:ActorManager){
 
     }
-    async create<P>(producerName:string,type:MessageType, topic:string,data,jobOptions?:bull.JobOptions):Promise<P> {
+    async create<P>(producerName:string,type:MessageType, topic:string,data,jobOptions?:JobsOptions):Promise<P> {
         let message:any;
         let producer = this.actorManger.get(producerName);
         if(!producer){
