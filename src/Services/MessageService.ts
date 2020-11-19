@@ -70,7 +70,8 @@ export class MessageService {
         let result = OnDemandToJson(message,[
             ExposeGroups.MESSAGE_JOB,
             ExposeGroups.RELATION_ACTOR,
-            ExposeGroups.SUBTASK_JOB
+            ExposeGroups.SUBTASK_JOB,
+            ExposeGroups.JOB_FULL,
         ])
         return result;
     }
