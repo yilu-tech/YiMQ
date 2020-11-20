@@ -1,13 +1,10 @@
-FROM yilutech/cloud9:ubuntu
+FROM yilutech/cloud9:node-12
 
-COPY docker/startup /
+COPY . /apps
 
-#SHELL ["/bin/bash", "-c"]
+RUN cd /apps \
+ && npm install \
+ && npm run build \
+ && mkdir -p /apps/logs
 
-RUN source /root/.nvm/nvm.sh && npm config set registry https://registry.npm.taobao.org && npm install -g yimq
-
-COPY ecosystem.config.js /root/.nvm/versions/node/v11.7.0/lib/node_modules/yimq/ecosystem.config.js
-
-WORKDIR /apps
-
-CMD ["bash", "/startup"]
+CMD ["bash", "-c", "cd /apps && pm2 start ecosystem.prod.config.js"]
