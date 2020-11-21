@@ -1,12 +1,19 @@
 import { Injectable } from "@nestjs/common";
+import { existsSync, mkdirSync } from "fs";
+import { join } from "path";
 import * as pino from "pino";
 
 @Injectable()
 export class ContextLogger{
     private logger:pino.Logger;
     constructor(){
+        let logDir = join(process.cwd(),'logs');
+        if(!existsSync(logDir)){
+            mkdirSync(logDir);
+        }
+        let logFile = join(logDir,'context.log')
         this.logger =  pino(pino.destination({
-            dest: './logs/context.log'
+            dest: logFile
         }))
     }
 
