@@ -1,5 +1,5 @@
 
-import { Coordinator } from './Coordinator';
+import { Coordinator, CoordinatorProcessResult } from './Coordinator';
 import * as bull from 'bull';
 import axios from 'axios';
 import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
@@ -22,7 +22,7 @@ export class HttpCoordinator extends Coordinator{
                 // debugMsg += jobContext.data.subtask_id? ` subtask-${jobContext.data.subtask_id||''}` : '';
                 // Logger.debug(debugMsg,'HttpCoordinator')
                 job = await this.actor.jobManager.restoreByContext(jobContext);
-                let result =  await job.process();
+                let result:CoordinatorProcessResult =  await job.process();
                 await this.logProcessSuccess(start_time,job,result);
                 return result;
             } catch (error) {

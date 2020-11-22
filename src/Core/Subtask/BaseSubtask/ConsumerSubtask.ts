@@ -8,6 +8,7 @@ import { JobType } from "../../../Constants/JobConstants";
 import { Expose } from "class-transformer";
 import { OnDemand } from "../../../Decorators/OnDemand";
 import { ExposeGroups, OnDemandSwitch } from "../../../Constants/ToJsonConstants";
+import { CoordinatorProcessResult } from "../../Coordinator/Coordinator";
 
 export abstract class ConsumerSubtask extends Subtask{
     @Expose({groups:[ExposeGroups.RELATION_ACTOR]})
@@ -58,8 +59,8 @@ export abstract class ConsumerSubtask extends Subtask{
     public async cancel(){
         await this.setStatusAddJobFor(SubtaskStatus.CANCELLING)
     }
-    abstract async toDo();
-    abstract async toCancel();
+    abstract async toDo():Promise<CoordinatorProcessResult>;
+    abstract async toCancel():Promise<CoordinatorProcessResult>;;
 
     private async setStatusAddJobFor(status:SubtaskStatus.DOING|SubtaskStatus.CANCELLING){
         this.status = status;

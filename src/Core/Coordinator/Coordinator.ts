@@ -5,6 +5,12 @@ import { RedisClient } from '../../Handlers/redis/RedisClient';
 import { Job } from '../Job/Job';
 import { BusinessException } from '../../Exceptions/BusinessException';
 import { clamp } from 'lodash';
+
+export interface CoordinatorProcessResult{
+    process: 'success' | 'compensate success'
+    actor_result?:any;
+}
+
 export abstract class Coordinator{
     public clientRedisClient:RedisClient;
     public subscriberRedisClient:RedisClient;

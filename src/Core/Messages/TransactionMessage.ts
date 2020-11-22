@@ -8,6 +8,7 @@ import { MessageJob } from "../Job/MessageJob";
 import {JobStatus} from "../../Constants/JobConstants"
 import { OnDemandFastToJson } from "../../Decorators/OnDemand";
 import { Exclude } from "class-transformer";
+import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
 @Exclude()
 export class TransactionMessage extends Message{
     type = MessageType.TRANSACTION;
@@ -19,12 +20,12 @@ export class TransactionMessage extends Message{
         return this;
     }
 
-    async toDoing():Promise<any>{
+    async toDoing():Promise<CoordinatorProcessResult>{
         //没有子任务直接完成message
         let pending_subtask_total = await this.getPendingSubtaskTotal();
         if(pending_subtask_total== 0){
             await this.setStatus(MessageStatus.DONE).save();
-            return this;
+            return {process: 'success'};
         }
         await this.loadSubtasks();
         //并行执行
@@ -34,16 +35,16 @@ export class TransactionMessage extends Message{
         }))
 
         await this.setStatus(MessageStatus.DOING).save();
-        return this;
+        return {process: 'success'};
         
     }
 
-    async toCancelling(){
+    async toCancelling():Promise<CoordinatorProcessResult>{
         //没有子任务直接完成message
         let pending_subtask_total = await this.getPendingSubtaskTotal();
         if(pending_subtask_total == 0){
             await this.setStatus(MessageStatus.CANCELED).save();
-            return this;
+            return {process: 'success'};
         }
         await this.loadSubtasks();
 
@@ -51,7 +52,7 @@ export class TransactionMessage extends Message{
             return subtask.cancel()
         }))
         await this.setStatus(MessageStatus.CANCELLING).save();
-        return this;
+        return {process: 'success'};
     }
 
     async cancel():Promise<MessageControlResult>{

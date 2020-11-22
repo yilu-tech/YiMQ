@@ -9,6 +9,7 @@ import {  Expose, Transform } from "class-transformer";
 import { format } from "date-fns";
 import {  ExposeGroups, OnDemandSwitch } from "../../Constants/ToJsonConstants";
 import { OnDemand } from "../../Decorators/OnDemand";
+import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
 
 export interface SubtaskContext{
     consumer_id:number
@@ -136,7 +137,7 @@ export abstract class Message{
         return this;
     }
 
-    abstract async toDoing():Promise<Message>;
+    abstract async toDoing():Promise<CoordinatorProcessResult>;
 
     protected async incrPendingSubtaskTotal(){
         let multi = this.producer.redisClient.multi();
