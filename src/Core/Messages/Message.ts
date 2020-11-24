@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import {  ExposeGroups, OnDemandSwitch } from "../../Constants/ToJsonConstants";
 import { OnDemand } from "../../Decorators/OnDemand";
 import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
+import { MessageOptions } from "../../Structures/MessageOptionsStructure";
 
 export interface SubtaskContext{
     consumer_id:number
@@ -95,8 +96,12 @@ export abstract class Message{
      * 创建message对应的job
      * @param options 
      */
-    async create(topic:string, jobOptions:bull.JobOptions):Promise<any>{
-        jobOptions.jobId = await this.producer.actorManager.getJobGlobalId();
+    async create(topic:string, options:MessageOptions):Promise<any>{
+        let jobOptions:bull.JobOptions = {
+            jobId: await this.producer.actorManager.getJobGlobalId(),
+            delay: options.delay,
+            backoff: options.backoff
+        };
         this.model.property('job_id',jobOptions.jobId);//先保存job_id，如果先创建job再保存id可能产生，message未记录job_id的情况
         await this.save();
         await this.initProperties();

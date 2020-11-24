@@ -13,18 +13,19 @@ import { OnDemandRun, OnDemandToJson } from "../Decorators/OnDemand";
 import { Actor } from "../Core/Actor";
 import { intersectionBy, unionBy } from "lodash";
 import { timestampToDateString } from "../Handlers";
+import { MessageOptions } from "../Structures/MessageOptionsStructure";
 @Injectable()
 export class MessageService {
     constructor(private actorManger:ActorManager){
 
     }
-    async create<P>(producerName:string,type:MessageType, topic:string,data,jobOptions?:bull.JobOptions):Promise<P> {
+    async create<P>(producerName:string,type:MessageType, topic:string,data,options?:MessageOptions):Promise<P> {
         let message:any;
         let producer = this.actorManger.get(producerName);
         if(!producer){
             throw new SystemException(`Producer <${producerName}> not exists.`)
         }
-        message =  await producer.messageManager.create(type,topic,data,jobOptions);
+        message =  await producer.messageManager.create(type,topic,data,options);
         return message;
     }
     async confirm(producerName:string,messageId):Promise<MessageControlResult>{

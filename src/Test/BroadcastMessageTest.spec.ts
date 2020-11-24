@@ -114,9 +114,9 @@ describe('BroadcastMessage', () => {
             await contentProducer.prepare();
 
             process.env.SUBTASK_JOB_DELAY = '100';
-            message = await messageService.create(producerName,MessageType.BROADCAST,topic,{
+            message = await messageService.create(producerName,MessageType.BROADCAST,topic,{},{
                 delay:0,
-                attempts:5,
+                // attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 5000
@@ -191,9 +191,8 @@ describe('BroadcastMessage', () => {
             await userProducer.prepare();
             await contentProducer.prepare();
 
-            message = await messageService.create(producerName,MessageType.TRANSACTION,topic,{
+            message = await messageService.create(producerName,MessageType.TRANSACTION,topic,{},{
                 delay:0,
-                attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 5000

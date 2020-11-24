@@ -80,11 +80,6 @@ describe('MessageService', () => {
 
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:8000, //设置超过5秒，检查confirm后是否立即执行job
-                attempts:5,
-                backoff:{
-                    type:'exponential',
-                    delay: 100  
-                }
             });
             expect(message.status).toBe(MessageStatus.PENDING)
             let producer = actorManager.get(producerName); 
@@ -131,7 +126,6 @@ describe('MessageService', () => {
             process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:50,
-                attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 100  
@@ -184,11 +178,7 @@ describe('MessageService', () => {
             let message:Message;
             process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
             message = await messageService.create(producerName,messageType,topic,{},{
-                attempts:5,
-                backoff:{
-                    type:'exponential',
-                    delay: 100  
-                }
+
             });
             expect(message.topic).toBe(topic);
             let producer = actorManager.get(producerName); 
@@ -223,12 +213,7 @@ describe('MessageService', () => {
             let message:Message;
            
             message = await messageService.create(producerName,messageType,topic,{},{
-                delay:8000,
-                attempts:5,
-                backoff:{
-                    type:'exponential',
-                    delay: 100  
-                }
+                delay:8000
             });
             expect(message.status).toBe(MessageStatus.PENDING)
             let producer = actorManager.get(producerName); 
@@ -272,11 +257,6 @@ describe('MessageService', () => {
         it('.timeout check cancel', async (done) => {
             process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
             message = await messageService.create(producerName,messageType,topic,{},{
-                attempts:5,
-                backoff:{
-                    type:'exponential',
-                    delay: 100  
-                }
             });
             expect(message.topic).toBe(topic);
             let producer = actorManager.get(producerName); 
@@ -303,11 +283,6 @@ describe('MessageService', () => {
            
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:1000, //设置超过5秒，检查confirm后是否立即执行job
-                attempts:5,
-                backoff:{
-                    type:'exponential',
-                    delay: 100  
-                }
             });
             expect(message.status).toBe(MessageStatus.PENDING)
 
