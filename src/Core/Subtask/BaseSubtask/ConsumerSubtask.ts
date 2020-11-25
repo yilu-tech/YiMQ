@@ -9,6 +9,9 @@ import { Expose } from "class-transformer";
 import { OnDemand } from "../../../Decorators/OnDemand";
 import { ExposeGroups, OnDemandSwitch } from "../../../Constants/ToJsonConstants";
 import { CoordinatorProcessResult } from "../../Coordinator/Coordinator";
+import { MessageStatus } from "../../../Constants/MessageConstants";
+import { Logger } from "@nestjs/common";
+import { Message } from "../../Messages/Message";
 
 export abstract class ConsumerSubtask extends Subtask{
     @Expose({groups:[ExposeGroups.RELATION_ACTOR]})
@@ -70,6 +73,32 @@ export abstract class ConsumerSubtask extends Subtask{
         await this.setJobId(jobOptions.jobId).save();//先保存job_id占位
         await this.setStatus(status).save();//先添加job有可能会导致job开始执行，subtask的状态还未修改，导致出错
         this.job = await this.consumer.jobManager.add(this,JobType.SUBTASK,jobOptions)
+    }
+
+    public async completeAndSetMeesageStatus(status,messageStatus){
+        await super.completeAndSetMeesageStatus(status,messageStatus);
+        
+        try {
+            await this.childMessageCheck();   
+        } catch (error) {
+            //忽略错误
+            Logger.error(error.message,null,'ConsumerSubtask')
+        }
+    }
+
+    public async childMessageCheck(){
+        let childMessageIds = await this.consumer.messageModel.find({
+            actor_id: this.consumer_id,
+            parent_process_id: this.id
+        })
+        for(let childMessageId of childMessageIds){
+            let message:Message = await this.consumer.messageManager.get(childMessageId);
+            await message.loadJob();
+            if(message.status == MessageStatus.PENDING){
+                await message.job.promote()
+            }
+        }
+
     }
 
 }

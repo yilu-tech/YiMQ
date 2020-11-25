@@ -9,13 +9,14 @@ import {JobStatus} from "../../Constants/JobConstants"
 import { OnDemandFastToJson } from "../../Decorators/OnDemand";
 import { Exclude } from "class-transformer";
 import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
+import { MessageOptions } from "../../Structures/MessageOptionsStructure";
 @Exclude()
 export class TransactionMessage extends Message{
     type = MessageType.TRANSACTION;
 
 
-    async createMessageModel(topic:string,data){
-        await super.createMessageModel(topic,data);
+    async createMessageModel(topic:string,data,options:MessageOptions){
+        await super.createMessageModel(topic,data,options);
         this.model.property('status',MessageStatus.PENDING);
         return this;
     }

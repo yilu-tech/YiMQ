@@ -3,14 +3,15 @@ import { MessageStatus,MessageType } from "../../Constants/MessageConstants";
 import { LstrSubtask } from "../Subtask/LstrSubtask";
 import { SubtaskType } from "../../Constants/SubtaskConstants";
 import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
+import { MessageOptions } from "../../Structures/MessageOptionsStructure";
 
 
 export class BroadcastMessage extends Message{
     public type = MessageType.BROADCAST;
     public context:object = {};
 
-    async createMessageModel(topic:string,data){
-        await super.createMessageModel(topic,data);
+    async createMessageModel(topic:string,data,options:MessageOptions){
+        await super.createMessageModel(topic,data,options);
         this.model.property('status',MessageStatus.DOING);//等待最后一个子任务完成时来标记message为done状态
         return this;
     }

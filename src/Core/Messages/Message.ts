@@ -68,12 +68,15 @@ export abstract class Message{
     @Expose()
     public clear_status:string;
 
+    @Expose()
+    public parent_process_id:number;
+
     constructor(producer:Actor){
 
         this.producer = producer;
     }
 
-    async createMessageModel(topic,data){
+    async createMessageModel(topic,data,options:MessageOptions){
         this.model = new this.producer.messageModel();
         
         this.model.id = String(await this.producer.actorManager.getMessageGlobalId());
@@ -83,6 +86,7 @@ export abstract class Message{
         this.model.property('type',this.type);
         this.model.property('status',MessageStatus.PENDING);
         this.model.property('clear_status',MessageClearStatus.WAITING);
+        this.model.property('parent_process_id',options.parent_process_id || -1)
         if(data){
             this.model.property('data',data)
         }
@@ -124,6 +128,7 @@ export abstract class Message{
         this.pending_subtask_total = this.model.property('pending_subtask_total');
         this.subtask_contexts = <Array<SubtaskContext>>this.model.property('subtask_contexts');
         this.clear_status = this.model.property('clear_status');
+        this.parent_process_id = this.model.property('parent_process_id');
 
 
     }

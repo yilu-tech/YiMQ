@@ -16,6 +16,8 @@ export class CreateMessageDto{
     @IsInt()
     delay:number;
 
+    parent_process_id:string;
+
     data:JSON;
 }
 

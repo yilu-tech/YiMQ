@@ -17,6 +17,8 @@ import { TransactionMessage } from '../../Core/Messages/TransactionMessage';
 import { Application } from '../../Application';
 import { ActorConfigManager } from '../../Core/ActorConfigManager';
 import { ContextLogger } from '../../Handlers/ContextLogger';
+import { SubtaskStatus, SubtaskType } from '../../Constants/SubtaskConstants';
+import { XaSubtask } from '../../Core/Subtask/XaSubtask';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('MessageService', () => {
@@ -65,6 +67,7 @@ describe('MessageService', () => {
     
         await actorManager.shutdown();
         await redisManager.closeAll();
+        mock.reset();
 
     })
     
@@ -95,7 +98,6 @@ describe('MessageService', () => {
             await producer.process();
 
             let result = await messageService.confirm(producerName,message.id);
-            console.log('--->',result)
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
             expect(updatedMessage.status).toBe(MessageStatus.DOING);
         });
@@ -303,6 +305,126 @@ describe('MessageService', () => {
 
         });
     });
+
+
+    describe('.child message', () => {
+        it('.child message create', async () => {
+            let producerName = 'user';
+            let messageType = MessageType.TRANSACTION;
+            let topic = 'user_create';
+            let parentMessage:TransactionMessage;
+            let childMessage1:TransactionMessage;
+            let childMessage2:TransactionMessage;
+
+            let userActor = actorManager.get('user');
+
+            parentMessage = await messageService.create(producerName,messageType,topic,{},{
+                delay:1000, //设置超过5秒，检查confirm后是否立即执行job
+            });
+            mock.onPost(userActor.api).replyOnce(200);
+            let subtask:XaSubtask = await parentMessage.addSubtask(SubtaskType.XA,{
+                processor:'user@user.create',
+                data:{
+                    'name':1
+                }
+            });
+
+            childMessage1 = await messageService.create(producerName,messageType,topic,{},{
+                delay:1000, //设置超过5秒，检查confirm后是否立即执行job
+                parent_process_id:subtask.id
+            });
+            await childMessage1.loadJob();
+            childMessage2 = await messageService.create(producerName,messageType,topic,{},{
+                delay:1000, //设置超过5秒，检查confirm后是否立即执行job
+                parent_process_id:subtask.id
+            });
+            await childMessage2.loadJob();
+            //子任务完成后，检查是否有立即去检查子message的状态
+            await subtask.completeAndSetMeesageStatus(SubtaskStatus.DONE,MessageStatus.DONE);
+
+            expect(await childMessage1.job.getStatus()).toBe(JobStatus.WAITING)
+            expect(await childMessage2.job.getStatus()).toBe(JobStatus.WAITING)
+        })
+
+
+        it('.child message create by real job', async (done) => {
+            let producerName = 'user';
+            let messageType = MessageType.TRANSACTION;
+            let topic = 'user_create';
+            let message:TransactionMessage;
+            let childMessage1:TransactionMessage;
+            let childMessage2:TransactionMessage;
+
+            let userActor = actorManager.get('user');
+
+            message = await messageService.create(producerName,messageType,topic,{},{
+                delay:5000, //设置超过5秒，检查confirm后是否立即执行job
+            });
+
+            mock.onPost(userActor.api).replyOnce(200);
+            let subtask:XaSubtask = await message.addSubtask(SubtaskType.XA,{
+                processor:'user@user.create',
+                data:{
+                    'name':1
+                }
+            });
+
+            childMessage1 = await messageService.create(producerName,messageType,topic,{},{
+                delay:1000*10, //设置超过5秒，检查confirm后是否立即执行job
+                parent_process_id:subtask.id
+            });
+            await childMessage1.loadJob();
+            childMessage2 = await messageService.create(producerName,messageType,topic,{},{
+                delay:1000*10, //设置超过5秒，检查confirm后是否立即执行job
+                parent_process_id:subtask.id
+            });
+            
+
+            await userActor.process()
+            userActor.coordinator.getQueue().on('completed',async (job)=>{
+                message = await userActor.messageManager.get(message.id);
+                
+                subtask = await userActor.subtaskManager.get(subtask.id);
+                await subtask.loadJob()
+
+                if(subtask.job && subtask.job.id == job.id){
+                    expect(subtask.status).toBe(SubtaskStatus.DONE)
+                    expect(message.status).toBe(MessageStatus.DONE)
+                  
+                }
+                if(childMessage1.job_id == job.id){
+                    childMessage1 = await userActor.messageManager.get(childMessage1.id);
+                    expect(childMessage1.status).toBe(MessageStatus.CANCELED)
+                }
+                if(childMessage2.job_id == job.id){
+                    childMessage2 = await userActor.messageManager.get(childMessage2.id);
+                    expect(childMessage2.status).toBe(MessageStatus.DONE)
+                    done();
+                }
+            })
+            //xa confirm
+            mock.onPost(userActor.api).replyOnce(200,{
+                message: 'xa confirm'
+            });
+            //childMessage1
+            mock.onPost(userActor.api,{asymmetricMatch:(actual)=>{
+                return actual.context.message_id == childMessage1.id ? true: false;
+            }}).replyOnce(200,{
+                status: ActorMessageStatus.CANCELED
+            });
+            //childMessage2
+            mock.onPost(userActor.api,{asymmetricMatch:(actual)=>{
+                return actual.context.message_id == childMessage2.id ? true: false;
+            }}).replyOnce(200,{
+                status: ActorMessageStatus.DONE
+            });
+            await message.confirm();
+
+
+        })
+
+    })
+
 
 
 });

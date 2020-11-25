@@ -16,7 +16,7 @@ export class MessageManager {
        
         
         let message:Message = this.messageFactory(type,this.producer);
-        await message.createMessageModel(topic,data);
+        await message.createMessageModel(topic,data,options);
         await (<Message>message).create(topic,options);//创建job
         return message;
     }

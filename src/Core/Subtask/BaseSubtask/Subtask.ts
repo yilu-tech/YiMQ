@@ -9,7 +9,7 @@ import { ExposeGroups } from "../../../Constants/ToJsonConstants";
 import { Actor } from "../../Actor";
 export abstract class Subtask{
     @Expose()
-    id:Number;
+    id:number;
     @Expose()
     job_id:number;
     @Expose()
