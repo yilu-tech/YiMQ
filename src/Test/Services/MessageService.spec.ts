@@ -328,15 +328,15 @@ describe('MessageService', () => {
                     'name':1
                 }
             });
-
+            let parent_subtask = `${subtask.producer.name}@${subtask.id}`;
             childMessage1 = await messageService.create(producerName,messageType,topic,{},{
                 delay:1000, //设置超过5秒，检查confirm后是否立即执行job
-                parent_process_id:subtask.id
+                parent_subtask: parent_subtask
             });
             await childMessage1.loadJob();
             childMessage2 = await messageService.create(producerName,messageType,topic,{},{
                 delay:1000, //设置超过5秒，检查confirm后是否立即执行job
-                parent_process_id:subtask.id
+                parent_subtask: parent_subtask
             });
             await childMessage2.loadJob();
             //子任务完成后，检查是否有立即去检查子message的状态
@@ -347,7 +347,42 @@ describe('MessageService', () => {
         })
 
 
-        it('.child message create by real job', async (done) => {
+        it('.other actor child message create', async () => {
+            let producerName = 'user';
+            let messageType = MessageType.TRANSACTION;
+            let topic = 'user_create';
+            let parentMessage:TransactionMessage;
+            let childMessage1:TransactionMessage;
+            let childMessage2:TransactionMessage;
+
+            let userActor = actorManager.get('user');
+            let contentActor = actorManager.get('content');
+
+            parentMessage = await messageService.create(producerName,messageType,topic,{},{
+                delay:1000, //设置超过5秒，检查confirm后是否立即执行job
+            });
+            mock.onPost(userActor.api).replyOnce(200);
+            let subtask:XaSubtask = await parentMessage.addSubtask(SubtaskType.XA,{
+                processor:'content@post.create',
+                data:{
+                    'title':1
+                }
+            });
+
+            let parent_subtask = `${subtask.producer.name}@${subtask.id}`;
+            childMessage1 = await messageService.create('content',messageType,topic,{},{
+                delay:1000, //设置超过5秒，检查confirm后是否立即执行job
+                parent_subtask: parent_subtask
+            });
+            await childMessage1.loadJob();
+   
+            //子任务完成后，检查是否有立即去检查子message的状态
+            await subtask.completeAndSetMeesageStatus(SubtaskStatus.DONE,MessageStatus.DONE);
+
+            expect(await childMessage1.job.getStatus()).toBe(JobStatus.WAITING)
+        })
+
+        it('.real job child message create', async (done) => {
             let producerName = 'user';
             let messageType = MessageType.TRANSACTION;
             let topic = 'user_create';
@@ -360,23 +395,28 @@ describe('MessageService', () => {
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:5000, //设置超过5秒，检查confirm后是否立即执行job
             });
-
-            mock.onPost(userActor.api).replyOnce(200);
+            let xaPrepareContext;
+            mock.onPost(userActor.api,{asymmetricMatch:(actual)=>{
+                xaPrepareContext = actual.context;
+                return true;
+            }}).replyOnce(200);
             let subtask:XaSubtask = await message.addSubtask(SubtaskType.XA,{
                 processor:'user@user.create',
                 data:{
                     'name':1
                 }
             });
+            expect(xaPrepareContext.producer).toBe(message.producer.name);
 
+            let parent_subtask = `${subtask.producer.name}@${subtask.id}`;
             childMessage1 = await messageService.create(producerName,messageType,topic,{},{
                 delay:1000*10, //设置超过5秒，检查confirm后是否立即执行job
-                parent_process_id:subtask.id
+                parent_subtask: parent_subtask
             });
             await childMessage1.loadJob();
             childMessage2 = await messageService.create(producerName,messageType,topic,{},{
                 delay:1000*10, //设置超过5秒，检查confirm后是否立即执行job
-                parent_process_id:subtask.id
+                parent_subtask: parent_subtask
             });
             
 

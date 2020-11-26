@@ -37,6 +37,7 @@ export class TccSubtask extends ConsumerSubtask{
             id: this.id,
             type: this.type,
             message_id: this.message.id,
+            producer: this.message.producer.name,
             processor: this.processor,
             data: this.data,
             options:options

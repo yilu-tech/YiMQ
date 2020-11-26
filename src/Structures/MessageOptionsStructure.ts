@@ -1,7 +1,7 @@
 
 
 export interface MessageOptions{
-    parent_process_id?:number;
+    parent_subtask?:string;
     delay?:number;
     backoff?:any
 }

@@ -24,7 +24,7 @@ export class MessagesController {
     async begin(@Body() createMessageDto: CreateMessageDto): Promise<any> {
         let message = await this.messageService.create<TransactionMessage>(createMessageDto.actor, createMessageDto.type, createMessageDto.topic,createMessageDto.data,{
             delay: createMessageDto.delay,
-            parent_process_id: Number(createMessageDto.parent_process_id)
+            parent_subtask: createMessageDto.parent_subtask
         });
         return OnDemandFastToJson(message);
     }

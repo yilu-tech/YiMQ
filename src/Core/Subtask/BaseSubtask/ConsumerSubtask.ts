@@ -76,20 +76,24 @@ export abstract class ConsumerSubtask extends Subtask{
     }
 
     public async completeAndSetMeesageStatus(status,messageStatus){
-        await super.completeAndSetMeesageStatus(status,messageStatus);
+        let pendingSubtaskTotal = await super.completeAndSetMeesageStatus(status,messageStatus);
         
-        try {
-            await this.childMessageCheck();   
-        } catch (error) {
-            //忽略错误
-            Logger.error(error.message,null,'ConsumerSubtask')
+        //message 完成的时候，加速child message的状态检查
+        if(pendingSubtaskTotal == 0){
+            try {
+                await this.childMessageCheck();   
+            } catch (error) {
+                //忽略错误
+                Logger.error(error.message,null,'ConsumerSubtask')
+            }
         }
     }
 
     public async childMessageCheck(){
+        //查找这个subtask消费者下的关联子任务
         let childMessageIds = await this.consumer.messageModel.find({
-            actor_id: this.consumer_id,
-            parent_process_id: this.id
+            actor_id: this.consumer_id, 
+            parent_subtask: `${this.producer_id}@${this.id}`
         })
         for(let childMessageId of childMessageIds){
             let message:Message = await this.consumer.messageManager.get(childMessageId);
