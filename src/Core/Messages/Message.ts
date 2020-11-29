@@ -68,8 +68,10 @@ export abstract class Message{
     @Expose()
     public clear_status:string;
 
+    @Expose({groups:[ExposeGroups.RELATION_ACTOR]})
+    public parent_subtask_producer:Actor;
     @Expose()
-    public parent_subtask:string;
+    public parent_subtask_id:string;
 
     constructor(producer:Actor){
 
@@ -137,7 +139,13 @@ export abstract class Message{
         this.pending_subtask_total = this.model.property('pending_subtask_total');
         this.subtask_contexts = <Array<SubtaskContext>>this.model.property('subtask_contexts');
         this.clear_status = this.model.property('clear_status');
-        this.parent_subtask = this.model.property('parent_subtask');
+
+
+        let parent_subtask_split = this.model.property('parent_subtask').split('@');
+        if(parent_subtask_split.length > 0){
+            this.parent_subtask_producer = this.producer.actorManager.getById(Number(parent_subtask_split[0]));
+            this.parent_subtask_id = parent_subtask_split[1];
+        }
 
 
     }
