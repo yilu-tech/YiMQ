@@ -61,6 +61,14 @@ export class AdminController {
         ){
        return this.actorService.jobs(query.actor_id,status,query.start,query.size,query.sort);
     }
+    @Get('actor/abnormal/jobs')
+    public async AbnormalJob(@Query() query){
+        let actor = this.actorManager.getById(query.actor_id);    
+        if(!actor){
+            throw new BusinessException(`actor_id ${query.actor_id} is not exists.`)
+        }
+        return this.actorService.abnormalJob(query.actor_id);
+    }
     @Get('actor/status')
     public async actorStatus(@Query() query:ActorDao){
         return this.actorService.getStatus(query.actor_id,true);
@@ -87,6 +95,4 @@ export class AdminController {
         await this.application.reload(query.name);
         return {message:'success'};
     }
-
-
 }
