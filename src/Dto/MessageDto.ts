@@ -42,4 +42,23 @@ export class AddSubtaskDto{
 }
 
 
+export class MessageConfirmDao{
+    @IsDefined()
+    actor:string;
+
+    @IsDefined()
+    message_id:string;
+}
+
+export class MessageCancelDao{
+    @IsDefined()
+    actor:string;
+
+    @IsDefined()
+    message_id:string;
+}
+
+
+
+
 

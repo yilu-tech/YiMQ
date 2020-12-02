@@ -31,6 +31,9 @@ export class MessageJob extends Job{
             case MessageStatus.PENDING://超时后远程检查任务状态
                 result = await this.remoteCheck();
                 break;
+            case MessageStatus.PREPARED://超时后远程检查任务状态
+                result = await this.remoteCheck();
+                break;
             case MessageStatus.DONE:
                 throw new SystemException('MessageStatus is DONE.');
                 // result = {process:'compensate done'}

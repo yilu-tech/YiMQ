@@ -74,35 +74,4 @@ export abstract class ConsumerSubtask extends Subtask{
         await this.setStatus(status).save();//先添加job有可能会导致job开始执行，subtask的状态还未修改，导致出错
         this.job = await this.consumer.jobManager.add(this,JobType.SUBTASK,jobOptions)
     }
-
-    public async completeAndSetMeesageStatus(status,messageStatus){
-        let pendingSubtaskTotal = await super.completeAndSetMeesageStatus(status,messageStatus);
-        
-        //message 完成的时候，加速child message的状态检查
-        if(pendingSubtaskTotal == 0){
-            try {
-                await this.childMessageCheck();   
-            } catch (error) {
-                //忽略错误
-                Logger.error(error.message,null,'ConsumerSubtask')
-            }
-        }
-    }
-
-    public async childMessageCheck(){
-        //查找这个subtask消费者下的关联子任务
-        let childMessageIds = await this.consumer.messageModel.find({
-            actor_id: this.consumer_id, 
-            parent_subtask: `${this.producer_id}@${this.id}`
-        })
-        for(let childMessageId of childMessageIds){
-            let message:Message = await this.consumer.messageManager.get(childMessageId);
-            await message.loadJob();
-            if(message.status == MessageStatus.PENDING){
-                await message.job.promote()
-            }
-        }
-
-    }
-
 }

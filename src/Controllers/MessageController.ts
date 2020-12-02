@@ -1,5 +1,5 @@
 import { Controller, Post, Body, UseInterceptors } from '@nestjs/common';
-import { CreateMessageDto, AddSubtaskDto } from '../Dto/MessageDto';
+import { CreateMessageDto, AddSubtaskDto, MessageConfirmDao, MessageCancelDao } from '../Dto/MessageDto';
 
 import { MessageService } from '../Services/MessageService';
 import { TransactionMessage } from '../Core/Messages/TransactionMessage';
@@ -56,7 +56,7 @@ export class MessagesController {
      * 提交事物
      */
     @Post('confirm')
-    async commit(@Body() body): Promise<any> {
+    async commit(@Body() body:MessageConfirmDao): Promise<any> {
         return (await this.messageService.confirm(body.actor,body.message_id));
     }
 
@@ -64,7 +64,7 @@ export class MessagesController {
      * 回滚事物
      */
     @Post('cancel')
-    async rollback(@Body() body): Promise<any> {
+    async rollback(@Body() body:MessageCancelDao): Promise<any> {
         return (await this.messageService.cancel(body.actor,body.message_id));
     }
 

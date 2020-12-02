@@ -70,6 +70,154 @@ describe('MessageService', () => {
         mock.reset();
 
     })
+
+    describe('.prepared', () => {
+        let producerName = 'user';
+        let messageType = MessageType.TRANSACTION;
+        let topic = 'goods_create';
+        let message:Message;
+
+        it('.prepared after confirm', async (done) => {
+
+            message = await messageService.create(producerName,messageType,topic,{},{
+                delay:8000, //设置超过5秒，检查confirm后是否立即执行job
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+            let producer = actorManager.get(producerName); 
+
+            producer.coordinator.getQueue().on('completed',async (job)=>{
+                if(message.job.id == job.id){
+                    let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+                    expect(updatedMessage.status).toBe(MessageStatus.DONE)
+                    done()
+                }
+            })
+
+            await producer.process();
+            await messageService.prepare(producerName,message.id,{});
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            expect(updatedMessage.status).toBe(MessageStatus.PREPARED);
+
+            let result = await messageService.confirm(producerName,message.id);
+            updatedMessage = await producer.messageManager.get(message.id);
+            expect(updatedMessage.status).toBe(MessageStatus.DOING);
+        });
+
+        it('.prepared after cancel', async (done) => {
+
+            message = await messageService.create(producerName,messageType,topic,{},{
+                delay:8000, //设置超过5秒，检查confirm后是否立即执行job
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+            let producer = actorManager.get(producerName); 
+
+            producer.coordinator.getQueue().on('completed',async (job)=>{
+                if(message.job.id == job.id){
+                    let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+                    expect(updatedMessage.status).toBe(MessageStatus.CANCELED)
+                    done()
+                }
+            })
+
+            await producer.process();
+            await messageService.prepare(producerName,message.id,{});
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            expect(updatedMessage.status).toBe(MessageStatus.PREPARED);
+
+            let result = await messageService.cancel(producerName,message.id);
+            updatedMessage = await producer.messageManager.get(message.id);
+            expect(updatedMessage.status).toBe(MessageStatus.CANCELLING);
+        });
+
+        it('.prepared after prepare', async () => {
+
+            message = await messageService.create(producerName,messageType,topic,{},{
+                delay:8000, //设置超过5秒，检查confirm后是否立即执行job
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+            let producer = actorManager.get(producerName); 
+
+    
+
+            await producer.process();
+            await messageService.prepare(producerName,message.id,{});
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            expect(updatedMessage.status).toBe(MessageStatus.PREPARED);
+
+            await expect(messageService.prepare(producerName,message.id,{})).rejects.toThrow('The status of this message is PREPARED instead of PENDING');
+            expect(updatedMessage.status).toBe(MessageStatus.PREPARED);
+            
+        });
+
+        it('.prepared after add subtask', async () => {
+            let userActor = actorManager.get('user');
+            message = await messageService.create(producerName,messageType,topic,{},{
+                delay:8000, //设置超过5秒，检查confirm后是否立即执行job
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+            let producer = actorManager.get(producerName); 
+
+    
+
+            await producer.process();
+            await messageService.prepare(producerName,message.id,{});
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            expect(updatedMessage.status).toBe(MessageStatus.PREPARED);
+       
+
+            await expect(updatedMessage.addSubtask(SubtaskType.XA,{
+                processor:'user@user.create',
+                data:{
+                    'name':1
+                }
+            })).rejects.toThrow('The status of this message is PREPARED instead of PENDING');
+            
+        });
+
+        it('.prepared  after timeout check done', async (done) => {
+            process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
+            message = await messageService.create(producerName,messageType,topic,{},{
+            });
+            expect(message.topic).toBe(topic);
+            let producer = actorManager.get(producerName); 
+
+            mock.onPost(producer.api).reply(200,{
+                status: MessageStatus.DONE
+            })
+            producer.coordinator.getQueue().on('completed',async (job)=>{
+                if(message.job.id == job.id){
+                    let updatedMessage = await producer.messageManager.get(message.id);
+                    expect(updatedMessage.status).toBe(MessageStatus.DONE)
+                    done()
+                }
+            })
+            await producer.process();
+            await messageService.prepare(producerName,message.id,{});
+        });
+
+        it('.prepared  after timeout check cancel', async (done) => {
+            process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
+            message = await messageService.create(producerName,messageType,topic,{},{
+            });
+            expect(message.topic).toBe(topic);
+            let producer = actorManager.get(producerName); 
+
+            mock.onPost(producer.api).reply(200,{
+                status: MessageStatus.CANCELED
+            })
+            producer.coordinator.getQueue().on('completed',async (job)=>{
+                if(message.job.id == job.id){
+                    let updatedMessage = await producer.messageManager.get(message.id);
+                    expect(updatedMessage.status).toBe(MessageStatus.CANCELED)
+                    done()
+                }
+            })
+            await producer.process();
+            await messageService.prepare(producerName,message.id,{});
+        });
+        
+
+    })
     
 
 
@@ -333,134 +481,13 @@ describe('MessageService', () => {
                 delay:1000, //设置超过5秒，检查confirm后是否立即执行job
                 parent_subtask: parent_subtask
             });
-            await childMessage1.loadJob();
+
             childMessage2 = await messageService.create(producerName,messageType,topic,{},{
                 delay:1000, //设置超过5秒，检查confirm后是否立即执行job
                 parent_subtask: parent_subtask
             });
-            await childMessage2.loadJob();
-            //子任务完成后，检查是否有立即去检查子message的状态
-            await subtask.completeAndSetMeesageStatus(SubtaskStatus.DONE,MessageStatus.DONE);
 
-            expect(await childMessage1.job.getStatus()).toBe(JobStatus.WAITING)
-            expect(await childMessage2.job.getStatus()).toBe(JobStatus.WAITING)
-        })
-
-
-        it('.other actor child message create', async () => {
-            let producerName = 'user';
-            let messageType = MessageType.TRANSACTION;
-            let topic = 'user_create';
-            let parentMessage:TransactionMessage;
-            let childMessage1:TransactionMessage;
-            let childMessage2:TransactionMessage;
-
-            let userActor = actorManager.get('user');
-            let contentActor = actorManager.get('content');
-
-            parentMessage = await messageService.create(producerName,messageType,topic,{},{
-                delay:1000, //设置超过5秒，检查confirm后是否立即执行job
-            });
-            mock.onPost(userActor.api).replyOnce(200);
-            let subtask:XaSubtask = await parentMessage.addSubtask(SubtaskType.XA,{
-                processor:'content@post.create',
-                data:{
-                    'title':1
-                }
-            });
-
-            let parent_subtask = `${subtask.producer.name}@${subtask.id}`;
-            childMessage1 = await messageService.create('content',messageType,topic,{},{
-                delay:1000, //设置超过5秒，检查confirm后是否立即执行job
-                parent_subtask: parent_subtask
-            });
-            await childMessage1.loadJob();
-   
-            //子任务完成后，检查是否有立即去检查子message的状态
-            await subtask.completeAndSetMeesageStatus(SubtaskStatus.DONE,MessageStatus.DONE);
-
-            expect(await childMessage1.job.getStatus()).toBe(JobStatus.WAITING)
-        })
-
-        it('.real job child message create', async (done) => {
-            let producerName = 'user';
-            let messageType = MessageType.TRANSACTION;
-            let topic = 'user_create';
-            let message:TransactionMessage;
-            let childMessage1:TransactionMessage;
-            let childMessage2:TransactionMessage;
-
-            let userActor = actorManager.get('user');
-
-            message = await messageService.create(producerName,messageType,topic,{},{
-                delay:5000, //设置超过5秒，检查confirm后是否立即执行job
-            });
-            let xaPrepareContext;
-            mock.onPost(userActor.api,{asymmetricMatch:(actual)=>{
-                xaPrepareContext = actual.context;
-                return true;
-            }}).replyOnce(200);
-            let subtask:XaSubtask = await message.addSubtask(SubtaskType.XA,{
-                processor:'user@user.create',
-                data:{
-                    'name':1
-                }
-            });
-            expect(xaPrepareContext.producer).toBe(message.producer.name);
-
-            let parent_subtask = `${subtask.producer.name}@${subtask.id}`;
-            childMessage1 = await messageService.create(producerName,messageType,topic,{},{
-                delay:1000*10, //设置超过5秒，检查confirm后是否立即执行job
-                parent_subtask: parent_subtask
-            });
-            await childMessage1.loadJob();
-            childMessage2 = await messageService.create(producerName,messageType,topic,{},{
-                delay:1000*10, //设置超过5秒，检查confirm后是否立即执行job
-                parent_subtask: parent_subtask
-            });
-            
-
-            await userActor.process()
-            userActor.coordinator.getQueue().on('completed',async (job)=>{
-                message = await userActor.messageManager.get(message.id);
-                
-                subtask = await userActor.subtaskManager.get(subtask.id);
-                await subtask.loadJob()
-
-                if(subtask.job && subtask.job.id == job.id){
-                    expect(subtask.status).toBe(SubtaskStatus.DONE)
-                    expect(message.status).toBe(MessageStatus.DONE)
-                  
-                }
-                if(childMessage1.job_id == job.id){
-                    childMessage1 = await userActor.messageManager.get(childMessage1.id);
-                    expect(childMessage1.status).toBe(MessageStatus.CANCELED)
-                }
-                if(childMessage2.job_id == job.id){
-                    childMessage2 = await userActor.messageManager.get(childMessage2.id);
-                    expect(childMessage2.status).toBe(MessageStatus.DONE)
-                    done();
-                }
-            })
-            //xa confirm
-            mock.onPost(userActor.api).replyOnce(200,{
-                message: 'xa confirm'
-            });
-            //childMessage1
-            mock.onPost(userActor.api,{asymmetricMatch:(actual)=>{
-                return actual.context.message_id == childMessage1.id ? true: false;
-            }}).replyOnce(200,{
-                status: ActorMessageStatus.CANCELED
-            });
-            //childMessage2
-            mock.onPost(userActor.api,{asymmetricMatch:(actual)=>{
-                return actual.context.message_id == childMessage2.id ? true: false;
-            }}).replyOnce(200,{
-                status: ActorMessageStatus.DONE
-            });
-            await message.confirm();
-
-
+            expect(childMessage1.parent_subtask_id).toBe(subtask.id)
         })
 
     })

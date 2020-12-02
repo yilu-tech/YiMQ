@@ -65,10 +65,12 @@ export class TransactionMessage extends Message{
             result.message = `Message already ${this.status}.`;
         }else if(await this.job.getStatus() != JobStatus.DELAYED ){
             result.message = `Message job status is ${await this.job.getStatus()} for timeout check.`;
-        }else{
+        }else if([MessageStatus.PENDING,MessageStatus.PREPARED].includes(this.status)){
             await this.setStatus(MessageStatus.CANCELLING).save();
             await this.job.context.promote();//立即执行job
             result.message = 'success';
+        }else{
+            throw new BusinessException(`The status of this message is ${this.status}.`);
         }
         return result;
     
@@ -77,7 +79,6 @@ export class TransactionMessage extends Message{
     async confirm():Promise<MessageControlResult>{
         let result:MessageControlResult=<MessageControlResult>{};
         await this.loadJob();
-
         if([MessageStatus.CANCELLING,MessageStatus.CANCELED].includes(this.status)){
             throw new BusinessException(`The status of this message is ${this.status}.`);
         }
@@ -85,14 +86,19 @@ export class TransactionMessage extends Message{
             result.message = `Message already ${this.status}.`;
         }else if(await this.job.getStatus() != JobStatus.DELAYED ){
             result.message = `Message job status is ${await this.job.getStatus()} for timeout check.`;
-        }else{
+        }else if([MessageStatus.PENDING,MessageStatus.PREPARED].includes(this.status)){
             await this.setStatus(MessageStatus.DOING).save();
             await this.job.context.promote();//立即执行job
             result.message = 'success';
+        }else{
+            throw new BusinessException(`The status of this message is ${this.status}.`);
         }
         return result;
     }
     async prepare(body){
+        if(this.status != MessageStatus.PENDING){//todo:: this.status改为从数据库实时获取
+            throw new BusinessException(`The status of this message is ${this.status} instead of ${MessageStatus.PENDING}`);
+        }
         let data = {
             id:  this.id,
             prepare_subtasks : []
@@ -100,6 +106,7 @@ export class TransactionMessage extends Message{
         if(body.prepare_subtasks && body.prepare_subtasks.length > 0 ){
             data.prepare_subtasks = await this.prepareSubtasks(body.prepare_subtasks);
         }
+        await this.setStatus(MessageStatus.PREPARED).save();
         return data;   
     }
     private async prepareSubtasks(prepareSubtasksBody){

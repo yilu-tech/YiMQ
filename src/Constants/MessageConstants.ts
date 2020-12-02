@@ -7,7 +7,7 @@ export enum MessageType{
 
 export enum MessageStatus{
     PENDING =  'PENDING',
-
+    PREPARED = 'PREPARED',
     DOING = 'DOING',
     DONE = 'DONE',
 
