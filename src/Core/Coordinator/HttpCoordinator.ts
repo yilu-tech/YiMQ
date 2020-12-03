@@ -48,7 +48,7 @@ export class HttpCoordinator extends Coordinator{
         }
         this.actor.actorManager.application.contextLogger.info(content);
     }
-    private logProcessFailure(start_time,error,job_id,job:Job){
+    private logProcessFailure(start_time,error:Error,job_id,job:Job){
         let end_time = Date.now()
 
         let content = {
@@ -63,6 +63,9 @@ export class HttpCoordinator extends Coordinator{
 
         if(error instanceof HttpCoordinatorRequestException){
             content['actor_response'] = error.getRespone();
+        }
+        else{
+            content['stack'] = error.stack;
         }
 
         content['end_time'] = format(end_time,'yyyy-MM-dd HH:mm:ss')
