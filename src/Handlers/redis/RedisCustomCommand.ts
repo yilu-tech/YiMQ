@@ -80,7 +80,7 @@ export function redisCustomCommand(client){
         local message_id = KEYS[2];
         local message_status = ARGV[2];
         local updated_at = ARGV[3];
-    
+        -- 处理LstrSubtask
         ${subtaskCompleteScript}
 
         --- BroadcastMessage done后处理transaction message
@@ -89,21 +89,23 @@ export function redisCustomCommand(client){
             return result;
         end
 
+        -- 判断是否是 BcstSubtask创建的BroadcastMessage
         local bcst_subtask_id = nil
-        local context = redis.call('HGET', message_hash_key, 'context');
-        if(context == false)
+        local parent_subtask = redis.call('HGET', message_hash_key, 'parent_subtask');
+
+        if(parent_subtask == '-1')
         then
             return result;
         end
         
-        bcst_subtask_id = cjson.decode(context)['bcst_subtask_id'];
-        if(bcst_subtask_id == false)
-        then
-            return result;
-        end
+        -- 获取 LstrSubtask 对应的 bcst_subtask_id
+        bcst_subtask_id = string.match(parent_subtask, "@(.+)")
+  
         local bcst_subtask_hash_key = prefix .. 'hash:subtask:' .. bcst_subtask_id;
+        -- 获取 bcst_subtask 对应的message
         local transaction_message_id = redis.call("HGET", bcst_subtask_hash_key, 'message_id')
 
+        -- 处理 BcstSubtask
         subtask_id = bcst_subtask_id;
         message_id = transaction_message_id;
 

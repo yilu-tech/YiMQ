@@ -4,6 +4,9 @@ import { BcstSubtask } from './BcstSubtask';
 import { MessageStatus } from '../../Constants/MessageConstants';
 import { SubtaskType } from '../../Constants/SubtaskConstants';
 
+/**
+ * Lstr (Listener)
+ */
 export class LstrSubtask extends EcSubtask{
     public type:SubtaskType = SubtaskType.LSTR;
     public async completeAndSetMeesageStatusByScript(status,messageStatus:MessageStatus){

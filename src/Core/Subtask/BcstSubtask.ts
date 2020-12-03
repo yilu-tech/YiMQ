@@ -9,7 +9,9 @@ export interface BcstSubtaskContext{
     topic:string;
     message_id?:number;
 }
-
+/**
+ * Bcst (BroadcastMessage)
+ */
 export class BcstSubtask extends Subtask{
     public type = SubtaskType.BCST;
     public context:BcstSubtaskContext = null;
@@ -43,8 +45,9 @@ export class BcstSubtask extends Subtask{
     async confirm(){
         // this.broadcastMessage = await this.message.producer.messageManager.create(MessageType.BROADCAST,this.context.topic);
         this.broadcastMessage = new BroadcastMessage(this.message.producer);
-        await this.broadcastMessage.createMessageModel(this.context.topic,this.data,{});
-        await this.broadcastMessage.setContext({bcst_subtask_id: this.id})
+        await this.broadcastMessage.createMessageModel(this.context.topic,this.data,{
+            parent_subtask: `${this.producer.name}@${this.id}`
+        });
         await this.broadcastMessage.create(this.context.topic,{
             delay:1000//bcst创建的广告信息，考虑不延迟
         });//创建job

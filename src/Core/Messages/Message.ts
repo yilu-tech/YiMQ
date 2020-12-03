@@ -11,6 +11,7 @@ import {  ExposeGroups, OnDemandSwitch } from "../../Constants/ToJsonConstants";
 import { OnDemand } from "../../Decorators/OnDemand";
 import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
 import { MessageOptions } from "../../Structures/MessageOptionsStructure";
+import { SystemException } from "../../Exceptions/SystemException";
 
 export interface SubtaskContext{
     consumer_id:number
@@ -92,6 +93,9 @@ export abstract class Message{
         if(options.parent_subtask){
             let parent_subtask_info = options.parent_subtask.split('@');
             let producer = this.producer.actorManager.get(parent_subtask_info[0]);
+            if(!producer){
+                throw new SystemException(`producer not exist of parent_subtask ${options.parent_subtask}.`)
+            }
             let parent_subtask = `${producer.id}@${parent_subtask_info[1]}`;
             this.model.property('parent_subtask',parent_subtask)
         }else{

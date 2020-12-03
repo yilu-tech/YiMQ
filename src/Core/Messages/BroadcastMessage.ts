@@ -16,14 +16,6 @@ export class BroadcastMessage extends Message{
         return this;
     }
 
-    /**
-     * 用于BcstSubtask设置上下文
-     * @param context { bcst_subtask_id: '1' }
-     */
-    setContext(context){
-        this.context = context;
-        this.model.property('context',context);
-    }
 
     async toDoing():Promise<CoordinatorProcessResult> {
         let listeners = await this.getListeners()

@@ -8,7 +8,7 @@ interface MessageProperties {
     topic: string;
     type:string;
     parent_subtask:string;
-    context:string;
+    // context:string;
     data:string;
     subtask_total:number;
     pending_subtask_total: number;
@@ -49,9 +49,9 @@ export class MessageModelClass extends NohmModel<MessageProperties> {
             index:true,
             validations: ['notEmpty']
         },
-        context: {
-            type: 'json',
-        },
+        // context: {
+        //     type: 'json',
+        // },
         data: {
             type: 'json',
         },
