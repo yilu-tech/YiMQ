@@ -22,6 +22,7 @@ export enum MessageClearStatus{
 
 export enum ActorMessageStatus{
     PENDING = 'PENDING',
+    PREPARED = 'PREPARED',
     DONE = 'DONE',
     CANCELED = 'CANCELED',
 }

@@ -68,7 +68,9 @@ export class MessageJob extends Job{
                 result = await this.message.toDoing();
                 break;
             case ActorMessageStatus.PENDING:
-                throw new SystemException('ActorMessageStatus is PENDING');
+                throw new SystemException(`ActorMessageStatus is ${actor_result.status}`);
+            case ActorMessageStatus.PREPARED:
+                throw new SystemException(`ActorMessageStatus is ${actor_result.status}`);
             default:
                 throw new SystemException(`ActorMessageStatus ${actor_result.status} is not exists.`);
         }
