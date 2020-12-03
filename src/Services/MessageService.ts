@@ -66,8 +66,9 @@ export class MessageService {
         await OnDemandRun(message,[
             OnDemandSwitch.MESSAGE_JOB,
             OnDemandSwitch.MESSAGE_SUBTASKS,
-            OnDemandSwitch.SUBTASK_JOB
-        ])
+            OnDemandSwitch.SUBTASK_JOB,
+            OnDemandSwitch.JOB_STATUS
+        ],3)
         let result = OnDemandToJson(message,[
             ExposeGroups.MESSAGE_JOB,
             ExposeGroups.RELATION_ACTOR,
