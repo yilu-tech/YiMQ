@@ -5,7 +5,6 @@ import { MasterModels } from "../Models/MasterModels";
 import { CoordinatorCallActorAction } from "../Constants/Coordinator";
 import { SystemException } from "../Exceptions/SystemException";
 import {differenceBy} from 'lodash';
-import axios from 'axios';
 import { HttpCoordinatorRequestException } from "../Exceptions/HttpCoordinatorRequestException";
 import { ActorStatus } from "../Constants/ActorConstants";
 import { ActorConfig } from "../Config/ActorConfig";
@@ -132,6 +131,7 @@ export class ActorConfigManager{
             listenerModel.property('topic',item.topic);
             listenerModel.property('processor',item.processor);
             listenerModel.property('actor_id',actor.id);
+            listenerModel.property('created_at',new Date().getTime());
             await listenerModel.save() 
         }
     }
