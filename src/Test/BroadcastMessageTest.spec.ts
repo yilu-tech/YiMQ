@@ -19,6 +19,8 @@ import { services } from '../app.module';
 import { async } from 'rxjs/internal/scheduler/async';
 import { BroadcastMessage } from '../Core/Messages/BroadcastMessage';
 import { Application } from '../Application';
+import { ActorConfigManager } from '../Core/ActorConfigManager';
+import { ContextLogger } from '../Handlers/ContextLogger';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('BroadcastMessage', () => {
@@ -27,7 +29,8 @@ describe('BroadcastMessage', () => {
     let redisManager:RedisManager;
     let messageService:MessageService;
     let actorManager:ActorManager;
-    let application:Application
+    let application:Application;
+    let actorConfigManager:ActorConfigManager;
 
 
     beforeEach(async () => {
@@ -40,6 +43,8 @@ describe('BroadcastMessage', () => {
             RedisManager,
             MasterModels,
             Application,
+            ContextLogger,
+            ActorConfigManager,
             ActorManager,
             ...services,
         ],
@@ -53,17 +58,17 @@ describe('BroadcastMessage', () => {
         application = app.get<Application>(Application);
         await application.baseBootstrap()
 
-        await redisManager.flushAllDb();
 
         config = app.get<Config>(Config);
         messageService = app.get<MessageService>(MessageService);
+        actorConfigManager = app.get<ActorConfigManager>(ActorConfigManager);
         actorManager = app.get<ActorManager>(ActorManager);
         
     });
 
     afterEach(async()=>{
-        await actorManager.closeActors();
-        await redisManager.quitAllDb();
+        await actorManager.shutdown();
+        await redisManager.closeAll();
     })
     
 
@@ -77,12 +82,11 @@ describe('BroadcastMessage', () => {
             let producerName = 'user';
             let topic = 'user.update';
             let message:TransactionMessage;
-            let userProducer = actorManager.get(producerName);
-            let contentProducer = actorManager.get('content');
             let updatedMessage:BroadcastMessage;
 
-
-            mock.onPost(userProducer.api).replyOnce(200,{
+            let userActorConfig = await actorConfigManager.getByName('user');
+            let contentActorConfig = await actorConfigManager.getByName('content');
+            mock.onPost(userActorConfig.api).replyOnce(200,{
                 "actor_name": 'user',
                 "broadcast_listeners": [{
                     "processor": "Tests\\Services\\ContentUpdateListener",
@@ -95,16 +99,24 @@ describe('BroadcastMessage', () => {
                     "condition": null
                 }]
             })
-            mock.onPost(contentProducer.api).replyOnce(200,{
+            mock.onPost(contentActorConfig.api).replyOnce(200,{
                 "actor_name": 'content',
                 "broadcast_listeners": []
             })
  
-            await actorManager.loadActorsRemoteConfig()
+            // await actorConfigManager.loadRemoteActorsConfig()
+            // await actorManager.initActors()
+            await actorManager.bootstrap(false);
+
+            let userProducer = actorManager.get(producerName);
+            let contentProducer = actorManager.get('content');
+            await userProducer.prepare();
+            await contentProducer.prepare();
+
             process.env.SUBTASK_JOB_DELAY = '100';
-            message = await messageService.create(producerName,MessageType.BROADCAST,topic,{
-                delay:0,
-                attempts:5,
+            message = await messageService.create(producerName,MessageType.BROADCAST,topic,{},{
+                delay:1000,
+                // attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 5000
@@ -132,7 +144,10 @@ describe('BroadcastMessage', () => {
 
 
 
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+           
+            await userProducer.process();
+            await contentProducer.process();
         })
 
 
@@ -140,10 +155,11 @@ describe('BroadcastMessage', () => {
             let producerName = 'user';
             let topic = 'user.update';
             let message:TransactionMessage;
-            let userProducer = actorManager.get(producerName);
-            let contentProducer = actorManager.get('content');
             let updatedMessage:TransactionMessage;
-            mock.onPost(userProducer.api).replyOnce(200,{
+
+            let userActorConfig = await actorConfigManager.getByName('user');
+            let contentActorConfig = await actorConfigManager.getByName('content');
+            mock.onPost(userActorConfig.api).replyOnce(200,{
                 "actor_name": 'user',
                 "broadcast_listeners": [{
                     "processor": "Tests\\Services\\ContentUpdateListener",
@@ -157,7 +173,7 @@ describe('BroadcastMessage', () => {
                 }
             ]
             })
-            mock.onPost(contentProducer.api).replyOnce(200,{
+            mock.onPost(contentActorConfig.api).replyOnce(200,{
                 "actor_name": 'content',
                 "broadcast_listeners": [{
                     "processor": "Tests\\Services\\UserUpdateListener",
@@ -165,10 +181,18 @@ describe('BroadcastMessage', () => {
                     "condition": null
                 }]
             })
-            await actorManager.loadActorsRemoteConfig()
-            message = await messageService.create(producerName,MessageType.TRANSACTION,topic,{
-                delay:0,
-                attempts:5,
+
+
+            await actorManager.bootstrap(false);
+
+
+            let userProducer = actorManager.get(producerName);
+            let contentProducer = actorManager.get('content');
+            await userProducer.prepare();
+            await contentProducer.prepare();
+
+            message = await messageService.create(producerName,MessageType.TRANSACTION,topic,{},{
+                delay:1000,
                 backoff:{
                     type:'exponential',
                     delay: 5000
@@ -236,7 +260,9 @@ describe('BroadcastMessage', () => {
                 }
 
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await userProducer.process();
+            await contentProducer.process();
 
 
             await message.confirm();

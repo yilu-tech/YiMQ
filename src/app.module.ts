@@ -3,7 +3,6 @@ import { Config } from './Config';
 import { RedisManager } from './Handlers/redis/RedisManager';
 
 import { MasterModels } from './Models/MasterModels';
-import {  Bootstrap } from './Bootstrap';
 import { ActorManager } from './Core/ActorManager';
 import { MessagesController } from './Controllers/MessageController';
 import { IndexController } from './Controllers/IndexController';
@@ -15,11 +14,15 @@ import { MessageService } from './Services/MessageService';
 import { JobService } from './Services/JobService';
 import { GrpcController } from './Controllers/GrpcController';
 
+import { ActorConfigManager } from './Core/ActorConfigManager';
+import { AdminService } from './Services/AdminService';
+import { ContextLogger } from './Handlers/ContextLogger';
 
 export const services = [
   ActorService,
   MessageService,
-  JobService
+  JobService,
+  AdminService
 ] 
 
 
@@ -35,10 +38,11 @@ export const services = [
   providers: [
     Application,
     Config,
+    ContextLogger,
     RedisManager,
     MasterModels,
+    ActorConfigManager,
     ActorManager,
-    Bootstrap,
     ...services
   ],
 })

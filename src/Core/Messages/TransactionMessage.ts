@@ -6,21 +6,27 @@ import { BusinessException } from "../../Exceptions/BusinessException";
 import { SubtaskModelClass } from "../../Models/SubtaskModel"
 import { MessageJob } from "../Job/MessageJob";
 import {JobStatus} from "../../Constants/JobConstants"
+import { OnDemandFastToJson } from "../../Decorators/OnDemand";
+import { Exclude } from "class-transformer";
+import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
+import { MessageOptions } from "../../Structures/MessageOptionsStructure";
+@Exclude()
 export class TransactionMessage extends Message{
     type = MessageType.TRANSACTION;
 
 
-    async createMessageModel(topic:string,data){
-        await super.createMessageModel(topic,data);
+    async createMessageModel(topic:string,data,options:MessageOptions){
+        await super.createMessageModel(topic,data,options);
         this.model.property('status',MessageStatus.PENDING);
         return this;
     }
 
-    async toDoing():Promise<any>{
+    async toDoing():Promise<CoordinatorProcessResult>{
         //没有子任务直接完成message
-        if(this.pending_subtask_total == 0){
+        let pending_subtask_total = await this.getPendingSubtaskTotal();
+        if(pending_subtask_total== 0){
             await this.setStatus(MessageStatus.DONE).save();
-            return this;
+            return {process: 'success'};
         }
         await this.loadSubtasks();
         //并行执行
@@ -30,15 +36,16 @@ export class TransactionMessage extends Message{
         }))
 
         await this.setStatus(MessageStatus.DOING).save();
-        return this;
+        return {process: 'success'};
         
     }
 
-    async toCancelling(){
+    async toCancelling():Promise<CoordinatorProcessResult>{
         //没有子任务直接完成message
-        if(this.pending_subtask_total == 0){
+        let pending_subtask_total = await this.getPendingSubtaskTotal();
+        if(pending_subtask_total == 0){
             await this.setStatus(MessageStatus.CANCELED).save();
-            return this;
+            return {process: 'success'};
         }
         await this.loadSubtasks();
 
@@ -46,23 +53,24 @@ export class TransactionMessage extends Message{
             return subtask.cancel()
         }))
         await this.setStatus(MessageStatus.CANCELLING).save();
-        return this;
+        return {process: 'success'};
     }
 
     async cancel():Promise<MessageControlResult>{
         let result:MessageControlResult=<MessageControlResult>{};
-
-        if([MessageStatus.CANCELED,MessageStatus.CANCELLING].includes(this.status)){
-            result.message = `Message already ${this.status}.`;
-        }else if([MessageStatus.DOING,MessageStatus.DONE].includes(this.status)){
+        await this.loadJob();
+        if([MessageStatus.DOING,MessageStatus.DONE].includes(this.status)){
             throw new BusinessException(`The status of this message is ${this.status}.`);
-        }
-        else if(await this.job.getStatus() != JobStatus.DELAYED ){
-            result.message = `Message job timeout check ${await this.job.getStatus()}.`;
-        }else{
+        }else if([MessageStatus.CANCELED,MessageStatus.CANCELLING].includes(this.status)){
+            result.message = `Message already ${this.status}.`;
+        }else if(await this.job.getStatus() != JobStatus.DELAYED ){
+            result.message = `Message job status is ${await this.job.getStatus()} for timeout check.`;
+        }else if([MessageStatus.PENDING,MessageStatus.PREPARED].includes(this.status)){
             await this.setStatus(MessageStatus.CANCELLING).save();
             await this.job.context.promote();//立即执行job
             result.message = 'success';
+        }else{
+            throw new BusinessException(`The status of this message is ${this.status}.`);
         }
         return result;
     
@@ -70,21 +78,27 @@ export class TransactionMessage extends Message{
 
     async confirm():Promise<MessageControlResult>{
         let result:MessageControlResult=<MessageControlResult>{};
-
-        if([MessageStatus.DOING,MessageStatus.DONE].includes(this.status)){
-            result.message = `Message already ${this.status}.`;
-        }else if([MessageStatus.DOING,MessageStatus.DONE].includes(this.status)){
+        await this.loadJob();
+        if([MessageStatus.CANCELLING,MessageStatus.CANCELED].includes(this.status)){
             throw new BusinessException(`The status of this message is ${this.status}.`);
+        }
+        else if([MessageStatus.DOING,MessageStatus.DONE].includes(this.status)){
+            result.message = `Message already ${this.status}.`;
         }else if(await this.job.getStatus() != JobStatus.DELAYED ){
-            result.message = `Message job timeout check ${await this.job.getStatus()}.`;
-        }else{
+            result.message = `Message job status is ${await this.job.getStatus()} for timeout check.`;
+        }else if([MessageStatus.PENDING,MessageStatus.PREPARED].includes(this.status)){
             await this.setStatus(MessageStatus.DOING).save();
             await this.job.context.promote();//立即执行job
             result.message = 'success';
+        }else{
+            throw new BusinessException(`The status of this message is ${this.status}.`);
         }
         return result;
     }
     async prepare(body){
+        if(this.status != MessageStatus.PENDING){//todo:: this.status改为从数据库实时获取
+            throw new BusinessException(`The status of this message is ${this.status} instead of ${MessageStatus.PENDING}`);
+        }
         let data = {
             id:  this.id,
             prepare_subtasks : []
@@ -92,33 +106,35 @@ export class TransactionMessage extends Message{
         if(body.prepare_subtasks && body.prepare_subtasks.length > 0 ){
             data.prepare_subtasks = await this.prepareSubtasks(body.prepare_subtasks);
         }
+        await this.setStatus(MessageStatus.PREPARED).save();
         return data;   
     }
     private async prepareSubtasks(prepareSubtasksBody){
         let prepareSubtasksResult = [];
         for (const subtaskBody of prepareSubtasksBody) {
-            let subtask = await this.addSubtask(subtaskBody.type,subtaskBody);
-            prepareSubtasksResult.push(subtask.toJson());
+            let subtask:Subtask = await this.addSubtask(subtaskBody.type,subtaskBody);
+            prepareSubtasksResult.push(OnDemandFastToJson(subtask));
         }
         return prepareSubtasksResult;
     }
-    /**
-     * 用于MessageManager get的时候重建信息
-     */
-    async restore(messageModel){
-        await super.restore(messageModel);
+
+
+    public async loadJob(){
+        //this.job = await this.producer.jobManager.get(this.job_id,true); 不用这句的原因是，get会再去查一次this
         let jobContext = await this.producer.coordinator.getJob(this.job_id);
         this.job = new MessageJob(this,jobContext);
+        await this.job.restore();
+        return this;
     }
 
-    public async loadSubtasks(){
+    public async loadSubtasks(full=false){
         let subtaskIds = await this.model.getAll(SubtaskModelClass.modelName)
         let subtaskModels = await this.producer.subtaskModel.loadMany(subtaskIds)
         let subtasks:Array<Subtask> = [];
         for(var i in subtaskModels){
             let subtaskModel = subtaskModels[i];
             let subtask:Subtask = this.producer.subtaskManager.factory(this,subtaskModel.property('type'));//TODO use sutaskmanager methdo
-            await subtask.restore(subtaskModel)
+            await subtask.restore(subtaskModel,full)
             subtasks.push(subtask);
         }
         this.subtasks = subtasks;
@@ -127,7 +143,7 @@ export class TransactionMessage extends Message{
     }
 
     async addSubtask(type,body){
-        if(this.status != MessageStatus.PENDING){
+        if(this.status != MessageStatus.PENDING){//todo:: this.status改为从数据库实时获取
             throw new BusinessException(`The status of this message is ${this.status} instead of ${MessageStatus.PENDING}`);
         }
         body.subtask_id = await this.producer.actorManager.getSubtaskGlobalId();
@@ -153,17 +169,7 @@ export class TransactionMessage extends Message{
     public getMessageHash(){
         return `${this.model['nohmClass'].prefix.hash}${this.model.modelName}:${this.id}`;
     }
-
-    private subtasksToJson(){
-        let subtasks = {};
-        this.subtasks.forEach((subtask,index)=>{
-            subtasks[`${index}`] = subtask.toJson();
-        })
-        return subtasks;
-    }
-    toJson(full=false){
-        let json = super.toJson(full);
-        json['subtasks'] = this.subtasksToJson();
-        return json;
+    async getPendingSubtaskTotal(){
+        return Number(await this.producer.redisClient.hget(this.getMessageHash(),'pending_subtask_total'));
     }
 }

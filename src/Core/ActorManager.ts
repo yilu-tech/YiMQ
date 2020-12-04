@@ -1,17 +1,23 @@
 
 
-import { Injectable } from '@nestjs/common';
+import { Injectable} from '@nestjs/common';
 import { Actor } from './Actor';
 import { Config } from '../Config';
 import { RedisManager } from '../Handlers/redis/RedisManager';
 import { MasterModels } from '../Models/MasterModels';
 import { ActorStatus } from '../Constants/ActorConstants';
-import { Logger} from '../Handlers/Logger';
+import {AppLogger} from '../Handlers/AppLogger';
+import { Application } from '../Application';
+import NohmModel, { IDictionary } from 'nohm/tsOut/model';
+import { BusinessException } from '../Exceptions/BusinessException';
+import { ActorConfigManager } from './ActorConfigManager';
+
 
 @Injectable()
 export class ActorManager{
+    public application:Application;
     public actors : Map<number,Actor> = new Map();
-    private actorsName: Map<string,Actor> = new Map();
+    public actorsName: Map<string,Actor> = new Map();
     
     /**
      * 
@@ -20,66 +26,110 @@ export class ActorManager{
      * @param config 
      * @param redisManager 
      */
-    constructor(public config:Config,private redisManager:RedisManager,public masterModels:MasterModels){
+    constructor(public config:Config,private redisManager:RedisManager,public masterModels:MasterModels,public actorConfigManager:ActorConfigManager){
 
     }
 
+    public setApplication(application:Application){
+        this.application = application;
+    }
 
-    public async initActors(){
-        let actorModels = await this.getAllActorModels();
+    public async bootstrap(bootstrap=true){
+        let actorModels = await this.actorConfigManager.getAllActiveActorModels();
+        let promises = [];
+
 
         for(let actorModel of actorModels){
-
-            let actor = new Actor(this,this.redisManager);
-            actor.setModel(actorModel);
-            await actor.init();
-            this.actors.set(actor.id,actor);
-            this.actorsName.set(actor.name,actor);
+            promises.push(this.initActor(actorModel,bootstrap));   
         }
+        await Promise.all(promises);//并行启动
         //todo::通过masterRedis对比，取出配置文件不存在的actor也进行初始化，用于后续手动操作
-        Logger.log('Inited actors.','ActorManager')
+        AppLogger.log('actor running...','ActorManager')
+    }
+
+    public async initActor(actorModel,bootstrap=true){
+        let actor = new Actor(this,this.redisManager);
+        await actor.init(actorModel)
+        if(bootstrap){
+            await actor.bootstrap()
+        }
+        this.actors.set(actor.id,actor);
+        this.actorsName.set(actor.name,actor);
+        return actor;
+    }
+
+    public async reload(name:string = '*'){
+        if(name == "*"){
+            return this.reloadAll();
+        }
+
+        let actorModels = await this.masterModels.ActorModel.findAndLoad({
+            name: name
+        })
+        if(actorModels.length > 0){
+            return this.reloadOne(actorModels[0]);
+        }
+        throw new BusinessException(`(${name}) actor not exists.`)
+    }
+
+    public async reloadAll(){
+        let actorModels = await this.actorConfigManager.getAllActorModels();
+        let promises = [];
+
+        for(let actorModel of actorModels){
+            promises.push(this.reloadOne(actorModel))
+        }
+        await Promise.all(promises);//并行启动
+        AppLogger.log('actor running...','ActorManager')
+    }
+
+    public async reloadOne(actorModel:NohmModel<IDictionary>){
+
+        //标记为REMOVED的actor,关闭并且移除
+        if(actorModel.property('status') == ActorStatus.REMOVED){
+            let actor = this.actors.get(Number(actorModel.id));
+            if(actor){
+                await this.removeActor(actor);
+                AppLogger.warn(`Actor removed...... ${actor.name}`,'ActorManager')
+            }
+            return 
+        }
+        
+        let actor = this.actors.get(Number(actorModel.id));
+
+        if(actor){//重新加载actor
+            await actor.shutdown()
+            await actor.init(actorModel);
+            await actor.bootstrap()
+        }else{
+            AppLogger.warn(`Actor add...... ${actorModel.property('name')}`,'ActorManager')
+            await this.initActor(actorModel);//初始化新的actor
+        }
+    }
+
+    public async removeActor(actor:Actor){
+        await actor.shutdown();
+        this.actors.delete(actor.id);
+        this.actorsName.delete(actor.name)
     }
 
     public async shutdown(){
-        await this.closeActors();
-        this.actors = new Map();
-        this.actorsName = new Map();
-    }
-
-
-    public async loadActorsRemoteConfig(){
+        let actorClosePromises=[];
         for(let [id,actor] of this.actors){
-            if(actor.status == ActorStatus.ACTIVE){
-                await actor.loadRemoteConfigToDB();
-            }
-            
+            actorClosePromises.push(actor.shutdown());
         }
-        //todo::通过masterRedis对比，取出配置文件不存在的actor也进行初始化，用于后续手动操作
-        Logger.log('Load actors remote config.','ActorManager')
+        return Promise.all(actorClosePromises);
     }
-    public async closeActors(){
-        for(let [id,actor] of this.actors){
-            await actor.close();
-        }
-    }
+    
+    
 
     public get(name:string):Actor{
         return this.actorsName.get(name);
     }
-    public getById(id):Actor{
-        return this.actors.get(id);
+    public getById(id:number):Actor{
+        return this.actors.get(Number(id));
     }
 
-    public async bootstrapActorsCoordinatorprocessor(){
-        for(let [id,actor] of this.actors){
-            if(actor.status == ActorStatus.ACTIVE){
-                actor.coordinator.processBootstrap();
-                Logger.log(`bootstrap`,`ActorManager <${actor.name}> coordinator`)
-            }else{
-                Logger.error(`Can not bootstrap, Actor status is ${actor.status}`,null,`ActorManager <${actor.name}> coordinator`)
-            }
-        }
-    }
 
     public async getJobGlobalId(){
         let masterRedisClient = await this.redisManager.client();
@@ -92,67 +142,6 @@ export class ActorManager{
     public async getSubtaskGlobalId():Promise<string>{
         let masterRedisClient = await this.redisManager.client();
         return String(await masterRedisClient.incr('global:ids:subtask'));
-    }
-    public async getAllActorModels(){
-        let ids = await this.masterModels.ActorModel.sort({
-            field: 'id',
-            direction: 'ASC'
-        },false);
-        return this.masterModels.ActorModel.loadMany(ids);
-    }
-
-
-    public async saveConfigFileToMasterRedis(){
-        Logger.log('Load actors to master redis.','ActorManager');
-        let actorsConfig = this.config.actors;
-
-        let actorModels = await this.getAllActorModels();
- 
-        let removeActorModels = actorModels.filter((item)=>{
-            for(let actorConfig of actorsConfig){
-                if(Number(item.id) == Number(actorConfig.id)){
-                    return false;
-                } 
-            }
-            return true;
-        })
-
-        for (const removeActorModel of removeActorModels) {
-            removeActorModel.property('status',ActorStatus.REMOVED)
-            await removeActorModel.save()
-            Logger.warn(removeActorModel.allProperties(),'ActorManager Actor_Remove');
-        }
-
-        
-        for(let actorConfig of actorsConfig){
-
-
-            let actorModel = (await this.masterModels.ActorModel.findAndLoad({
-                id: actorConfig.id
-            }))[0]
-            
-            if(actorModel){
-                Logger.debug(actorModel.allProperties(),'ActorManager Actor_Update');
-            }else{
-                actorModel = new this.masterModels.ActorModel();
-                Logger.debug(actorConfig,'Actor_Add');
-            }
-            actorModel.id = actorConfig.id;
-            actorModel.property('id',actorConfig.id);
-            actorModel.property('name',actorConfig.name);
-
-            actorModel.property('key',actorConfig.key);
-
-            actorModel.property('api',actorConfig.api);
-            actorModel.property('status',ActorStatus.ACTIVE);
-            actorModel.property('protocol',actorConfig.protocol);
-            actorModel.property('options',actorConfig.options);
-            actorModel.property('redis',actorConfig.redis);
-            actorModel.property('redisOptions',this.config.system.redis[actorConfig.redis]);
-            await  actorModel.save(); 
-        }
-        Logger.log('Loaded actors to master redis.','ActorManager');
-        return true;
     }
 
 }

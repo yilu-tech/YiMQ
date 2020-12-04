@@ -1,15 +1,19 @@
 syntax = "proto3";
 
+
 package YiMQ;
 
-service ServerService {
-  rpc CreateMessage (Request) returns (Response) {}
+service MessageService {
+  rpc Create (Request) returns (Response) {}
 }
 
-message Request {
+message Request{
   string actor = 1;
-  string data = 2;
-
+  string topic = 2;
+  string type = 3;
+  double delay = 4;
+  string parent_subtask = 5;
+  string data = 6;
 }
 
 message Response{

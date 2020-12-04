@@ -1,13 +1,63 @@
-import { Injectable } from '@nestjs/common';
-import { Logger} from './Handlers/Logger';
+import { Injectable, OnApplicationShutdown, OnApplicationBootstrap, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { MasterModels } from './Models/MasterModels';
 import { ActorManager } from './Core/ActorManager';
 import { RedisManager } from './Handlers/redis/RedisManager';
-const { setQueues } = require('bull-board')
+import { RedisClient } from './Handlers/redis/RedisClient';
+import { Config } from './Config';
+import { ActorConfigManager } from './Core/ActorConfigManager';
+import {AppLogger as Logger} from './Handlers/AppLogger';
+import { ApplicationStatus } from './Constants/ApplicationConstants';
+import { BusinessException } from './Exceptions/BusinessException';
+import { timeout } from './Handlers';
+import { ContextLogger } from './Handlers/ContextLogger';
+let pacakage = require('../package.json');
 @Injectable()
-export class Application {
-    constructor(public redisManager:RedisManager, public masterModels:MasterModels, public actorManager:ActorManager){
+export class Application implements OnApplicationShutdown,OnApplicationBootstrap,OnModuleInit{
+    public version:string;
+    public masterRedisClient:RedisClient;
+    public status:ApplicationStatus;
+    private startingUpTime:number;
+    private shutdownTime:number;
+    constructor(
+        public redisManager:RedisManager, 
+        public masterModels:MasterModels, 
+        public actorConfigManager:ActorConfigManager,
+        public actorManager:ActorManager,
+        public config:Config,
+        public contextLogger:ContextLogger
+        ){
+        this.actorManager.setApplication(this);
+        this.redisManager.setApplication(this);
+        this.version = pacakage.version;
+    }
+    async onModuleInit() {
+        this.startingUpTime = Date.now();
+        console.info('..........................................Starting Up..........................................');
+        await this.bootstrap();
+    }
 
+    async onApplicationBootstrap() {
+       
+        if(process.send){
+            process.send('ready');//pm2优雅启动
+        }
+        console.info(`YiMQ listening on port 7379!`);
+        let costTime = (Date.now() - this.startingUpTime)/1000;
+        console.info(`..........................................Starting Up: ${costTime}s..........................................`);
+    }
+    
+    
+    async onApplicationShutdown(signal?: string) {
+        this.status = ApplicationStatus.SHUTDOWN;
+        this.shutdownTime = Date.now();
+        console.info('..........................................Shutdown..........................................');
+        if(this.masterRedisClient && this.masterRedisClient.status == 'ready'){
+            await this.shutdown()
+            await timeout(50);
+        }
+        let costTime = (Date.now() - this.shutdownTime)/1000;
+        console.info(`..........................................Shutdown: ${costTime}s..........................................\n`);
+        // process.exit(0);//框架自己有发出信号，这里不需要手动
     }
 
     private online = true;
@@ -24,34 +74,68 @@ export class Application {
 
     async baseBootstrap(){
         await this.masterModels.register()
-        await this.actorManager.saveConfigFileToMasterRedis()
-        await this.actorManager.initActors();
-        
+        await this.actorConfigManager.saveConfigFileToMasterRedis()
     }
     async bootstrap(){
         await this.baseBootstrap();
-        await this.actorManager.loadActorsRemoteConfig();  
-        await this.actorManager.bootstrapActorsCoordinatorprocessor();
-    
-        await this.setUiQueue();
+        await this.actorManagerBootstrap();
+    }
+    async actorManagerBootstrap(){
+        await this.actorManager.bootstrap();
+        
+        //todo 单独抽函数
+        this.masterRedisClient = await this.redisManager.client();
+
+        let subscribeRedisClient = await this.redisManager.client('app_subscribe',this.config.system.default);
+
+        // Logger.log('Subscribe ACTORS_CONFIG_UPDATED event','Application');
+        subscribeRedisClient.subscribe('ACTORS_CONFIG_UPDATED',function(err,count){
+            if(err){
+                Logger.error(new Error(err.message));
+            }
+        })
+        subscribeRedisClient.on('message',async (channel, actorName)=>{
+            if(channel == 'ACTORS_CONFIG_UPDATED'){
+                Logger.log('........Actor Manager Restart........','Application');
+                this.status = ApplicationStatus.RELOADING;
+                try {
+                    await this.actorManager.reload(actorName);
+                } catch (error) {
+                    Logger.error(error.message,null,"Application Reload");
+                }
+        
+                this.status = ApplicationStatus.RUNNING;
+            }
+        })
+    }
+    async reload(actorName){
+        if(this.status == ApplicationStatus.RELOADING){
+            let message = 'applicaton is reloading...'
+            Logger.error(message,null,'Application');
+            throw new BusinessException(message);
+        }
+        await this.config.load_actors_config();
+        await this.actorConfigManager.saveConfigFileToMasterRedis();
+        await this.publishGlobalEventActorsConfigChange(actorName);
     }
 
-    async shutdown(){
-        await this.actorManager.shutdown();
-        Logger.log('ActorManager shutdown','Application');
-        await this.masterModels.shutdown();
-        Logger.log('MasterModels shutdown','Application');
-        await this.redisManager.shutdown();
-        Logger.log('RedisManager shutdown','Application');
-        
+    async publishGlobalEventActorsConfigChange(actorName){
+        this.masterRedisClient.publish('ACTORS_CONFIG_UPDATED',actorName);
     }
-    
-    async setUiQueue(){//TODO 自己开发ui后移除
-        
-        let queues = [];
-        this.actorManager.actors.forEach((actor)=>{
-            queues.push(actor.coordinator.getQueue());
-        })
-        setQueues(queues);
+
+
+
+    async shutdown(){
+        Logger.log('ActorManager shutdown.......','Application');
+        await this.actorManager.shutdown();
+        Logger.log('MasterModels shutdown.......','Application');
+        await this.masterModels.shutdown();
+        Logger.log('RedisManager shutdown.......','Application');
+        await this.redisManager.shutdown();
+
+    }
+
+    getVersion(){
+        return this.version;
     }
 }

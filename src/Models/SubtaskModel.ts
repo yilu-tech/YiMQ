@@ -3,11 +3,13 @@ import { NohmModel, TTypedDefinitions } from "nohm";
 import { SubtaskType, SubtaskStatus } from "../Constants/SubtaskConstants";
 
 interface SubtaskProperties {
-    parent_id: Number; //TODO 还原为message_id
+    message_id: Number; //TODO 还原为message_id
     job_id: Number;
     type:SubtaskType;
     status: SubtaskStatus;
     data: any;
+    options:any;
+    producer_id:number;
     consumer_id:number;
     processor:string;
     context:string;
@@ -21,14 +23,14 @@ export class SubtaskModelClass extends NohmModel<SubtaskProperties> {
     public static modelName = 'subtask';
     // public static idGenerator = 'increment';
     protected static definitions: TTypedDefinitions<SubtaskProperties> = {
-        parent_id: {
+        message_id: {
             type: 'integer',
             index:true,
             validations: ['notEmpty']
         },
         job_id: {
             type: 'integer',
-            defaultValue:'-1',//nohm数字类型，不存在的时候为0，为了避免误解
+            // defaultValue:-1,//nohm默认值不会自动删除索引，不能使用
             index:true
         },
         type: {
@@ -43,6 +45,14 @@ export class SubtaskModelClass extends NohmModel<SubtaskProperties> {
         },
         data: {
             type: 'json',
+        },
+        options: {
+            type: 'json',
+        },
+        producer_id:{
+            type:'integer',
+            index:true,
+            validations: ['notEmpty']
         },
         consumer_id:{
             type:'integer',

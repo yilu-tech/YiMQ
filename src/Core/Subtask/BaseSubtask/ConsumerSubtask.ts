@@ -5,11 +5,21 @@ import { SubtaskJob } from "../../Job/SubtaskJob";
 import { SubtaskStatus } from "../../../Constants/SubtaskConstants";
 import * as bull from 'bull';
 import { JobType } from "../../../Constants/JobConstants";
+import { Expose } from "class-transformer";
+import { OnDemand } from "../../../Decorators/OnDemand";
+import { ExposeGroups, OnDemandSwitch } from "../../../Constants/ToJsonConstants";
+import { CoordinatorProcessResult } from "../../Coordinator/Coordinator";
+import { MessageStatus } from "../../../Constants/MessageConstants";
+import { Logger } from "@nestjs/common";
+import { Message } from "../../Messages/Message";
 
 export abstract class ConsumerSubtask extends Subtask{
-    consumer:Actor;
+    @Expose({groups:[ExposeGroups.RELATION_ACTOR]})
+    public consumer:Actor;
+    @Expose()
     consumer_id:number;
-    consumerprocessorName:string;
+    // @Expose()
+    // consumerprocessorName:string;
 
     constructor(message:TransactionMessage){
         super(message);
@@ -30,11 +40,19 @@ export abstract class ConsumerSubtask extends Subtask{
        
     }
 
-    public async restore(subtaskModel){
+    public async restore(subtaskModel,full=false){
         await super.restore(subtaskModel);
+        if(full){
+            await this.loadJob();
+        }
+    }
+    @OnDemand(OnDemandSwitch.SUBTASK_JOB)
+    public async loadJob(){
         if(this.job_id > -1){
             let jobContext = await this.consumer.coordinator.getJob(this.job_id);
             this.job = new SubtaskJob(this,jobContext);
+            await this.job.restore();
+            //this.job = await this.consumer.jobManager.get(this.job_id); //不用这句的原因是这句又要重新去查this
         }
     }
 
@@ -44,8 +62,8 @@ export abstract class ConsumerSubtask extends Subtask{
     public async cancel(){
         await this.setStatusAddJobFor(SubtaskStatus.CANCELLING)
     }
-    abstract async toDo();
-    abstract async toCancel();
+    abstract async toDo():Promise<CoordinatorProcessResult>;
+    abstract async toCancel():Promise<CoordinatorProcessResult>;;
 
     private async setStatusAddJobFor(status:SubtaskStatus.DOING|SubtaskStatus.CANCELLING){
         this.status = status;
@@ -56,5 +74,4 @@ export abstract class ConsumerSubtask extends Subtask{
         await this.setStatus(status).save();//先添加job有可能会导致job开始执行，subtask的状态还未修改，导致出错
         this.job = await this.consumer.jobManager.add(this,JobType.SUBTASK,jobOptions)
     }
-
 }

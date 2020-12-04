@@ -27,6 +27,7 @@ export class ActorModelClass extends NohmModel<ActorProperties> {
         name: {
             type: 'string',
             unique: true,
+            index:true,
             validations: ['notEmpty'],
         },
         key: {
@@ -38,13 +39,16 @@ export class ActorModelClass extends NohmModel<ActorProperties> {
             validations: ['notEmpty'],
         },
         status: {
-            type: 'string'
+            type: 'string',
+            index:true,
+            validations: ['notEmpty'],
         },
         protocol: {
             type: 'string'
         },
         options: {
-            type: 'json'
+            type: 'json',
+            defaultValue: {}
         },
         redis: {
             type: 'string'

@@ -6,6 +6,7 @@ import { RedisManager } from '../../Handlers/redis/RedisManager';
 import { MasterModels } from '../../Models/MasterModels';
 import { join } from 'path';
 import { RedisClient } from '../../Handlers/redis/RedisClient';
+import { ActorConfigManager } from '../../Core/ActorConfigManager';
 import { ActorManager } from '../../Core/ActorManager';
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('ActorConfigLoadToMasterRedis.spec', () => {
@@ -13,7 +14,7 @@ describe('ActorConfigLoadToMasterRedis.spec', () => {
     let config:Config;
     let redisManager:RedisManager;
     let redisClient:RedisClient;
-    let actorManager:ActorManager;
+    let actorConfigManager:ActorConfigManager;
     beforeEach(async () => {
         process.env.CONFIG_DIR_PATH = join(__dirname,'../config');
 
@@ -23,8 +24,9 @@ describe('ActorConfigLoadToMasterRedis.spec', () => {
             Config,
             RedisManager,
             MasterModels,
-            ActorService,
             ActorManager,
+            ActorService,
+            ActorConfigManager,
         ],
         }).compile();
         config = app.get<Config>(Config);
@@ -36,19 +38,19 @@ describe('ActorConfigLoadToMasterRedis.spec', () => {
         
         
         redisManager = app.get<RedisManager>(RedisManager);
-        actorManager = app.get<ActorManager>(ActorManager);
+        actorConfigManager = app.get<ActorConfigManager>(ActorConfigManager);
         redisClient = await redisManager.client();
         await redisClient.flushdb();
     });
 
     afterEach(async()=>{
-        await redisManager.quitAllDb();
+        await redisManager.closeAll();
     })
 
     it('Load config file to redis.', async () => {
        
-        await actorManager.saveConfigFileToMasterRedis()
-        let actors = await actorService.list();
-        expect(actors.length).toBe(2);
+        await actorConfigManager.saveConfigFileToMasterRedis()
+        let actors = await actorConfigManager.getAllActorModels();
+        expect(actors.length).toBe(3);
     });
 });

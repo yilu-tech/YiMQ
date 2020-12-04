@@ -4,9 +4,9 @@ let id = 0;
 @Controller()
 export class GrpcController {
 
-    @GrpcMethod('ServerService')
-    createMessage(req): any {
-      req.data = JSON.parse(req.data);
+    @GrpcMethod('MessageService')
+    create(req): any {
+
       console.log(req);
       return {data: JSON.stringify( {id:id++})};
     }

@@ -17,6 +17,8 @@ import { TccSubtask } from '../../Core/Subtask/TccSubtask';
 import { JobService } from '../../Services/JobService';
 import { MasterModels } from '../../Models/MasterModels';
 import { Application } from '../../Application';
+import { ActorConfigManager } from '../../Core/ActorConfigManager';
+import { ContextLogger } from '../../Handlers/ContextLogger';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('Subtask', () => {
@@ -37,8 +39,10 @@ describe('Subtask', () => {
             Config,
             RedisManager,
             MasterModels,
+            ActorConfigManager,
             ActorManager,
             Application,
+            ContextLogger,
             ...services,
         ],
         }).compile();
@@ -59,12 +63,14 @@ describe('Subtask', () => {
         messageService = app.get<MessageService>(MessageService);
         jobService = app.get<JobService>(JobService);
         actorManager = app.get<ActorManager>(ActorManager);
+        await actorManager.bootstrap(false)
         
     });
 
     afterAll(async()=>{
-        await redisManager.quitAllDb();
-        await actorManager.closeActors();
+        await actorManager.shutdown();
+        await redisManager.closeAll();
+    
     })
 
     describe('.create:', () => {
@@ -79,7 +85,6 @@ describe('Subtask', () => {
             let producer = actorManager.get(producerName);
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:300,
-                attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 100  
@@ -109,7 +114,6 @@ describe('Subtask', () => {
             let contentActor = actorManager.get('content'); 
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:300,
-                attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 100  

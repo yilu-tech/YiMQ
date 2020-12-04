@@ -1,0 +1,5 @@
+#!/bin/bash
+
+source /root/.nvm/nvm.sh
+pm2 start /startup.json
+pm2-runtime start /root/.nvm/versions/node/v11.7.0/lib/node_modules/yimq/ecosystem.config.js

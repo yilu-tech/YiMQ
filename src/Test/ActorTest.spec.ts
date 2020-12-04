@@ -8,7 +8,7 @@ import { ActorManager } from '../Core/ActorManager';
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
 import { MasterModels } from '../Models/MasterModels';
-import { services } from '../app.module';
+import { ActorConfigManager } from '../Core/ActorConfigManager';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('Subtask', () => {
@@ -16,6 +16,7 @@ describe('Subtask', () => {
     let config:Config;
     let redisManager:RedisManager;
     let actorManager:ActorManager;
+    let actorConfigManager:ActorConfigManager;
 
 
     beforeEach(async () => {
@@ -28,7 +29,7 @@ describe('Subtask', () => {
             RedisManager,
             MasterModels,
             ActorManager,
-            ...services,
+            ActorConfigManager,
         ],
         }).compile();
         config = app.get<Config>(Config);
@@ -39,19 +40,19 @@ describe('Subtask', () => {
         await masterModels.register()
 
         await redisManager.flushAllDb();
-        actorService = app.get<ActorService>(ActorService);
 
         
+        actorConfigManager = app.get<ActorConfigManager>(ActorConfigManager);
+        await actorConfigManager.saveConfigFileToMasterRedis()
+
         actorManager = app.get<ActorManager>(ActorManager);
-        await actorManager.saveConfigFileToMasterRedis()
         
         
         
     });
 
     afterEach(async()=>{
-        await redisManager.quitAllDb();
-        await actorManager.closeActors();
+        await redisManager.closeAll();
     })
     
 
@@ -61,10 +62,9 @@ describe('Subtask', () => {
     describe('.client config', () => {
 
         it('.broadcast_listeners to db', async () => {
-            await actorManager.initActors();
-
-            
-            mock.onPost(actorManager.get('user').api).replyOnce(200,{
+            let userActorConfig = await actorConfigManager.getByName('user');
+            let contentActorConfig = await actorConfigManager.getByName('content');
+            mock.onPost(userActorConfig.api).replyOnce(200,{
                 'actor_name':'user',
                 "broadcast_listeners": [{
                     "processor": "Tests\\Services\\ContentUpdateListener",
@@ -72,7 +72,7 @@ describe('Subtask', () => {
                     "condition": null
                 }]
             })
-            mock.onPost(actorManager.get('content').api).replyOnce(200,{
+            mock.onPost(contentActorConfig.api).replyOnce(200,{
                 'actor_name':'content',
                 "broadcast_listeners": [{
                     "processor": "Tests\\Services\\UserUpdateListener",
@@ -81,13 +81,18 @@ describe('Subtask', () => {
                 }]
             })
            
-            await actorManager.loadActorsRemoteConfig()
+            // await actorConfigManager.loadRemoteActorsConfig()
+            await actorManager.bootstrap(false);
+            let userActor = actorManager.get('user');
+            let contentActor = actorManager.get('content');
+            await userActor.loadRemoteConfig();
+            await contentActor.loadRemoteConfig();
             
-            let listenerModels = await actorManager.masterModels.ListenerModel.find({});
+            let listenerModels = await actorConfigManager.masterModels.ListenerModel.find({});
             expect(listenerModels.length).toBe(2);//确认添加成功
 
             let newTopic = 'content@post.update_new';
-            mock.onPost(actorManager.get('user').api).replyOnce(200,{
+            mock.onPost(userActorConfig.api).replyOnce(200,{
                 'actor_name':'user',
                 "broadcast_listeners": [{
                     "processor": "Tests\\Services\\ContentUpdateListener",
@@ -100,16 +105,19 @@ describe('Subtask', () => {
                     "condition": null
                 }]
             })
-            mock.onPost(actorManager.get('content').api).replyOnce(200,{
+            mock.onPost(contentActorConfig.api).replyOnce(200,{
                 'actor_name':'content',
                 "broadcast_listeners": []
             })
-            await actorManager.loadActorsRemoteConfig()
-            let userListeners = await actorManager.masterModels.ListenerModel.findAndLoad({'actor_id':actorManager.get('user').id});
+
+            await userActor.loadRemoteConfig();
+            await contentActor.loadRemoteConfig();
+
+            let userListeners = await actorConfigManager.masterModels.ListenerModel.findAndLoad({'actor_id':userActorConfig.id});
             expect(userListeners.length).toBe(2);//修改一个，添加一个，一个两个
             expect(userListeners[0].property('topic')).toBe(newTopic);//修改是否成功
 
-            let contentListeners = await actorManager.masterModels.ListenerModel.findAndLoad({'actor_id':actorManager.get('content').id});
+            let contentListeners = await actorConfigManager.masterModels.ListenerModel.findAndLoad({'actor_id':contentActorConfig.id});
             expect(contentListeners.length).toBe(0); //是否删除
 
         });

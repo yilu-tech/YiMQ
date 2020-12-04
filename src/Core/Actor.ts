@@ -2,7 +2,6 @@
 import { RedisManager } from "../Handlers/redis/RedisManager";
 import { NohmClass, IStaticMethods } from "nohm";
 import { Redis } from "ioredis";
-import { Logger} from '../Handlers/Logger';
 import { Coordinator } from "./Coordinator/Coordinator";
 import { HttpCoordinator } from "./Coordinator/HttpCoordinator";
 import { GrpcCoordinator } from "./Coordinator/GrpcCoordinator";
@@ -11,23 +10,26 @@ import { MessageManager } from "./MessageManager";
 import { JobManager } from "./JobManager";
 import { ActorManager } from "./ActorManager";
 import { SubtaskModelClass } from "../Models/SubtaskModel";
-import { CoordinatorCallActorAction } from "../Constants/Coordinator";
-import {differenceBy} from 'lodash';
 import { ActorStatus } from "../Constants/ActorConstants";
-import { HttpCoordinatorRequestException } from "../Exceptions/HttpCoordinatorRequestException";
 import {SubtaskManager} from './SubtaskManager';
 import { ActorModelClass } from "../Models/ActorModel";
-import { SystemException } from "../Exceptions/SystemException";
 import { ActorOptions } from "../Config/ActorConfig";
-
+import { ActorCleaner } from "./ActorCleaner";
+import { AppLogger } from "../Handlers/AppLogger";
+import { Exclude, Expose } from "class-transformer";
+import { ExposeGroups } from "../Constants/ToJsonConstants";
+@Exclude()
 export class Actor{
+    @Expose()
     public id:number;
+    @Expose()
     public name:string;
     public key:string;
     public api:string;
     public options:ActorOptions;
     public redis:string;
     public protocol:string;
+    @Expose()
     public status:ActorStatus
 
     
@@ -42,9 +44,24 @@ export class Actor{
     public jobManager:JobManager;
     public subtaskManager:SubtaskManager
     private model:ActorModelClass
+    public actorCleaner:ActorCleaner;
 
-    constructor(public actorManager:ActorManager,private redisManager:RedisManager){
+    constructor(public actorManager:ActorManager,public redisManager:RedisManager){
 
+    }
+
+    public async bootstrap() {
+        await this.prepare();
+        await this.actorCleaner.setupClearJob();
+        await this.process();
+        
+    }
+    public async process(){
+        await this.coordinator.processBootstrap()
+    }
+    public async shutdown(){
+        AppLogger.log(`Actor shutdown...... （${this.name}).`,'Actor')
+        await this.coordinator.close()
     }
     setModel(actorModel){
         this.id = actorModel.property('id');
@@ -57,16 +74,27 @@ export class Actor{
         this.status = <ActorStatus>actorModel.property('status');
         this.model = actorModel;
     }
-    public async init(){
-        
+    public async init(actorModel){
+        this.setModel(actorModel);
+        AppLogger.log(`Actor init...... （${this.name}).`,'Actor')
         this.redisClient = await this.redisManager.client(this.redis);
+        this.initNohm();
         this.messageManager = new MessageManager(this);
+        this.actorCleaner = new ActorCleaner(this);
         this.jobManager = new JobManager(this);
         this.subtaskManager = new SubtaskManager(this);
-        this.initCoordinator();
-        this.initNohm();
-        Logger.log(`Inited actor: ${this.name}.`,'Actor')
+        await this.initCoordinator();
+        return this;
     }
+    public async prepare(){
+        await this.loadRemoteConfig();
+        return this;
+    }
+
+    public async loadRemoteConfig(){
+        await this.actorManager.actorConfigManager.loadRemoteConfigToDB(this)
+    }
+
     private initNohm(){
         this.nohm = new NohmClass({});
         this.nohm.setClient(this.redisClient);
@@ -75,85 +103,22 @@ export class Actor{
     }
 
 
-    public async loadRemoteConfigToDB(){
-        try {
-            let result = await this.coordinator.callActor(this,CoordinatorCallActorAction.GET_CONFIG);
-            if(result.actor_name != this.name){
-                throw new SystemException(`Remote config actor_name is <${result.actor_name}>`);
-            }
-            await this.saveListener(result['broadcast_listeners']);   
-        } catch (error) {
-            let errorMessage = `${error.message}`;
-            if(error instanceof HttpCoordinatorRequestException){
-                errorMessage = `${error.message}: ${error.response.message} `;
-            }
-            Logger.error(errorMessage,null,`Actor <${this.name}> loadRemoteConfig`)
-            this.status = ActorStatus.INACTIVE;
-        }
-        //TODO processor记录到db
-    }
-    
-    private async saveListener(listenerOptions){
-        let listenerModels = await this.actorManager.masterModels.ListenerModel.findAndLoad({
-            actor_id:this.id
-        });
+    private async initCoordinator(){
 
-        let listeners = listenerModels.map((item)=>{
-            return item.allProperties();
-        })
-        let removeListeners = differenceBy(listeners, listenerOptions, 'processor');
-
-        for (const item of removeListeners) {
-            await this.actorManager.masterModels.ListenerModel.remove(item.id);
-            Logger.log(item,'Actor_Listener_Remove');
-        }
-
-
-        for (const item of listenerOptions) {
-            let listenerModel;
-
-            listenerModel = (await this.actorManager.masterModels.ListenerModel.findAndLoad({
-                actor_id:this.id,
-                processor: item.processor,
-            }))[0];
-
-            if(listenerModel){
-                Logger.log(`${item.processor}`,`Actor_Listener_Update <${this.name}>`);
-            }else{
-                listenerModel = new this.actorManager.masterModels.ListenerModel();
-                Logger.log(item,'Actor_Listener_Add');
-            }
-            
-            listenerModel.property('topic',item.topic);
-            listenerModel.property('processor',item.processor);
-            listenerModel.property('actor_id',this.id);
-            await listenerModel.save() 
-        }
-    }
-
-    private initCoordinator(){
-        let redisOptions = this.redisManager.getClientOptions(this.redis);
         switch (this.protocol) {
             case 'http':
-                this.coordinator = new HttpCoordinator(this,redisOptions);
+                this.coordinator = new HttpCoordinator(this);
                 break;
             case 'grpc':
-                this.coordinator = new GrpcCoordinator(this,redisOptions);
+                this.coordinator = new GrpcCoordinator(this);
                 break;
         }
+        await this.coordinator.initQueue();
     }
 
-    public safeClose(){
+    
 
-    }
 
-    public async close(){
-        await this.coordinator.close();
-        // if(this.redisClient.status == 'ready'){//已经被单独关闭的情况下，避免发生错误(主要发生在单元测试中)
-        //     await this.redisClient.quit();
-        // }
-        
-    }
 
     public suspend(){
 
@@ -166,7 +131,7 @@ export class Actor{
     public delete(force:boolean = false){
         
     }
-
+    
 }
 
 

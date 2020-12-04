@@ -5,4 +5,5 @@ export enum CoordinatorCallActorAction{
     TRY = 'TRY',
     CONFIRM = 'CONFIRM',
     CANCEL = 'CANCEL',
+    ACTOR_CLEAR= 'ACTOR_CLEAR'
 }

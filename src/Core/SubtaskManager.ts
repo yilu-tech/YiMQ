@@ -8,56 +8,65 @@ import { BcstSubtask } from "./Subtask/BcstSubtask";
 import { LstrSubtask } from "./Subtask/LstrSubtask";
 import { BusinessException } from "../Exceptions/BusinessException";
 import { Subtask } from "./Subtask/BaseSubtask/Subtask";
-import { ConsumerSubtask } from "./Subtask/BaseSubtask/ConsumerSubtask";
+import { Message } from "./Messages/Message";
 export class SubtaskManager{
     constructor(private actor:Actor){
 
     }
 
-    async addSubtask(from:any,type,body):Promise<Subtask>{
+    async addSubtask(message:Message,type,body):Promise<Subtask>{
 
-        let subtask =  this.factory(from,type);
+        let subtask =  this.factory(message,type);
         await subtask.create(body);
         return subtask;
     }
 
     async get(subtask_id):Promise<any>{
-        let subtaskModel = await this.actor.subtaskModel.load(subtask_id);
-        let from:any;
-
-        from = await this.actor.messageManager.get(subtaskModel.property('parent_id'));
         
-        let subtask:Subtask =  this.factory(from,subtaskModel.property('type'));
+        try{
+            var subtaskModel = await this.actor.subtaskModel.load(subtask_id);
+        }catch(error){
+            if(error && error.message === 'not found'){
+                return null;
+            }
+            throw error;
+        }
+
+        // let subtaskModel = await this.actor.subtaskModel.load(subtask_id);
+
+        let message = await this.actor.messageManager.get(subtaskModel.property('message_id'));
+        
+        let subtask:Subtask =  this.factory(message,subtaskModel.property('type'));
         await subtask.restore(subtaskModel);
         return subtask;
 
     }
-    async getByFrom(from,subtask_id){
+    async getByMessage(message,subtask_id){
         let subtaskModel = await this.actor.subtaskModel.load(subtask_id);
-        let subtask:Subtask =  this.factory(from,subtaskModel.property('type'));
+        let subtask:Subtask =  this.factory(message,subtaskModel.property('type'));
         await subtask.restore(subtaskModel);
         return subtask;
 
     }
 
 
-    factory(from,type){
+    factory(message,type){
         let subtask:any;
         switch (type) {
             case SubtaskType.EC:
-                subtask = new EcSubtask(from);
+                subtask = new EcSubtask(message);
                 break;
             case SubtaskType.TCC:
-                subtask = new TccSubtask(from);
+                subtask = new TccSubtask(message);
                 break;
             case SubtaskType.XA:
-                subtask = new XaSubtask(from);
+                subtask = new XaSubtask(message);
                 break;
             case SubtaskType.BCST:
-                subtask = new BcstSubtask(from);
+                subtask = new BcstSubtask(message);
                 break;
             case SubtaskType.LSTR:
-                subtask = new LstrSubtask(from);
+                subtask = new LstrSubtask(message);
                 break;
         
             default:

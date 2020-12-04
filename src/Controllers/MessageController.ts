@@ -1,13 +1,17 @@
-import { Controller, Post, Body } from '@nestjs/common';
-import { CreateMessageDto, AddSubtaskDto } from '../Dto/MessageDto';
+import { Controller, Post, Body, UseInterceptors } from '@nestjs/common';
+import { CreateMessageDto, AddSubtaskDto, MessageConfirmDao, MessageCancelDao } from '../Dto/MessageDto';
 
 import { MessageService } from '../Services/MessageService';
 import { TransactionMessage } from '../Core/Messages/TransactionMessage';
+import { OnDemandFastToJson } from '../Decorators/OnDemand';
+import { Subtask } from '../Core/Subtask/BaseSubtask/Subtask';
+import { ContextLoggingInterceptor } from '../Interceptors/ContextLoggingInterceptor';
 
 
 
 
 @Controller('message')
+@UseInterceptors(ContextLoggingInterceptor)
 export class MessagesController {
     constructor(private messageService:MessageService){
 
@@ -19,23 +23,24 @@ export class MessagesController {
     @Post('create')
     async begin(@Body() createMessageDto: CreateMessageDto): Promise<any> {
         let message = await this.messageService.create<TransactionMessage>(createMessageDto.actor, createMessageDto.type, createMessageDto.topic,createMessageDto.data,{
-            delay: createMessageDto.delay
+            delay: createMessageDto.delay,
+            parent_subtask: createMessageDto.parent_subtask
         });
-        return message.toJson();
+        return OnDemandFastToJson(message);
     }
 
     /**
      * 创建事物任务
      */
     @Post('subtask')
-    async jobs(@Body() addSubtaskDto: AddSubtaskDto): Promise<any> {
-        let subtask = await this.messageService.addSubtask(
+    async subtask(@Body() addSubtaskDto: AddSubtaskDto): Promise<any> {
+        let subtask:Subtask = await this.messageService.addSubtask(
             addSubtaskDto.actor,
             addSubtaskDto.message_id,
             addSubtaskDto.type,
             addSubtaskDto
             );
-        return subtask.toJson();
+        return OnDemandFastToJson(subtask)
     }
 
 
@@ -51,7 +56,7 @@ export class MessagesController {
      * 提交事物
      */
     @Post('confirm')
-    async commit(@Body() body): Promise<any> {
+    async commit(@Body() body:MessageConfirmDao): Promise<any> {
         return (await this.messageService.confirm(body.actor,body.message_id));
     }
 
@@ -59,7 +64,7 @@ export class MessagesController {
      * 回滚事物
      */
     @Post('cancel')
-    async rollback(@Body() body): Promise<any> {
+    async rollback(@Body() body:MessageCancelDao): Promise<any> {
         return (await this.messageService.cancel(body.actor,body.message_id));
     }
 

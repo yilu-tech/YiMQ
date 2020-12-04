@@ -3,11 +3,9 @@ import { SystemConfig } from './SystemConfig.';
 import {safeLoad} from 'js-yaml';
 import { readFileSync,readdirSync } from "fs";
 import { join } from "path";
-import { ActorConfig } from "./ActorConfig";
-import { get } from 'lodash';
+import { ActorConfig, actorDefaultOptions } from "./ActorConfig";
 import { EventEmitter } from "events";
-// const chokidar = require('chokidar');
-import { Logger} from '../Handlers/Logger';
+import {AppLogger as Logger} from '../Handlers/AppLogger';
 
 process.env.CONFIG_DIR_PATH = process.env.CONFIG_DIR_PATH || join(process.cwd(),'config');
 
@@ -38,7 +36,7 @@ export class Config {
     async loadConfig(){
         try {
             this.load_system_config();
-            Logger.log(`system_config is loaded`,'Config')
+            Logger.debug(`system_config is loaded`,'Config')
             this.event.emit(ConfigEvents.SYSTEM_CONFIG_LOAD);
         } catch (error) {
             Logger.error(error,'Config');
@@ -46,7 +44,7 @@ export class Config {
         
         try {
             this.load_actors_config();
-            Logger.log(`actors_config is loaded`,'Config')
+            Logger.debug(`actors_config is loaded`,'Config')
             this.event.emit(ConfigEvents.ACTORS_CONFIG_LOAD);
         } catch (error) {
             Logger.error(error,'Config');
@@ -56,6 +54,7 @@ export class Config {
             Logger.log('All configs Loaded','Config')
             this.event.emit(ConfigEvents.CONFIG_LOAD)
         }
+        return this;
     }
 
     load_system_config(){
@@ -65,39 +64,15 @@ export class Config {
     load_actors_config(){
         let actors = [];
         let fileContent = this.readConfig(this.paths.actors_config);
-        fileContent.actors.forEach((actorConfig)=>{
+        fileContent['actors'] && fileContent['actors'].forEach((actorConfig)=>{
+            let default_options = Object.assign({},actorDefaultOptions);
+            let common_options = Object.assign(default_options,fileContent['common_options']);
+            actorConfig.options = Object.assign(common_options,actorConfig.options);
             actors.push(actorConfig)
         })
         this.actors = actors;
     }
     
-
-    async reloadConfig(configName){
-        this[`load_${configName}`]()
-
-        this.event.emit(`${configName}_reload`.toUpperCase());
-
-        Logger.log(`${configName} is change`,'Config')
-        if(configName == 'actors_config'){
-            Logger.log('Config Reloaded','Config')
-            this.event.emit(ConfigEvents.CONFIG_RELOAD)
-        }
-    }
-    // async reloadConfigs(){
-    //     for (const name in this.paths) {
-    //         await this.reloadConfig(name);
-    //     }
-    // }
-
-    // async setWatch(){
-    //     chokidar.watch(process.env.CONFIG_DIR_PATH).on('change', async (path) => {
-    //         for (const name in this.paths) {
-    //             if(path == this.paths[name]){
-    //                 await this.reloadConfig(name);
-    //             }
-    //         }
-    //     });
-    // }
 
     private readConfig(filepath){
         try{

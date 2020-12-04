@@ -18,6 +18,9 @@ import { MasterModels } from '../../Models/MasterModels';
 import { services } from '../../app.module';
 import { BcstSubtask } from '../../Core/Subtask/BcstSubtask';
 import { Application } from '../../Application';
+import { ActorConfigManager } from '../../Core/ActorConfigManager';
+import { OnDemandFastToJson } from '../../Decorators/OnDemand';
+import { ContextLogger } from '../../Handlers/ContextLogger';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('Subtask', () => {
@@ -38,8 +41,10 @@ describe('Subtask', () => {
             Config,
             RedisManager,
             MasterModels,
+            ActorConfigManager,
             ActorManager,
             Application,
+            ContextLogger,
             ...services,
         ],
         }).compile();
@@ -56,12 +61,14 @@ describe('Subtask', () => {
         actorService = app.get<ActorService>(ActorService);
         messageService = app.get<MessageService>(MessageService);
         actorManager = app.get<ActorManager>(ActorManager);
+        await actorManager.bootstrap(false)
+        mock.reset()
     });
 
     afterEach(async()=>{
         
-        await actorManager.closeActors();
-        await redisManager.quitAllDb();
+        await actorManager.shutdown();
+        await redisManager.closeAll();
     })
     
 
@@ -80,7 +87,6 @@ describe('Subtask', () => {
            
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:300,
-                attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 100  
@@ -110,7 +116,6 @@ describe('Subtask', () => {
           
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:300,
-                attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 100  
@@ -137,9 +142,45 @@ describe('Subtask', () => {
             await updatedMessage.loadSubtasks();
             let savedTccSubtask = updatedMessage.subtasks[0];
             expect(savedTccSubtask.id).toBe(tccsubtask.id);
-            expect(savedTccSubtask.toJson()['data'].title).toBe('new post');
-            expect(savedTccSubtask.toJson()['prepareResult'].title).toBe('get new post');
-            expect(savedTccSubtask['prepareResult'].title).toBe('get new post');
+            expect(OnDemandFastToJson(savedTccSubtask)['data'].title).toBe('new post');
+            expect(OnDemandFastToJson(savedTccSubtask)['prepareResult'].data.title).toBe('get new post');
+            expect(savedTccSubtask['prepareResult'].data.title).toBe('get new post');
+        });
+
+        it('.add tcc subtask prepare timeout', async () => {
+          
+            message = await messageService.create(producerName,messageType,topic,{},{
+                delay:300,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+
+
+
+
+            let producer = actorManager.get(producerName); 
+      
+
+            mock.onPost(producer.api).timeoutOnce();
+            let tccBody = {
+                processor:'user@user.create',
+                data:{
+                    title: 'new post'
+                },
+                options:{
+                    timeout:300
+                }
+            };
+            let tccsubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,tccBody) 
+
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            await updatedMessage.loadSubtasks();
+            let savedTccSubtask = updatedMessage.subtasks[0];
+            expect(savedTccSubtask.id).toBe(tccsubtask.id);
+            expect(savedTccSubtask['prepareResult'].message).toBe(`TRY: user/yimq timeout of ${tccBody.options.timeout}ms exceeded`);
         });
 
 
@@ -148,7 +189,6 @@ describe('Subtask', () => {
            
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:300,
-                attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 100  
@@ -170,6 +210,7 @@ describe('Subtask', () => {
             let savedEcSubtask = updatedMessage.subtasks[0];;
             expect(savedEcSubtask.type).toBe(SubtaskType.EC);
             expect(savedEcSubtask.status).toBe(SubtaskStatus.PREPARED);
+            expect(updatedMessage.subtask_total).toBe(1);
             expect(updatedMessage.pending_subtask_total).toBe(1);
 
             mock.onPost(contentActor.api).reply(200,{
@@ -186,6 +227,7 @@ describe('Subtask', () => {
             await updatedMessage.loadSubtasks();
             let savedTccSubtask = updatedMessage.subtasks[1];
             expect(savedTccSubtask.type).toBe(SubtaskType.TCC);
+            expect(updatedMessage.subtask_total).toBe(2);
             expect(updatedMessage.pending_subtask_total).toBe(2);
             
         });
@@ -193,7 +235,6 @@ describe('Subtask', () => {
         it('.add ec by prepare', async () => {
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:300,
-                attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 100  
@@ -229,7 +270,6 @@ describe('Subtask', () => {
            
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:300,
-                attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 100  
@@ -262,7 +302,6 @@ describe('Subtask', () => {
         it('.add bcst by prepare', async (done) => {
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:300,
-                attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 100  
@@ -304,7 +343,8 @@ describe('Subtask', () => {
                     done()   
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
              //把message确认
             await messageService.confirm(producerName,message.id);
         })
@@ -325,7 +365,6 @@ describe('Subtask', () => {
            
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:300,
-                attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 100  
@@ -365,7 +404,8 @@ describe('Subtask', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
 
         });
 
@@ -377,7 +417,6 @@ describe('Subtask', () => {
             let contentActor = actorManager.get('content'); 
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:300,
-                attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 100  
@@ -400,7 +439,7 @@ describe('Subtask', () => {
                     title: 'new post'
                 }
             })          
-            expect(tccSubtask.toJson()['prepareResult'].title).toBe(prepareResult.title);
+            expect(OnDemandFastToJson(tccSubtask)['prepareResult'].data.title).toBe(prepareResult.title);
 
             prepareResult = {title: 'get update user'};
             mock.onPost(producer.api).reply(200,prepareResult)
@@ -434,7 +473,8 @@ describe('Subtask', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
 
         });
 
@@ -444,7 +484,6 @@ describe('Subtask', () => {
            
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:300,
-                attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 100  
@@ -506,6 +545,70 @@ describe('Subtask', () => {
         let message:TransactionMessage;
 
 
+        it('.message confirm ec attemptsMade2',async(done)=>{
+
+            message = await messageService.create(producerName,messageType,topic,{},{
+                delay:300,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+            expect(message.job_id).toBe(1)
+
+            
+            let producer = actorManager.get(producerName); 
+
+
+            mock.onPost(producer.api).timeoutOnce();
+            mock.onPost(producer.api).replyOnce(400,{'username':'username is locked'});
+            mock.onPost(producer.api).replyOnce(200,{user_id:1});
+            process.env.SUBTASK_JOB_BACKOFF_DELAY = '100';//加快二次尝试，防止测试超时
+            let body  = {
+                processor:"user@user.create",
+                data:{
+                    username: 'jack'
+                },
+                options:{
+                    attempts: 3,
+                }
+            }
+            let ecSubtask:EcSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,body)   
+            expect(ecSubtask.options.attempts).toBe(body.options.attempts)
+
+            //把message确认
+            await messageService.confirm(producerName,message.id);
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            await updatedMessage.loadSubtasks();
+            expect(updatedMessage.status).toBe(MessageStatus.DOING);
+
+
+            producer.coordinator.getQueue().on('completed',async (job)=>{
+                updatedMessage = await producer.messageManager.get(message.id);
+                await updatedMessage.loadSubtasks(true);
+                if(message.job.id == job.id){
+                    expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
+                    //检查EcSubtask
+                    expect(updatedMessage.subtasks[0].type).toBe(SubtaskType.EC)
+                    expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DOING)
+                    expect(updatedMessage.subtasks[0].job_id).toBe(2)
+
+                    expect(updatedMessage.subtasks[0].job.context.opts.attempts).toBe(body.options.attempts)
+                    
+                }else if(updatedMessage.subtasks[0].job_id == job.id){
+                    expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DONE);
+                    expect(job.attemptsMade).toBe(2);
+                    done()
+                }
+            })
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
+
+        
+        })
+
+
        
 
         it('.message confirm ec tcc to done', async (done) => {
@@ -513,7 +616,6 @@ describe('Subtask', () => {
             let contentActor = actorManager.get('content'); 
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:300,
-                attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 100  
@@ -532,7 +634,7 @@ describe('Subtask', () => {
                     title: 'new post'
                 }
             })          
-            expect(tccSubtask.toJson()['prepareResult'].title).toBe(prepareResult.title);
+            expect(OnDemandFastToJson(tccSubtask)['prepareResult'].data.title).toBe(prepareResult.title);
             
 
             //mock添加ec子任务时的远程调用
@@ -552,6 +654,7 @@ describe('Subtask', () => {
             let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
             await updatedMessage.loadSubtasks();
             expect(updatedMessage.status).toBe(MessageStatus.DOING);
+            expect(updatedMessage.subtask_total).toBe(2);
             expect(updatedMessage.pending_subtask_total).toBe(2);
             producer.coordinator.getQueue().on('failed',async(job,err)=>{
                 // console.log(job.toJSON(),err)
@@ -604,7 +707,9 @@ describe('Subtask', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
+            await contentActor.process();
 
         });
 
@@ -615,7 +720,6 @@ describe('Subtask', () => {
            
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:300,
-                attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 100  
@@ -635,7 +739,7 @@ describe('Subtask', () => {
                     username: 'jack'
                 }
             })          
-            expect(tccSubtask.toJson()['prepareResult'].title).toBe(prepareResult.title);
+            expect(OnDemandFastToJson(tccSubtask)['prepareResult'].data.title).toBe(prepareResult.title);
 
             //把message确认
             await messageService.confirm(producerName,message.id);
@@ -679,7 +783,8 @@ describe('Subtask', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
         });
 
     });
@@ -700,7 +805,6 @@ describe('Subtask', () => {
            
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:300,
-                attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 100  
@@ -721,7 +825,7 @@ describe('Subtask', () => {
                     username: 'jack'
                 }
             })          
-            expect(tccSubtask.toJson()['prepareResult'].title).toBe(prepareResult.title);
+            expect(OnDemandFastToJson(tccSubtask)['prepareResult'].data.title).toBe(prepareResult.title);
 
             //mock添加ec子任务时的远程调用
             prepareResult = {title: 'get update user'};
@@ -805,7 +909,8 @@ describe('Subtask', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
 
         });
 
@@ -815,7 +920,6 @@ describe('Subtask', () => {
            
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:300,
-                attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 100  
@@ -868,7 +972,8 @@ describe('Subtask', () => {
                     done()
                 }
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
 
         });
 
@@ -879,7 +984,6 @@ describe('Subtask', () => {
            
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:300,
-                attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 100  
@@ -899,7 +1003,7 @@ describe('Subtask', () => {
                     username: 'jack'
                 }
             })          
-            expect(tccSubtask.toJson()['prepareResult'].title).toBe(prepareResult.title);
+            expect(OnDemandFastToJson(tccSubtask)['prepareResult'].data.title).toBe(prepareResult.title);
 
             //把message确认
             await messageService.cancel(producerName,message.id);
@@ -945,8 +1049,119 @@ describe('Subtask', () => {
                 }
                 //TODO 子任务完成后检查message状态为完成
             })
-            await actorManager.bootstrapActorsCoordinatorprocessor();
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
         });
+        
 
+        it('.message tcc timeout after prepared to cancel', async (done) => {
+
+           
+            message = await messageService.create(producerName,messageType,topic,{},{
+                delay:500,
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+            
+            let producer = actorManager.get(producerName); 
+
+
+            let prepareResult = {title: 'get new user'};
+            mock.onPost(producer.api).replyOnce(async ()=>{//让subtask超时perpared
+                await timeout(1000)
+                return [200,prepareResult];
+            })
+
+            mock.onPost(producer.api).replyOnce(async ()=>{ //让subtask第一次cancel失败
+                await timeout(1000)
+                return [500,{message: 'failed'}];
+            })
+
+            mock.onPost(producer.api).replyOnce(async ()=>{ //让subtaks第二次cancel成功
+                await timeout(10)
+                return [200,{message: 'success'}];
+            })
+            
+        
+               // //任务执行完毕
+            producer.coordinator.getQueue().on('completed',async (job)=>{
+                // console.debug('Job completed',job.id)
+                let updatedMessage = await producer.messageManager.get(message.id);
+                await updatedMessage.loadSubtasks();
+
+                if(message.job.id == job.id){
+                    
+                    expect(updatedMessage.status).toBe(MessageStatus.CANCELLING)//检查message
+                    
+                }
+                else if(updatedMessage.subtasks[0].job_id == job.id){
+                    expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.CANCELED);
+                    done()
+                }
+            })
+            // await actorManager.bootstrapActorsCoordinatorprocessor();
+            await producer.process();
+
+            process.env.SUBTASK_JOB_BACKOFF_DELAY = '10';
+            //没有await，让其在cancel之后再返回数据
+            messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                processor:"user@user.create",
+                data:{
+                    username: 'jack'
+                },
+                options:{
+                    timeout:0
+                }
+            }).then(async (tccSubtask:TccSubtask)=>{
+                expect(OnDemandFastToJson(tccSubtask)['prepareResult'].data.title).toBe(prepareResult.title);
+                // expect(await tccSubtask.getStatus()).toBe(SubtaskStatus.CANCELLING);
+            })  
+        
+            await messageService.cancel(producerName,message.id);
+
+
+
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            await updatedMessage.loadSubtasks();
+            expect(updatedMessage.status).toBe(MessageStatus.CANCELLING);
+
+            
+         
+        });
     });
+
+    describe('.prepare faild:', () => {
+
+        it('.tcc try faild', async () => {
+            let producerName = 'user';
+            let messageType = MessageType.TRANSACTION;
+            let topic = 'subtask_test';
+            let message:TransactionMessage;
+           
+            message = await messageService.create(producerName,messageType,topic,{},{
+                delay:300,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+        
+            let producer = actorManager.get(producerName); 
+
+            process.env.SUBTASK_JOB_DELAY = '200';//子任务延迟，否则会有一定几率比message的job先执行完毕
+
+            //mock添加tcc子任务时的远程调用
+            let prepareResult = {message: 'username exists.'};
+            mock.onPost(producer.api).reply(400,prepareResult)
+            let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                processor:"user@user.create",
+                data:{
+                    username: 'jack'
+                }
+            })   
+            expect(tccSubtask.prepareResult.status).toBe(400);       
+
+        })
+
+    })
 });

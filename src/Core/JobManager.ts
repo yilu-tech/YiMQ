@@ -8,6 +8,8 @@ import { Message } from "./Messages/Message";
 import * as bull from 'bull';
 import { TransactionMessage } from "./Messages/TransactionMessage";
 import { Subtask } from "./Subtask/BaseSubtask/Subtask";
+import { ActorClearJob } from "./Job/ActorClearJob";
+import { SystemException } from "../Exceptions/SystemException";
 export class JobManager{
     constructor(private actor:Actor){
     }
@@ -37,8 +39,8 @@ export class JobManager{
                     message_id: message.id,
                     type: type,
                 };
-                let defaultDelay = 2000;
-                jobOptions.delay = jobOptions.delay > defaultDelay ? jobOptions.delay : Number(process.env.TRANSACATION_MESSAGE_JOB_DELAY) || defaultDelay;
+                let defaultDelay = 1000*5;
+                jobOptions.delay = jobOptions.delay >= 1000 ? jobOptions.delay : Number(process.env.TRANSACATION_MESSAGE_JOB_DELAY) || defaultDelay;
                 jobContext = await this.actor.coordinator.add(message.topic,data,jobOptions);
                 job = new MessageJob(message,jobContext);
                 break;
@@ -51,6 +53,8 @@ export class JobManager{
                     type: JobType.SUBTASK,
                 }
                 jobOptions.delay = Number(process.env.SUBTASK_JOB_DELAY) || 0;//单元测试部分地方需要延时
+                jobOptions.attempts = subtask.options.attempts ? subtask.options.attempts : 3;
+                jobOptions.attempts = this.actor.options.subtask_force_attempts ? this.actor.options.subtask_force_attempts: jobOptions.attempts;
                 jobOptions.backoff = {
                     type:'exponential',
                     delay: Number(process.env.SUBTASK_JOB_BACKOFF_DELAY) || 5000 // delay*1  delay*3 delay*7 delay*15     delay*(times*2+1) times开始于0
@@ -76,14 +80,35 @@ export class JobManager{
                 //由于subtask的job不一定和它的subjob在同一个actor，也就不一定在同一个redis，所以直接通过id无法查找
                 //拿到job的producer
                 let producer = this.actor.actorManager.getById(jobContext.data.producer_id);
+                if(!producer){
+                    throw new SystemException(`Job ${jobContext.id} of Actor ${this.actor.id} not found ${jobContext.data.producer_id} producer.`)
+                }
                 let subtask = await producer.subtaskManager.get(jobContext.data.subtask_id);
+                if(!subtask){
+                    throw new SystemException(`Actor [${this.actor.name}-${this.actor.id}] Job ${jobContext.id} not found producer [${jobContext.data.producer_id}] Subtask ${jobContext.data.subtask_id}.`)
+                }
                 
                 //生成subtask实例
                 job = new SubtaskJob(subtask,jobContext);
                 break;
+            case JobType.ACTOR_CLEAR:
+                job = new ActorClearJob(this.actor,jobContext);
+                break;
             default:
                 throw new Error('JobType is not exists.');
-        }      
+        }
+        await job.restore();      
         return job;
+    }
+
+    public async get(id){
+        if(id == null){
+            return null;
+        }
+        let jobContext = await this.actor.coordinator.getJob(id);
+        if(!jobContext){
+            return null;
+        }
+        return this.restoreByContext(jobContext);
     }
 }

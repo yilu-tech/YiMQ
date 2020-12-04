@@ -4,8 +4,15 @@ import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
 import { TransactionMessage } from "../Messages/TransactionMessage";
 import * as bull from 'bull';
 import { SystemException } from "../../Exceptions/SystemException";
+import { Exclude, Expose } from "class-transformer";
+import { ExposeGroups } from "../../Constants/ToJsonConstants";
+import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
+
+@Exclude()
 export class MessageJob extends Job{
+    @Expose()
     public message_id:number | string;
+    @Expose({groups:[ExposeGroups.JOB_PARENT]})
     public message:TransactionMessage;//TransactionMessage ---> Message
     constructor(message:TransactionMessage,public readonly context:bull.Job){
         super(context)
@@ -13,21 +20,28 @@ export class MessageJob extends Job{
         this.message = message;
     }
     async process() {
-        let result = {};
+        let result:CoordinatorProcessResult = {process:null,actor_result:null};
         switch (this.message.status) {
             case MessageStatus.DOING:
-                await this.message.toDoing();
+                result = await this.message.toDoing();
                 break;
             case MessageStatus.CANCELLING:
-                await this.message.toCancelling()
+                result = await this.message.toCancelling()
                 break;
             case MessageStatus.PENDING://超时后远程检查任务状态
                 result = await this.remoteCheck();
                 break;
+            case MessageStatus.PREPARED://超时后远程检查任务状态
+                result = await this.remoteCheck();
+                break;
             case MessageStatus.DONE:
-                throw new SystemException('MessageStatus is CANCELED.');
+                throw new SystemException('MessageStatus is DONE.');
+                // result = {process:'compensate done'}
+                // break;
             case MessageStatus.CANCELED:
                 throw new SystemException('MessageStatus is CANCELED.');
+                // result = {process:'compensate canceled'}
+                // break;
             default:
                 throw new SystemException(`MessageStatus <${this.message.status}> is not exists.`);
         }
@@ -36,7 +50,7 @@ export class MessageJob extends Job{
     
     }
 
-    private async remoteCheck(){
+    private async remoteCheck():Promise<CoordinatorProcessResult>{
 
         let context = {
             message_id: this.message_id,
@@ -44,20 +58,25 @@ export class MessageJob extends Job{
             job_id: this.message.job_id,
             job_key: `bull:${this.message.producer.id}:${this.message.job_id}`
         }
-        let result = await this.message.producer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.MESSAGE_CHECK,context);
-        switch (result.status) {
+        let result:CoordinatorProcessResult = {process:null};
+        let actor_result = await this.message.producer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.MESSAGE_CHECK,context);
+        switch (actor_result.status) {
             case ActorMessageStatus.CANCELED:
-                await this.message.toCancelling();
+                result = await this.message.toCancelling();
                 break;
             case ActorMessageStatus.DONE:
-                await this.message.toDoing();
+                result = await this.message.toDoing();
                 break;
             case ActorMessageStatus.PENDING:
-                throw new SystemException('ActorMessageStatus is PENDING');
+                throw new SystemException(`ActorMessageStatus is ${actor_result.status}`);
+            case ActorMessageStatus.PREPARED:
+                throw new SystemException(`ActorMessageStatus is ${actor_result.status}`);
             default:
-                throw new SystemException(`ActorMessageStatus ${result.status} is not exists.`);
+                throw new SystemException(`ActorMessageStatus ${actor_result.status} is not exists.`);
         }
-        return result;
+        return {
+            ...result,
+            actor_result: actor_result
+        };
     }
-
 }
