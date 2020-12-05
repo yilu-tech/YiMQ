@@ -20,7 +20,7 @@ export class MessageManager {
         await (<Message>message).create(topic,options);//创建job
         return message;
     }
-    async get(id):Promise<any>{
+    async get(id):Promise<Message>{
         try{
             //TODO 这里要添加一个添加查询 producer.id  = message.producer_id
             var messageModel = await this.producer.messageModel.load(id);
@@ -45,7 +45,7 @@ export class MessageManager {
         return message.confirm()
     }
     async prepare(id,data):Promise<any>{
-        let message:TransactionMessage = await this.get(id);
+        let message = <TransactionMessage>await this.get(id);
         return message.prepare(data)
     }
     async cancel(id):Promise<MessageControlResult>{
@@ -53,7 +53,7 @@ export class MessageManager {
         return message.cancel()
     }
     async addSubtask(id,type,body){
-        let message:TransactionMessage = await this.get(id);
+        let message=  <TransactionMessage>await this.get(id);
         return message.addSubtask(type,body)
 
     }

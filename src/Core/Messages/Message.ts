@@ -14,6 +14,9 @@ import { MessageOptions } from "../../Structures/MessageOptionsStructure";
 import { SystemException } from "../../Exceptions/SystemException";
 import { timeout } from "../../Handlers";
 import { Logger } from "@nestjs/common";
+import { lowerCase } from "lodash";
+import { RedisClient } from "../../Handlers/redis/RedisClient";
+import IORedis from "ioredis";
 
 export interface SubtaskContext{
     consumer_id:number
@@ -78,6 +81,8 @@ export abstract class Message{
     @Expose()
     public parent_subtask_id:string;
 
+    public parent_subtask:Subtask;
+
     private message_lock_key:string;
 
     constructor(producer:Actor){
@@ -122,9 +127,11 @@ export abstract class Message{
      * @param options 
      */
     async create(topic:string, options:MessageOptions):Promise<any>{
+       
+        let delay = options.delay ? options.delay : this.producer.actorManager.config.options[`${lowerCase(this.type)}_message_delay`];
         let jobOptions:bull.JobOptions = {
             jobId: await this.producer.actorManager.getJobGlobalId(),
-            delay: options.delay,
+            delay: delay,
             backoff: options.backoff
         };
         this.model.property('job_id',jobOptions.jobId);//先保存job_id，如果先创建job再保存id可能产生，message未记录job_id的情况
@@ -183,6 +190,12 @@ export abstract class Message{
         return this;
     }
 
+    public async loadParentSubtask(){
+        if(this.parent_subtask_id){
+            this.parent_subtask = await this.producer.subtaskManager.get(this.parent_subtask_id);
+        }
+    }
+
     abstract async toDoing():Promise<CoordinatorProcessResult>;
 
     protected async incrPendingSubtaskTotalAndLinkSubtask(subtask:Subtask){
@@ -207,6 +220,11 @@ export abstract class Message{
         this.model.property('status',status);
         this.status = status;
         return this;
+    }
+
+    async setStatusAndUpdate(redisClient:RedisClient|IORedis.Pipeline,status:MessageStatus){
+        let updated_at = new Date().getTime();
+        return await redisClient['setMessageStatus'](this.id,'updated_at',status,updated_at);
     }
     async save(){
         this.model.property('updated_at',new Date().getTime());

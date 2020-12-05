@@ -26,7 +26,7 @@ export class MessagesDto{
     @Validate(StringArrayIsIn,[MessageStatus.CANCELED,MessageStatus.CANCELLING,MessageStatus.DOING,MessageStatus.DONE,MessageStatus.PENDING])
     @ValidateIf(properties => properties.clear_status)
     @IsEmpty({message:'one of status and clear_status to search'})
-    status:MessageStatus[];
+    status:any[];
 
     @IsIn([undefined,MessageClearStatus.WAITING,MessageClearStatus.FAILED])
     @Transform((value:String) => value.toLocaleUpperCase())

@@ -21,6 +21,8 @@ import { BroadcastMessage } from '../Core/Messages/BroadcastMessage';
 import { Application } from '../Application';
 import { ActorConfigManager } from '../Core/ActorConfigManager';
 import { ContextLogger } from '../Handlers/ContextLogger';
+import { Actor } from '../Core/Actor';
+import { MessagesDto } from '../Dto/AdminControllerDto';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('BroadcastMessage', () => {
@@ -32,6 +34,7 @@ describe('BroadcastMessage', () => {
     let application:Application;
     let actorConfigManager:ActorConfigManager;
 
+    let userActor:Actor;
 
     beforeEach(async () => {
         process.env.CONFIG_DIR_PATH = join(__dirname,'config');
@@ -65,6 +68,8 @@ describe('BroadcastMessage', () => {
         actorManager = app.get<ActorManager>(ActorManager);
         await actorManager.bootstrap(false); //这行必须beforeEach启动
         mock.reset()
+
+        userActor = actorManager.get('user');
         
     });
 
@@ -79,8 +84,59 @@ describe('BroadcastMessage', () => {
 
     describe('.create:',() => {
 
+        it('.add by message listener total 0',async ()=>{
+
+            let message = <BroadcastMessage>await userActor.messageManager.create(MessageType.BROADCAST,'test',{data:'test'},{})
+            expect(message.status).toBe(MessageStatus.DOING);
+
+            let result = await message.toDoing();
+            expect(result.desc).toBe('Not have listeners.');
+
+            let updatedMessage = <BroadcastMessage> await userActor.messageManager.get(message.id);
+
+            expect(updatedMessage.status).toBe(MessageStatus.DONE);
+            let conditions = <MessagesDto>{
+                actor_id:userActor.id,
+                status:[MessageStatus.DONE],
+                start:0,
+                size:100
+            }
+            let searchResult = await messageService.search(userActor.id,conditions)
+            expect(searchResult.total).toBe(1);
+  
+
+        })
+
+        it('add by bcst listener total 0',async ()=>{
+
+            let message = <TransactionMessage>await userActor.messageManager.create(MessageType.TRANSACTION,'test',{data:'test'},{})
+            // expect(message.status).toBe(MessageStatus.DOING);
+
+            let bcstSubtask = <BcstSubtask>await message.addSubtask(SubtaskType.BCST,{
+                topic: 'user.update'
+            })
+            await message.confirm();
+            await message.toDoing();
+
+            bcstSubtask = await userActor.subtaskManager.get(bcstSubtask.id);
+            await bcstSubtask.loadBroadcastMessage();
+            let bcstMessage = bcstSubtask.broadcastMessage;
+
+
+            expect(bcstMessage.status).toBe(MessageStatus.DOING);
+            expect(await bcstSubtask.getStatus()).toBe(SubtaskStatus.DOING);
+            expect(await message.getStatus()).toBe(MessageStatus.DOING)
+
+            await bcstMessage.toDoing();
+
+            expect(await bcstMessage.getStatus()).toBe(MessageStatus.DONE);
+            expect(await bcstSubtask.getStatus()).toBe(SubtaskStatus.DONE);
+            expect(await message.getStatus()).toBe(MessageStatus.DONE)
+
+        })
 
         it('.add by broadcast message',async (done)=>{
+
             let producerName = 'user';
             let topic = 'user.update';
             let message:TransactionMessage;
@@ -128,7 +184,7 @@ describe('BroadcastMessage', () => {
             mock.onPost(userProducer.api).replyOnce(200,{message:'subtask process succeed'})
 
             userProducer.coordinator.getQueue().on('completed',async (job)=>{
-                updatedMessage = await userProducer.messageManager.get(message.id);
+                updatedMessage = <BroadcastMessage>await userProducer.messageManager.get(message.id);
 
 
                 let subtasks = (await updatedMessage.loadSubtasks()).subtasks;
@@ -217,17 +273,18 @@ describe('BroadcastMessage', () => {
 
 
             let listenerDoneCount = 0;
-            function doneExpect(done,updatedMessage,broadcastMessage){
+            function doneExpect(done,updatedMessage,broadcastMessage,bcstSubtask:BcstSubtask){
                 expect(broadcastMessage.status).toBe(MessageStatus.DONE)
                 expect(broadcastMessage.pending_subtask_total).toBe(0)
                 //检查message的状态
                 expect(updatedMessage.status).toBe(MessageStatus.DONE)
                 expect(updatedMessage.pending_subtask_total).toBe(0)
+                expect(bcstSubtask.status).toBe(SubtaskStatus.DONE)
                     
                 done();
             }
             userProducer.coordinator.getQueue().on('completed',async (job)=>{
-                updatedMessage = await userProducer.messageManager.get(message.id);
+                updatedMessage = <TransactionMessage> await userProducer.messageManager.get(message.id);
                 await updatedMessage.loadSubtasks();
                 let bcstSubtask:BcstSubtask = <BcstSubtask>updatedMessage.subtasks[0];
                 let broadcastMessage = (await bcstSubtask.loadBroadcastMessage()).broadcastMessage;
@@ -242,23 +299,25 @@ describe('BroadcastMessage', () => {
                 }
 
                 if(listenerSubtasks.length > 0 && listenerSubtasks[0]['job_id'] == job.id){
-                    console.log('userProducer job_id',job.id)
+                    // console.log('userProducer job_id',job.id)
+                    expect(await listenerSubtasks[0].getStatus()).toBe(SubtaskStatus.DONE)
                     listenerDoneCount++
-                    if(listenerDoneCount == 2)doneExpect(done,updatedMessage,broadcastMessage);
+                    if(listenerDoneCount == 2)doneExpect(done,updatedMessage,broadcastMessage,bcstSubtask);
                 }
             })
 
             contentProducer.coordinator.getQueue().on('completed',async (job)=>{
-                updatedMessage = await userProducer.messageManager.get(message.id);
+                updatedMessage =<TransactionMessage> await userProducer.messageManager.get(message.id);
                 await updatedMessage.loadSubtasks();
                 let bcstSubtask:BcstSubtask = <BcstSubtask>updatedMessage.subtasks[0];
                 let broadcastMessage = (await bcstSubtask.loadBroadcastMessage()).broadcastMessage;
                 let listenerSubtasks = (await broadcastMessage.loadSubtasks()).subtasks;
                 
                 if(listenerSubtasks.length > 0 && listenerSubtasks[1]['job_id'] == job.id){
-                    console.log('contentProducer',job.id)
+                    // console.log('contentProducer',job.id)
+                    expect(await listenerSubtasks[1].getStatus()).toBe(SubtaskStatus.DONE)
                     listenerDoneCount++
-                    if(listenerDoneCount == 2)doneExpect(done,updatedMessage,broadcastMessage);
+                    if(listenerDoneCount == 2)doneExpect(done,updatedMessage,broadcastMessage,bcstSubtask);
                 }
 
             })
@@ -280,6 +339,8 @@ describe('BroadcastMessage', () => {
 
         it('.create listeners failed after retry',async ()=>{
             await actorManager.bootstrap(false);
+
+            config.options.broadcast_message_delay = 1000;
 
             let userActor = actorManager.get('user');
             let userListenerOption = {

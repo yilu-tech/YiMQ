@@ -89,7 +89,7 @@ describe('MessageService', () => {
 
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 if(message.job.id == job.id){
-                    let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+                    let updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.DONE)
                     done()
                 }
@@ -97,7 +97,7 @@ describe('MessageService', () => {
 
             await producer.process();
             await messageService.prepare(producerName,message.id,{});
-            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            let updatedMessage = await producer.messageManager.get(message.id);
             expect(updatedMessage.status).toBe(MessageStatus.PREPARED);
 
             let result = await messageService.confirm(producerName,message.id);
@@ -115,7 +115,7 @@ describe('MessageService', () => {
 
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 if(message.job.id == job.id){
-                    let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+                    let updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.CANCELED)
                     done()
                 }
@@ -123,7 +123,7 @@ describe('MessageService', () => {
 
             await producer.process();
             await messageService.prepare(producerName,message.id,{});
-            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            let updatedMessage = await producer.messageManager.get(message.id);
             expect(updatedMessage.status).toBe(MessageStatus.PREPARED);
 
             let result = await messageService.cancel(producerName,message.id);
@@ -143,7 +143,7 @@ describe('MessageService', () => {
 
             await producer.process();
             await messageService.prepare(producerName,message.id,{});
-            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            let updatedMessage = await producer.messageManager.get(message.id);
             expect(updatedMessage.status).toBe(MessageStatus.PREPARED);
 
             await expect(messageService.prepare(producerName,message.id,{})).rejects.toThrow('The status of this message is PREPARED instead of PENDING');
@@ -163,7 +163,7 @@ describe('MessageService', () => {
 
             await producer.process();
             await messageService.prepare(producerName,message.id,{});
-            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            let updatedMessage = <TransactionMessage>await producer.messageManager.get(message.id);
             expect(updatedMessage.status).toBe(MessageStatus.PREPARED);
        
 
@@ -177,8 +177,8 @@ describe('MessageService', () => {
         });
 
         it('.prepared  after timeout check done', async (done) => {
-            process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
             message = await messageService.create(producerName,messageType,topic,{},{
+                delay:100
             });
             expect(message.topic).toBe(topic);
             let producer = actorManager.get(producerName); 
@@ -198,8 +198,8 @@ describe('MessageService', () => {
         });
 
         it('.prepared  after timeout check cancel', async (done) => {
-            process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
             message = await messageService.create(producerName,messageType,topic,{},{
+                delay:100
             });
             expect(message.topic).toBe(topic);
             let producer = actorManager.get(producerName); 
@@ -239,7 +239,7 @@ describe('MessageService', () => {
 
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 if(message.job.id == job.id){
-                    let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+                    let updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.DONE)
                     done()
                 }
@@ -248,7 +248,7 @@ describe('MessageService', () => {
             await producer.process();
 
             let result = await messageService.confirm(producerName,message.id);
-            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            let updatedMessage = await producer.messageManager.get(message.id);
             expect(updatedMessage.status).toBe(MessageStatus.DOING);
         });
 
@@ -258,7 +258,7 @@ describe('MessageService', () => {
             userActor.coordinator.getQueue().on('completed',async (job)=>{
                 if(message.job.id == job.id){
                     //process后
-                    let updatedMessage:TransactionMessage = await userActor.messageManager.get(message.id);
+                    let updatedMessage = <TransactionMessage>await userActor.messageManager.get(message.id);
                     await expect(updatedMessage.confirm()).rejects.toThrow(`The status of this message is ${MessageStatus.CANCELED}.`)
                     done()
                 }
@@ -269,15 +269,14 @@ describe('MessageService', () => {
             expect(await message.getStatus()).toBe(MessageStatus.CANCELLING)
             
             //未process前    (需要重新查询一次message，否则状态未更新)
-            let updatedMessage:TransactionMessage = await userActor.messageManager.get(message.id);
+            let updatedMessage = <TransactionMessage>await userActor.messageManager.get(message.id);
             await expect(updatedMessage.confirm()).rejects.toThrow(`The status of this message is ${MessageStatus.CANCELLING}.`)
             await userActor.process();
         })
 
         it('.remote status pending after done', async (done) => {
-            process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
             message = await messageService.create(producerName,messageType,topic,{},{
-                delay:50,
+                delay:100,
                 backoff:{
                     type:'exponential',
                     delay: 100  
@@ -293,7 +292,7 @@ describe('MessageService', () => {
             producer.coordinator.getQueue().on('failed',async (job)=>{
                 let updatedMessage = await producer.messageManager.get(message.id);
                 if(message.job.id == job.id && job.attemptsMade == 1){//第一次获取失败
-                    expect(job.opts.delay).toBe(Number(process.env.TRANSACATION_MESSAGE_JOB_DELAY));
+                    expect(job.opts.delay).toBe(100);
                     expect(job.attemptsMade).toBe(1)
                     mock.onPost(producer.api).reply(200,{
                         status: MessageStatus.PENDING
@@ -328,8 +327,8 @@ describe('MessageService', () => {
             let messageType = MessageType.TRANSACTION;
             let topic = 'posts_create';
             let message:Message;
-            process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
             message = await messageService.create(producerName,messageType,topic,{},{
+                delay:100
 
             });
             expect(message.topic).toBe(topic);
@@ -372,7 +371,7 @@ describe('MessageService', () => {
             //message确认后，移除message的检测job
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 if(message.job.id == job.id){
-                    let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+                    let updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.CANCELED)
                     done()
                 }
@@ -380,7 +379,7 @@ describe('MessageService', () => {
             await producer.process();
             await messageService.cancel(producerName,message.id);
 
-            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            let updatedMessage = await producer.messageManager.get(message.id);
             expect(updatedMessage.status).toBe(MessageStatus.CANCELLING);
         });
 
@@ -390,7 +389,7 @@ describe('MessageService', () => {
             userActor.coordinator.getQueue().on('completed',async (job)=>{
                 if(message.job.id == job.id){
                     //process后
-                    let updatedMessage:TransactionMessage = await userActor.messageManager.get(message.id);
+                    let updatedMessage = <TransactionMessage>await userActor.messageManager.get(message.id);
                     await expect(updatedMessage.cancel()).rejects.toThrow(`The status of this message is ${MessageStatus.DONE}.`)
                     done()
                 }
@@ -401,14 +400,14 @@ describe('MessageService', () => {
             expect(await message.getStatus()).toBe(MessageStatus.DOING)
             
             //未process前    (需要重新查询一次message，否则状态未更新)
-            let updatedMessage:TransactionMessage = await userActor.messageManager.get(message.id);
+            let updatedMessage = <TransactionMessage>await userActor.messageManager.get(message.id);
             await expect(updatedMessage.cancel()).rejects.toThrow(`The status of this message is ${MessageStatus.DOING}.`)
             await userActor.process();
         })
 
         it('.timeout check cancel', async (done) => {
-            process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
             message = await messageService.create(producerName,messageType,topic,{},{
+                delay:100
             });
             expect(message.topic).toBe(topic);
             let producer = actorManager.get(producerName); 
@@ -444,7 +443,7 @@ describe('MessageService', () => {
             })
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 if(message.job.id == job.id){
-                    let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+                    let updatedMessage = <TransactionMessage>await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.CANCELED)
                     let result = await updatedMessage.cancel()
                     expect(result.message).toBe(`Message already ${MessageStatus.CANCELED}.`)
@@ -550,7 +549,7 @@ describe('MessageService', () => {
         
             await messageService.cancel(producerName,message.id)// message cancle的时候，正在tcc try
 
-            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            let updatedMessage = await producer.messageManager.get(message.id);
             expect(updatedMessage.status).toBe(MessageStatus.CANCELLING)
             
             await updatedMessage.loadJob()
@@ -641,7 +640,7 @@ describe('MessageService', () => {
         
             await messageService.confirm(producerName,message.id)// message cancle的时候，正在tcc try
 
-            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            let updatedMessage = await producer.messageManager.get(message.id);
             await updatedMessage.loadJob()
             expect(updatedMessage.status).toBe(MessageStatus.DOING)
             

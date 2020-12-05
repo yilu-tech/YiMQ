@@ -14,6 +14,56 @@ export function redisCustomCommand(client){
     // end
     // `
 
+    let setMessageStatusAndUpdateUpdatedAtScript = `
+
+    local function setMessageStatusAndUpdatedAt (message_hash_key,target_status,updated_at)
+
+        local origin_status = redis.call("HGET", message_hash_key, 'status')
+    
+        redis.call("HSET", message_hash_key,'status',message_status)
+
+        -- 处理message status索引
+        redis.call("SREM", prefix .. 'index:message:status:' .. origin_status,message_id)
+        redis.call("SADD", prefix .. 'index:message:status:' .. target_status,message_id)
+
+        --处理updated_at
+        local message_current_updated_at = redis.call("HGET", message_hash_key, 'updated_at')
+        redis.call("HSET", message_hash_key,'updated_at',updated_at)
+        redis.call("SREM", prefix .. 'index:message:updated_at:' .. message_current_updated_at,message_id)
+        redis.call("SADD", prefix .. 'index:message:updated_at:' .. updated_at,message_id)
+        --todo: 时间索引没有修改
+
+        return origin_status,target_status;
+        
+    end
+
+    `;
+
+
+    client.defineCommand('setMessageStatus',{
+        numberOfKeys:2,
+        lua:`
+        local message_id = KEYS[1];
+        local message_status = ARGV[1];
+        local updated_at = ARGV[2];
+
+        local prefix = 'nohm:';
+        local message_hash_key = prefix .. 'hash:message:' .. message_id;
+
+        local message_origin_status = redis.call("HGET", message_hash_key, 'status')
+        local message_updated_status = message_origin_status;
+        
+        ${setMessageStatusAndUpdateUpdatedAtScript}
+
+        local message_origin_status,message_updated_status = setMessageStatusAndUpdatedAt(message_hash_key,message_status,updated_at)
+        
+        return {
+            message_origin_status,
+            message_updated_status
+        }
+        `
+    })
+
     let subtaskCompleteScript = `
    
 
@@ -22,13 +72,13 @@ export function redisCustomCommand(client){
     local subtask_hash_key = prefix .. 'hash:subtask:' .. subtask_id;
 
     --处理subtask状态
-    local subtask_current_status = redis.call("HGET", subtask_hash_key, 'status')
+    local subtask_origin_status = redis.call("HGET", subtask_hash_key, 'status')
 
     redis.call("HSET", subtask_hash_key,'status',subtask_status)
     redis.call("HSET", subtask_hash_key,'updated_at',updated_at)
     local subtask_updated_status = redis.call("HGET", subtask_hash_key, 'status')
     -- 处理subtask status索引
-    redis.call("SREM", prefix .. 'index:subtask:status:' .. subtask_current_status,subtask_id)
+    redis.call("SREM", prefix .. 'index:subtask:status:' .. subtask_origin_status,subtask_id)
     redis.call("SADD", prefix .. 'index:subtask:status:' .. subtask_updated_status,subtask_id)
 
 
@@ -37,14 +87,14 @@ export function redisCustomCommand(client){
     local pending_subtask_total = redis.call("HINCRBY", message_hash_key, 'pending_subtask_total',-1)
 
 
-    local message_current_status = redis.call("HGET", message_hash_key, 'status')
-    local message_updated_status = message_current_status;
+    local message_origin_status = redis.call("HGET", message_hash_key, 'status')
+    local message_updated_status = message_origin_status;
 
     local result = {
         subtask_updated_status,
-        message_current_status,
-        pending_subtask_total,
+        message_origin_status,
         message_updated_status,
+        pending_subtask_total,
     }
 
     --任务全部完成，设置message status为done
@@ -53,20 +103,20 @@ export function redisCustomCommand(client){
         return result;
     end
 
-    redis.call("HSET", message_hash_key,'status',message_status)
-    message_updated_status = redis.call("HGET", message_hash_key, 'status')
-    -- 处理message status索引
-    redis.call("SREM", prefix .. 'index:message:status:' .. message_current_status,message_id)
-    redis.call("SADD", prefix .. 'index:message:status:' .. message_updated_status,message_id)
+    ${setMessageStatusAndUpdateUpdatedAtScript}
 
-    --处理updated_at
-    local message_current_updated_at = redis.call("HGET", message_hash_key, 'updated_at')
-    redis.call("HSET", message_hash_key,'updated_at',updated_at)
-    redis.call("SREM", prefix .. 'index:message:updated_at:' .. message_current_updated_at,message_id)
-    redis.call("SADD", prefix .. 'index:message:updated_at:' .. updated_at,message_id)
+    local message_origin_status,message_updated_status = setMessageStatusAndUpdatedAt(message_hash_key,message_status,updated_at)
+    
 
+    result =  {
+        subtask_updated_status,
+        message_origin_status,
+        message_updated_status,
+        pending_subtask_total,
+    }
 
     `
+
     client.defineCommand('subtaskCompleteAndSetMessageStatus',{
         numberOfKeys:3,
         lua:`

@@ -39,8 +39,8 @@ export class JobManager{
                     message_id: message.id,
                     type: type,
                 };
-                let defaultDelay = 1000*5;
-                jobOptions.delay = jobOptions.delay >= 1000 ? jobOptions.delay : Number(process.env.TRANSACATION_MESSAGE_JOB_DELAY) || defaultDelay;
+                // let defaultDelay = 1000*5;
+                // jobOptions.delay = jobOptions.delay >= 1000 ? jobOptions.delay : Number(process.env.TRANSACATION_MESSAGE_JOB_DELAY) || defaultDelay;
                 jobContext = await this.actor.coordinator.add(message.topic,data,jobOptions);
                 job = new MessageJob(message,jobContext);
                 break;

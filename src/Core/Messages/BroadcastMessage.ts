@@ -1,12 +1,13 @@
 import { Message } from "./Message";
 import { MessageStatus,MessageType } from "../../Constants/MessageConstants";
 import { LstrSubtask } from "../Subtask/LstrSubtask";
-import { SubtaskType } from "../../Constants/SubtaskConstants";
+import { SubtaskStatus, SubtaskType } from "../../Constants/SubtaskConstants";
 import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
 import { MessageOptions } from "../../Structures/MessageOptionsStructure";
 import { RedisClient } from "../../Handlers/redis/RedisClient";
+import { Exclude } from "class-transformer";
 
-
+@Exclude()
 export class BroadcastMessage extends Message{
     public type = MessageType.BROADCAST;
     public context:object = {};
@@ -17,12 +18,28 @@ export class BroadcastMessage extends Message{
         return this;
     }
 
-
     async toDoing():Promise<CoordinatorProcessResult> {
-        let subtask_contexts = await this.getListeners()
-        await this.createListenerSubtasks(subtask_contexts)
+        let listener_contexts = await this.getListeners()
+
+        if(listener_contexts.length == 0 ){
+            await this.notHaveListenerToDone();
+            return {result: 'success',desc:'Not have listeners.'};
+        }
+        await this.createListenerSubtasks(listener_contexts)
         await this.setStatus(MessageStatus.DOING).save();
-        return {result: 'success'};
+        return {result: 'success',desc:`Broadcast to ${this.subtasks.length} listeners.`};
+    }
+
+    async notHaveListenerToDone(){
+        await this.loadParentSubtask();
+
+        let multi = this.producer.redisClient.multi();
+        await this.setStatusAndUpdate(multi,MessageStatus.DONE)
+        if(this.parent_subtask){
+            this.parent_subtask.completeAndSetMeesageStatusByScript(multi,SubtaskStatus.DONE,MessageStatus.DONE);//修改parent_bcst_subtask状态
+        }
+        let multiResult = await multi.exec();
+        // console.debug('BroadcastMessage notHaveListenerToDone',multiResult)
     }
 
     private async getListeners(){

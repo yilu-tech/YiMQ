@@ -471,9 +471,9 @@ describe('ActorClearTest', () => {
                     //模拟5个完成的message给clearJob2，300毫秒后，清理message
                     for(var i =0;i<5;i++){
                         let message = <TransactionMessage>await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
-                            delay:10,
+                            delay:1000,
                         });
-                        await message.setStatus(MessageStatus.DONE).save();
+                        await message.confirm();
                     }
 
                     clearJob2 = await userActor.actorCleaner.getActiveClearJob();

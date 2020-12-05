@@ -110,16 +110,16 @@ export abstract class Subtask{
     public getDbHash(){
         return `${this.model['nohmClass'].prefix.hash}${this.model.modelName}:${this.id}`;
     }
-    public async completeAndSetMeesageStatusByScript(status,messageStatus:MessageStatus){
-        return this.message.producer.redisClient['subtaskCompleteAndSetMessageStatus'](this.id,this.message.id,'updated_at',status,messageStatus,new Date().getTime());    
+    public async completeAndSetMeesageStatusByScript(redisClient,status,messageStatus:MessageStatus){
+        return redisClient['subtaskCompleteAndSetMessageStatus'](this.id,this.message.id,'updated_at',status,messageStatus,new Date().getTime());    
     }
     public async completeAndSetMeesageStatus(status,messageStatus){
         
         var [subtaskUpdatedStatus,
-            messageCurrentStatus,
-            pendingSubtaskTotal,
+            messageOriginStatus,
             messageUpdatedStatus,
-        ] = await this.completeAndSetMeesageStatusByScript(status,messageStatus);    
+            pendingSubtaskTotal,
+        ] = await this.completeAndSetMeesageStatusByScript(this.producer.redisClient,status,messageStatus);    
   
         
         //修改instance中的值,但是不save,防止其他地方用到
