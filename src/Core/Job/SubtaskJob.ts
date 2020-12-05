@@ -18,14 +18,16 @@ export class SubtaskJob extends Job{
         this.subtask_id = subtask.id;
     }
     async process() {
-        let result:CoordinatorProcessResult={process:null};
+        let result:CoordinatorProcessResult;
         switch (this.subtask.status) {
             //重复做到成功为止
             case SubtaskStatus.DOING:
                 result = await this.subtask.toDo();
+                result.action = 'toDo';
                 break;
             case SubtaskStatus.CANCELLING://todo:: cancled情况可以考虑允许重复取消，因为job里面调整了subtask状态，但job失败了
                 result = await this.subtask.toCancel();
+                result.action = 'toCancel';
                 break;
             case SubtaskStatus.PREPARING:
                 throw new SystemException('SubtaskStatus is PENDING');

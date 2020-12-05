@@ -32,7 +32,7 @@ export class EcSubtask extends ConsumerSubtask{
         await this.completeAndSetMeesageStatus(SubtaskStatus.DONE,MessageStatus.DONE);
 
         return {
-            process:'success',
+            result:'success',
             actor_result
         }
     }
@@ -42,7 +42,7 @@ export class EcSubtask extends ConsumerSubtask{
      */
     async toCancel():Promise<CoordinatorProcessResult>{
         await this.completeAndSetMeesageStatus(SubtaskStatus.CANCELED,MessageStatus.CANCELED);
-        return {process:'success'}
+        return {result:'success'}
     }
 
 }

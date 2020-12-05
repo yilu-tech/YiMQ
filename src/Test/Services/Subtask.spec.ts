@@ -21,6 +21,8 @@ import { Application } from '../../Application';
 import { ActorConfigManager } from '../../Core/ActorConfigManager';
 import { OnDemandFastToJson } from '../../Decorators/OnDemand';
 import { ContextLogger } from '../../Handlers/ContextLogger';
+import { OnDemandSwitch } from '../../Constants/ToJsonConstants';
+import { OnDemandRun } from "../../Decorators/OnDemand";
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('Subtask', () => {
@@ -400,7 +402,7 @@ describe('Subtask', () => {
                     //检查EcSubtask
                     expect(updatedMessage.subtasks[0].type).toBe(SubtaskType.EC)
                     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DOING)
-                    expect(updatedMessage.subtasks[0].job_id).toBe(2)
+                    expect(updatedMessage.subtasks[0]['job_id']).toBe(2)
                     done()
                 }
             })
@@ -506,31 +508,20 @@ describe('Subtask', () => {
             let prepareResult = {title: 'get new user'};
 
 
-            let tccErrorMessage;
-            try {
-                let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
-                    processor:"content@content.create",
-                    data:{
-                        title: 'new post'
-                    }
-                })  
-            } catch (error) {
-                tccErrorMessage = error.message;
-            }        
-            expect(tccErrorMessage).toBe('The status of this message is DOING instead of PENDING');
+            await expect(messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                processor:"content@content.create",
+                data:{
+                    title: 'new post'
+                }
+            })).rejects.toThrow('The status of this message is DOING instead of PENDING')
 
-            let ECErrorMessage;
-            try {
-                let ecSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,{
-                    processor:"content@content.create",
-                    data:{
-                        title: 'new post'
-                    }
-                })   
-            } catch (error) {
-                ECErrorMessage = error.message;
-            }        
-            expect(ECErrorMessage).toBe('The status of this message is DOING instead of PENDING');
+
+            await expect(messageService.addSubtask(producerName,message.id,SubtaskType.EC,{
+                processor:"content@content.create",
+                data:{
+                    title: 'new post'
+                }
+            })).rejects.toThrow('The status of this message is DOING instead of PENDING')
 
         });
 
@@ -586,17 +577,20 @@ describe('Subtask', () => {
 
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 updatedMessage = await producer.messageManager.get(message.id);
-                await updatedMessage.loadSubtasks(true);
+                await updatedMessage.loadSubtasks();
+                await OnDemandRun(updatedMessage,[
+                    OnDemandSwitch.SUBTASK_JOB
+                ])
                 if(message.job.id == job.id){
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
                     //检查EcSubtask
                     expect(updatedMessage.subtasks[0].type).toBe(SubtaskType.EC)
                     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DOING)
-                    expect(updatedMessage.subtasks[0].job_id).toBe(2)
+                    expect(updatedMessage.subtasks[0]['job_id']).toBe(2)
 
-                    expect(updatedMessage.subtasks[0].job.context.opts.attempts).toBe(body.options.attempts)
+                    expect(updatedMessage.subtasks[0]['job'].context.opts.attempts).toBe(body.options.attempts)
                     
-                }else if(updatedMessage.subtasks[0].job_id == job.id){
+                }else if(updatedMessage.subtasks[0]['job_id'] == job.id){
                     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DONE);
                     expect(job.attemptsMade).toBe(2);
                     done()
@@ -670,10 +664,10 @@ describe('Subtask', () => {
                 if(message.job.id == job.id){
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
                     
-                }else if(updatedMessage.subtasks[0].job_id == job.id){
+                }else if(updatedMessage.subtasks[0]['job_id'] == job.id){
                     expect(job.data.message_id).toBe(updatedMessage.id);
                 }
-                else if(updatedMessage.subtasks[1].job_id == job.id){
+                else if(updatedMessage.subtasks[1]['job_id'] == job.id){
                     expect(job.data.producer_id).toBe(updatedMessage.producer.id);
 
                 }
@@ -686,10 +680,10 @@ describe('Subtask', () => {
                     
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
                     
-                }else if(updatedMessage.subtasks[0].job_id == job.id){
+                }else if(updatedMessage.subtasks[0]['job_id'] == job.id){
                     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DONE);
                 }
-                else if(updatedMessage.subtasks[1].job_id == job.id){
+                else if(updatedMessage.subtasks[1]['job_id'] == job.id){
                     expect(updatedMessage.subtasks[1].status).toBe(SubtaskStatus.DONE);
                 }
 
@@ -754,7 +748,7 @@ describe('Subtask', () => {
             producer.coordinator.getQueue().on('failed',async(job,err)=>{
                 updatedMessage = await producer.messageManager.get(message.id);
                 await updatedMessage.loadSubtasks();
-                if(updatedMessage.subtasks[0].job_id != job.id){
+                if(updatedMessage.subtasks[0]['job_id'] != job.id){
                    return;
                 }
                 if(job.attemptsMade == 1){
@@ -776,7 +770,7 @@ describe('Subtask', () => {
                     await updatedMessage.loadSubtasks();
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
                     
-                }else if(updatedMessage.subtasks[0].job_id == job.id){
+                }else if(updatedMessage.subtasks[0]['job_id'] == job.id){
                     updatedMessage = await producer.messageManager.get(message.id);
                     await updatedMessage.loadSubtasks();
                     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DONE);
@@ -964,7 +958,7 @@ describe('Subtask', () => {
                 if(message.job.id == job.id){
                     expect(updatedMessage.status).toBe(MessageStatus.CANCELLING)//检查message
                     
-                }else if(updatedMessage.subtasks[0].job_id == job.id){
+                }else if(updatedMessage.subtasks[0]['job_id'] == job.id){
 
                     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.CANCELED);
                     expect(updatedMessage.pending_subtask_total).toBe(0);
@@ -1041,7 +1035,7 @@ describe('Subtask', () => {
                     await updatedMessage.loadSubtasks();
                     expect(updatedMessage.status).toBe(MessageStatus.CANCELLING)//检查message
                     
-                }else if(updatedMessage.subtasks[0].job_id == job.id){
+                }else if(updatedMessage.subtasks[0]['job_id'] == job.id){
                     updatedMessage = await producer.messageManager.get(message.id);
                     await updatedMessage.loadSubtasks();
                     expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.CANCELED);
@@ -1160,6 +1154,35 @@ describe('Subtask', () => {
                 }
             })   
             expect(tccSubtask.prepareResult.status).toBe(400);       
+
+        })
+
+    })
+
+
+    describe('.abnormal transaction', () => {
+
+        it('.prevent subtask from repeatedly adding jobs', async () => {
+            let userActor = actorManager.get('user');
+            let message = <TransactionMessage> await userActor.messageManager.create(MessageType.TRANSACTION,'test',{},{})
+            let ecSubtask = <EcSubtask>await message.addSubtask(SubtaskType.EC,{
+                processor:"user@user.create",
+                data:{
+                    title: 'new post'
+                }
+            });
+
+            process.env.SUBTASK_JOB_DELAY = '3000';
+
+            await message.confirm();
+            await message.toDoing();
+            let jobConunts = await userActor.coordinator.getJobConuts();
+            expect(jobConunts.delayed).toBe(1); 
+
+            await message.toDoing();
+            jobConunts = await userActor.coordinator.getJobConuts();
+            expect(jobConunts.delayed).toBe(1);
+
 
         })
 

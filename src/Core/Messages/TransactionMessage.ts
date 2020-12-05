@@ -3,13 +3,14 @@ import { MessageStatus,MessageType } from "../../Constants/MessageConstants";
 import { SubtaskType } from "../../Constants/SubtaskConstants";
 import { Subtask } from "../Subtask/BaseSubtask/Subtask";
 import { BusinessException } from "../../Exceptions/BusinessException";
-import { SubtaskModelClass } from "../../Models/SubtaskModel"
 import { MessageJob } from "../Job/MessageJob";
 import {JobStatus} from "../../Constants/JobConstants"
 import { OnDemandFastToJson } from "../../Decorators/OnDemand";
 import { Exclude } from "class-transformer";
 import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
 import { MessageOptions } from "../../Structures/MessageOptionsStructure";
+import { timeout } from "../../Handlers";
+import { SystemException } from "../../Exceptions/SystemException";
 @Exclude()
 export class TransactionMessage extends Message{
     type = MessageType.TRANSACTION;
@@ -22,38 +23,54 @@ export class TransactionMessage extends Message{
     }
 
     async toDoing():Promise<CoordinatorProcessResult>{
-        //没有子任务直接完成message
-        let pending_subtask_total = await this.getPendingSubtaskTotal();
-        if(pending_subtask_total== 0){
-            await this.setStatus(MessageStatus.DONE).save();
-            return {process: 'success'};
+        if(!await this.lock('toDoing')){
+            throw new SystemException('Message is locking can not to to doing');
         }
-        await this.loadSubtasks();
-        //并行执行
-        //TODO 增加防重复执行，导致重复给subtask添加任务,其中一个创建失败，再次尝试的时候，要避免已经成功的重复创建
-        await Promise.all(this.subtasks.map((subtask)=>{
-            return subtask.confirm()
-        }))
+        try {
+            
+            await this.updatePendingSubtaskTotalAndSubtaskIds();
 
-        await this.setStatus(MessageStatus.DOING).save();
-        return {process: 'success'};
-        
+            //没有子任务直接完成message
+            if(this.pending_subtask_total== 0){
+                await this.setStatus(MessageStatus.DONE).save();
+                return {result: 'success',desc:'not have subtask'};
+            }
+            await this.loadSubtasks();
+            //并行执行
+            await Promise.all(this.subtasks.map((subtask)=>{
+                return subtask.confirm()
+            }))
+
+            await this.setStatus(MessageStatus.DOING).save();
+            return {result: 'success'};
+            
+        } finally{
+            await this.unlock();
+        }
     }
 
     async toCancelling():Promise<CoordinatorProcessResult>{
-        //没有子任务直接完成message
-        let pending_subtask_total = await this.getPendingSubtaskTotal();
-        if(pending_subtask_total == 0){
-            await this.setStatus(MessageStatus.CANCELED).save();
-            return {process: 'success'};
-        }
-        await this.loadSubtasks();
 
-        await Promise.all(this.subtasks.map((subtask)=>{
-            return subtask.cancel()
-        }))
-        await this.setStatus(MessageStatus.CANCELLING).save();
-        return {process: 'success'};
+        if(!await this.lock('toCancelling')){
+            throw new SystemException('Message is locking can not to cancelling');
+        }
+        try {
+             //没有子任务直接完成message
+            if(this.pending_subtask_total == 0){
+                await this.setStatus(MessageStatus.CANCELED).save();
+                return {result: 'success'};
+            }
+            await this.loadSubtasks();
+
+            await Promise.all(this.subtasks.map((subtask)=>{
+                return subtask.cancel()
+            }))
+            await this.setStatus(MessageStatus.CANCELLING).save();
+            return {result: 'success'};
+            
+        } finally{
+            await this.unlock();
+        }
     }
 
     async cancel():Promise<MessageControlResult>{
@@ -127,49 +144,49 @@ export class TransactionMessage extends Message{
         return this;
     }
 
-    public async loadSubtasks(full=false){
-        let subtaskIds = await this.model.getAll(SubtaskModelClass.modelName)
-        let subtaskModels = await this.producer.subtaskModel.loadMany(subtaskIds)
-        let subtasks:Array<Subtask> = [];
-        for(var i in subtaskModels){
-            let subtaskModel = subtaskModels[i];
-            let subtask:Subtask = this.producer.subtaskManager.factory(this,subtaskModel.property('type'));//TODO use sutaskmanager methdo
-            await subtask.restore(subtaskModel,full)
-            subtasks.push(subtask);
-        }
-        this.subtasks = subtasks;
-        return this;
-        
-    }
-
     async addSubtask(type,body){
-        if(this.status != MessageStatus.PENDING){//todo:: this.status改为从数据库实时获取
-            throw new BusinessException(`The status of this message is ${this.status} instead of ${MessageStatus.PENDING}`);
+        if(!await this.lock('addSubtask')){
+            throw new SystemException('Message is locking can not add subtask');
         }
-        body.subtask_id = await this.producer.actorManager.getSubtaskGlobalId();
-        
-        if(type == SubtaskType.BCST){
-            body.consumer_id = this.producer.id
-            body.processor = null; 
-        }else{
-            let {consumer,consumerProcessorName} = this.producer.subtaskManager.getConsumerAndProcessor(body.processor);
-            body.consumer_id = consumer.id;
-            body.processor = consumerProcessorName;
+
+
+        try {
+
+            if((await this.getStatus()) != MessageStatus.PENDING){//todo:: this.status改为从数据库实时获取
+                throw new BusinessException(`The status of this message is ${this.status} instead of ${MessageStatus.PENDING}`);
+            }
+            body.subtask_id = await this.producer.actorManager.getSubtaskGlobalId();
+            
+            if(type == SubtaskType.BCST){
+                body.consumer_id = this.producer.id
+                body.processor = null; 
+            }else{
+                let {consumer,consumerProcessorName} = this.producer.subtaskManager.getConsumerAndProcessor(body.processor);
+                body.consumer_id = consumer.id;
+                body.processor = consumerProcessorName;
+            }
+            
+            
+            var subtask = await this.producer.subtaskManager.addSubtask(this,type,body);
+            if(process.env.MOCK_TODONG_TOCANCING_AFTER_LINK_SUBTASK_WAIT_TIME){
+                await timeout(Number(process.env.MOCK_TODONG_TOCANCING_AFTER_LINK_SUBTASK_WAIT_TIME));
+            }
+            await this.incrPendingSubtaskTotalAndLinkSubtask(subtask);
+            this.subtasks.push(subtask);
+            
+        }finally{
+            await this.unlock(); //tcc类子任务prepare时间可能过程，提前释放锁
         }
-        
-        
-        let subtask = await this.producer.subtaskManager.addSubtask(this,type,body);
-        this.model.link(subtask.model);
-        await this.model.save()
-        await this.incrPendingSubtaskTotal();
-        this.subtasks.push(subtask);
-        return subtask.prepare();
+
+        return subtask.prepare();//try抛出错误的情况不会再prepare
     }
 
     public getMessageHash(){
         return `${this.model['nohmClass'].prefix.hash}${this.model.modelName}:${this.id}`;
     }
-    async getPendingSubtaskTotal(){
-        return Number(await this.producer.redisClient.hget(this.getMessageHash(),'pending_subtask_total'));
+    async updatePendingSubtaskTotalAndSubtaskIds(){
+        let [pending_subtask_total,subtask_ids] = await this.producer.redisClient.hmget(this.getMessageHash(),'pending_subtask_total','subtask_ids')
+        this.pending_subtask_total = Number(pending_subtask_total);
+        this.subtask_ids = JSON.parse(subtask_ids);
     }
 }

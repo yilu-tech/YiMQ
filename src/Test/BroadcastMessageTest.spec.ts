@@ -63,6 +63,8 @@ describe('BroadcastMessage', () => {
         messageService = app.get<MessageService>(MessageService);
         actorConfigManager = app.get<ActorConfigManager>(ActorConfigManager);
         actorManager = app.get<ActorManager>(ActorManager);
+        await actorManager.bootstrap(false); //这行必须beforeEach启动
+        mock.reset()
         
     });
 
@@ -95,7 +97,7 @@ describe('BroadcastMessage', () => {
                 },
                 {
                     "processor": "Tests\\Services\\UserUpdateListener",
-                    "topic": "user@user.update",
+                    "topic": `user@${topic}`,
                     "condition": null
                 }]
             })
@@ -106,7 +108,7 @@ describe('BroadcastMessage', () => {
  
             // await actorConfigManager.loadRemoteActorsConfig()
             // await actorManager.initActors()
-            await actorManager.bootstrap(false);
+
 
             let userProducer = actorManager.get(producerName);
             let contentProducer = actorManager.get('content');
@@ -135,7 +137,7 @@ describe('BroadcastMessage', () => {
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
                 }
        
-                if(subtasks[0].job_id == job.id){
+                if(subtasks[0]['job_id'] == job.id){
                     expect(updatedMessage.status).toBe(MessageStatus.DONE)
                     expect(updatedMessage.pending_subtask_total).toBe(0)
                     done()
@@ -183,7 +185,7 @@ describe('BroadcastMessage', () => {
             })
 
 
-            await actorManager.bootstrap(false);
+            
 
 
             let userProducer = actorManager.get(producerName);
@@ -239,7 +241,7 @@ describe('BroadcastMessage', () => {
                     expect(broadcastMessage.status).toBe(MessageStatus.DOING)  
                 }
 
-                if(listenerSubtasks.length > 0 && listenerSubtasks[0].job_id == job.id){
+                if(listenerSubtasks.length > 0 && listenerSubtasks[0]['job_id'] == job.id){
                     console.log('userProducer job_id',job.id)
                     listenerDoneCount++
                     if(listenerDoneCount == 2)doneExpect(done,updatedMessage,broadcastMessage);
@@ -253,7 +255,7 @@ describe('BroadcastMessage', () => {
                 let broadcastMessage = (await bcstSubtask.loadBroadcastMessage()).broadcastMessage;
                 let listenerSubtasks = (await broadcastMessage.loadSubtasks()).subtasks;
                 
-                if(listenerSubtasks.length > 0 && listenerSubtasks[1].job_id == job.id){
+                if(listenerSubtasks.length > 0 && listenerSubtasks[1]['job_id'] == job.id){
                     console.log('contentProducer',job.id)
                     listenerDoneCount++
                     if(listenerDoneCount == 2)doneExpect(done,updatedMessage,broadcastMessage);
@@ -272,6 +274,53 @@ describe('BroadcastMessage', () => {
        
 
     });
+
+    describe('.abnormal transaction',() => {
+
+
+        it('.create listeners failed after retry',async ()=>{
+            await actorManager.bootstrap(false);
+
+            let userActor = actorManager.get('user');
+            let userListenerOption = {
+                "processor": "Tests\\User\\Services\\UserUpdateListener",
+                "topic": `user@user.update`,
+                "condition": null
+            }
+            await actorConfigManager.saveOrUpdateListener(userActor,userListenerOption);
+
+            let contentActor = actorManager.get('content');
+            let contentListenerOption = {
+                "processor": "Tests\\Content\\Services\\UserUpdateListener",
+                    "topic": "user@user.update",
+                "condition": null
+            }
+            await actorConfigManager.saveOrUpdateListener(contentActor,contentListenerOption);
+
+            let message = await userActor.messageManager.create(MessageType.BROADCAST,'user.update',{data:'test'},{});
+            process.env.SUBTASK_JOB_DELAY = '3000';
+
+            await message.job.process()
+            let subtask_ids = await userActor.subtaskModel.find({message_id: message.id});
+            expect(subtask_ids.length).toBe(2);
+            
+            let jobConuts = await userActor.coordinator.getJobConuts()
+
+            expect(jobConuts.delayed).toBe(2); //message job + subtask job
+
+            await message.job.process()
+            subtask_ids = await userActor.subtaskModel.find({message_id: message.id});
+
+            expect(subtask_ids.length).toBe(2);
+            jobConuts = await userActor.coordinator.getJobConuts()
+            expect(jobConuts.delayed).toBe(2); //message job + subtask job
+            
+            expect(1).toBe(1)
+
+
+        })
+
+    })
 
 
 

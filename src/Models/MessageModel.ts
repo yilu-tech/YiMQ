@@ -8,13 +8,12 @@ interface MessageProperties {
     topic: string;
     type:string;
     parent_subtask:string;
-    // context:string;
     data:string;
     subtask_total:number;
     pending_subtask_total: number;
     status: MessageStatus;
     job_id: number;
-    subtask_contexts:object;//TODO change name to subtasks
+    subtask_ids:string[];
     clear_status:string;
     updated_at: number;
     created_at: number;
@@ -49,9 +48,6 @@ export class MessageModelClass extends NohmModel<MessageProperties> {
             index:true,
             validations: ['notEmpty']
         },
-        // context: {
-        //     type: 'json',
-        // },
         data: {
             type: 'json',
         },
@@ -70,7 +66,7 @@ export class MessageModelClass extends NohmModel<MessageProperties> {
             type: 'integer',
             index: true
         },
-        subtask_contexts:{
+        subtask_ids:{
             type: 'json',
             defaultValue:[]
         },

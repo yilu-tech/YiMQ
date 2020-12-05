@@ -12,6 +12,8 @@ import { OnDemand } from "../../Decorators/OnDemand";
 import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
 import { MessageOptions } from "../../Structures/MessageOptionsStructure";
 import { SystemException } from "../../Exceptions/SystemException";
+import { timeout } from "../../Handlers";
+import { Logger } from "@nestjs/common";
 
 export interface SubtaskContext{
     consumer_id:number
@@ -57,7 +59,9 @@ export abstract class Message{
     @Expose({groups:[ExposeGroups.MESSAGE_JOB]})
     public job:Job;
     public model:MessageModelClass
-    public subtask_contexts:Array<SubtaskContext>;
+
+    @Expose()
+    public subtask_ids:string[];
 
     @Expose()
     public subtasks:Array<Subtask> = [];  //事物的子项目
@@ -73,6 +77,8 @@ export abstract class Message{
     public parent_subtask_producer:Actor;
     @Expose()
     public parent_subtask_id:string;
+
+    private message_lock_key:string;
 
     constructor(producer:Actor){
 
@@ -141,8 +147,8 @@ export abstract class Message{
         this.created_at = this.model.property('created_at');
         this.subtask_total = this.model.property('subtask_total');
         this.pending_subtask_total = this.model.property('pending_subtask_total');
-        this.subtask_contexts = <Array<SubtaskContext>>this.model.property('subtask_contexts');
         this.clear_status = this.model.property('clear_status');
+        this.subtask_ids = this.model.property('subtask_ids');
 
 
         let parent_subtask_split = this.model.property('parent_subtask').split('@');
@@ -151,6 +157,7 @@ export abstract class Message{
             this.parent_subtask_id = parent_subtask_split[1];
         }
 
+        this.message_lock_key = `yimq:actor:${this.producer.id}:message:${this.id}:lock`;
 
     }
 
@@ -160,9 +167,17 @@ export abstract class Message{
     };
 
     @OnDemand(OnDemandSwitch.MESSAGE_SUBTASKS)
-    public  async loadSubtasks(full=false){
+    public async loadSubtasks() {
+
+        let subtasks:Array<Subtask> = [];
+        for(var subtask_id of this.subtask_ids){
+            let subtask = await this.producer.subtaskManager.getByMessage(this,subtask_id);
+            subtasks.push(subtask);
+        }
+        this.subtasks = subtasks;
         return this;
-    };
+    }
+    
     @OnDemand(OnDemandSwitch.MESSAGE_JOB)
     public async loadJob(){
         return this;
@@ -170,11 +185,13 @@ export abstract class Message{
 
     abstract async toDoing():Promise<CoordinatorProcessResult>;
 
-    protected async incrPendingSubtaskTotal(){
+    protected async incrPendingSubtaskTotalAndLinkSubtask(subtask:Subtask){
         let multi = this.producer.redisClient.multi();
+        multi['message_link_subtask_id'](this.getMessageHash(),subtask.id)
         multi.hincrby(this.getMessageHash(),'subtask_total',1);
         multi.hincrby(this.getMessageHash(),'pending_subtask_total',1);
-        await multi.exec();
+        let result = await multi.exec();
+    
     }
     public getMessageHash(){
         return `${this.model['nohmClass'].prefix.hash}${this.model.modelName}:${this.id}`;
@@ -196,11 +213,36 @@ export abstract class Message{
         return this.model.save();
     }
     async getStatus(){
-        return this.status;
+        // return this.status;
+        // return await this.message.producer.redisClient.hget(this.getDbHash(),'status');
+        return await this.producer.redisClient.hget(this.getMessageHash(),'status');
+    }
+
+    /**
+     * 重写nohm后可以取消锁
+     */
+    async lock(action){
+        let millisecond = 200;
+        let lockAction = await this.producer.redisClient.get(this.message_lock_key);
+        for(var i=0;i < 5; i++){
+            let lock = await this.producer.redisClient.set(this.message_lock_key,action,"PX",millisecond,'NX');
+            if(lock){
+                i > 0 && Logger.warn(`Actor:${this.producer.id} message:${this.id} (${action}) get ${i} times lock by ${lockAction}`,`Message`)
+                return true;
+            }
+            await timeout(20);
+        }
+        
+        Logger.warn(`Actor:${this.producer.id} message:${this.id} (${action}) get ${i} times failed lock by ${lockAction}`,`Message`)
+       
+        return false;
+    }
+    async unlock(){
+        return await this.producer.redisClient.del(this.message_lock_key);
     }
 
     public async delete() {
-        await this.loadSubtasks(true);
+        await this.loadSubtasks();
         for (const subtask of this.subtasks) {
             await subtask.delete();
         }

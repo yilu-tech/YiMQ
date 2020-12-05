@@ -35,14 +35,14 @@ export class HttpCoordinator extends Coordinator{
         AppLogger.log(`Coordinator <${this.actor.name}> bootstrap`,`HttpCoordinator`)
     };
 
-    private logProcessSuccess(start_time,job:Job,result:any){
+    private logProcessSuccess(start_time,job:Job,result:CoordinatorProcessResult){
         let end_time = Date.now()
 
         let content = {
             start_time: format(start_time,'yyyy-MM-dd HH:mm:ss'),
             type: 'process',
+            ...result,
             job: OnDemandFastToJson(job),
-            result,
             end_time: format(end_time,'yyyy-MM-dd HH:mm:ss'),
             cost_time: end_time - start_time
         }

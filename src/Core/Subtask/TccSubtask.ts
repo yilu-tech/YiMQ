@@ -47,12 +47,19 @@ export class TccSubtask extends ConsumerSubtask{
             this.prepareResult.status = 200;
          
             this.prepareResult.data = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.TRY,callContext,options);     
-            if((await this.getStatus()) == SubtaskStatus.CANCELLING){
-                Logger.warn(`Subtask ${this.id} status is CANCELLING after prepared.`,`TccSubtask ${this.type}`)
-            }else{
+
+            // if((await this.getStatus()) == SubtaskStatus.CANCELLING){
+            //     Logger.warn(`Actor:${this.producer.id} Subtask:${this.id} status is CANCELLING after prepared.`,`TccSubtask ${this.type}`)
+            // }else{
+            //     this.setStatus(SubtaskStatus.PREPARED);
+            // }
+            let status = await this.getStatus();
+            if(status == SubtaskStatus.PREPARING){
                 this.setStatus(SubtaskStatus.PREPARED);
-            }
-            
+            }else{
+                Logger.warn(`Actor:${this.producer.id} Subtask:${this.id} status is ${status} after prepared.`,`TccSubtask ${this.type}`)
+            }         
+
         } catch (error) {
             if(!(error instanceof HttpCoordinatorRequestException)){
                throw error;
@@ -84,7 +91,7 @@ export class TccSubtask extends ConsumerSubtask{
 
         await this.completeAndSetMeesageStatus(SubtaskStatus.DONE,MessageStatus.DONE);
         return {
-            process:'success',
+            result:'success',
             actor_result
         }
     }
@@ -98,7 +105,7 @@ export class TccSubtask extends ConsumerSubtask{
         let actor_result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CANCEL,callContext);
         await this.completeAndSetMeesageStatus(SubtaskStatus.CANCELED,MessageStatus.CANCELED);
         return {
-            process:'success',
+            result:'success',
             actor_result
         }
     }

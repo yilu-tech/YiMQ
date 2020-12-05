@@ -12,7 +12,7 @@ export class MessageManager {
 
     }
 
-    async create(type:MessageType, topic:string,data,options:MessageOptions):Promise<any> {
+    async create(type:MessageType, topic:string,data,options:MessageOptions):Promise<Message> {
        
         
         let message:Message = this.messageFactory(type,this.producer);

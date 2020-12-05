@@ -3,6 +3,17 @@ import { MessageType } from "../../Constants/MessageConstants";
 
 export function redisCustomCommand(client){
 
+    // let has_value = `
+    // local function has_value (tab, val)
+    //     for index, value in ipairs(tab) do
+    //         if value == val then
+    //             return true
+    //         end
+    //     end
+    //     return false
+    // end
+    // `
+
     let subtaskCompleteScript = `
    
 
@@ -113,6 +124,49 @@ export function redisCustomCommand(client){
     
         return result
         
+        `
+    })
+
+    client.defineCommand('message_has_subtask',{
+        numberOfKeys:4,
+        lua:`
+
+        local message_has_subtask_ids_tmp_key = KEYS[1];
+
+        local subtask_message_id_index_key = KEYS[2];
+        local subtask_consumer_id_index_key = KEYS[3];
+        local subtask_processor_index_key = KEYS[4];
+
+
+
+        local result = redis.call('SINTERSTORE',message_has_subtask_ids_tmp_key, subtask_message_id_index_key, subtask_consumer_id_index_key,subtask_processor_index_key)
+        redis.call('DEL',message_has_subtask_ids_tmp_key);
+        return result;
+
+        `
+    })
+
+    client.defineCommand('message_link_subtask_id',{
+        numberOfKeys:1,
+        lua:`
+        local message_key = KEYS[1];
+        local subtask_id = ARGV[1]
+        local subtask_ids = redis.call('HGET',message_key,'subtask_ids');
+
+
+        if(not subtask_ids or subtask_ids == '')
+        then
+            subtask_ids = {};
+        else
+            subtask_ids = cjson.decode(subtask_ids)
+        end
+
+        table.insert(subtask_ids,subtask_id)
+
+        subtask_ids = cjson.encode(subtask_ids);
+
+        redis.call('HSET',message_key,'subtask_ids',subtask_ids)
+        return subtask_ids;
         `
     })
 

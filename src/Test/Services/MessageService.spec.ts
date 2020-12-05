@@ -19,6 +19,8 @@ import { ActorConfigManager } from '../../Core/ActorConfigManager';
 import { ContextLogger } from '../../Handlers/ContextLogger';
 import { SubtaskStatus, SubtaskType } from '../../Constants/SubtaskConstants';
 import { XaSubtask } from '../../Core/Subtask/XaSubtask';
+import { TccSubtask } from '../../Core/Subtask/TccSubtask';
+import { OnDemandFastToJson } from '../../Decorators/OnDemand';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('MessageService', () => {
@@ -61,13 +63,13 @@ describe('MessageService', () => {
         messageService = app.get<MessageService>(MessageService);
         actorManager = app.get<ActorManager>(ActorManager);
         await actorManager.bootstrap(false)
+        mock.reset()
     });
 
     afterEach(async()=>{
     
         await actorManager.shutdown();
         await redisManager.closeAll();
-        mock.reset();
 
     })
 
@@ -252,7 +254,7 @@ describe('MessageService', () => {
 
         it('.cancel after confirm',async (done) => {
             let userActor = actorManager.get('user');
-            let message:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'test',{},{delay:5000});
+            let message:TransactionMessage = <TransactionMessage>await userActor.messageManager.create(MessageType.TRANSACTION,'test',{},{delay:5000});
             userActor.coordinator.getQueue().on('completed',async (job)=>{
                 if(message.job.id == job.id){
                     //process后
@@ -384,7 +386,7 @@ describe('MessageService', () => {
 
         it('.confirm after cancel',async (done) => {
             let userActor = actorManager.get('user');
-            let message:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'test',{},{delay:5000});
+            let message:TransactionMessage = <TransactionMessage>await userActor.messageManager.create(MessageType.TRANSACTION,'test',{},{delay:5000});
             userActor.coordinator.getQueue().on('completed',async (job)=>{
                 if(message.job.id == job.id){
                     //process后
@@ -488,6 +490,188 @@ describe('MessageService', () => {
             });
 
             expect(childMessage1.parent_subtask_id).toBe(subtask.id)
+        })
+
+    })
+
+
+    describe('.message lock', () => {
+
+        it('.add subtask long time after cancle message can not get lock', async (done) => {
+            let producerName = 'user';
+            let messageType = MessageType.TRANSACTION;
+            let topic = 'subtask_test';
+            let message:TransactionMessage;
+           
+            message = await messageService.create(producerName,messageType,topic,{},{
+                delay:300,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+            let producer = actorManager.get(producerName);  
+            let prepareResult = {title: 'get new user'};
+            
+            mock.onPost(producer.api,{
+                asymmetricMatch:(actual)=>{
+                    // console.log(actual)
+                    return true;
+                }
+            }).replyOnce(async ()=>{//让subtask超时perpared
+                await timeout(500)
+                return [200,prepareResult];
+            }) 
+
+            mock.onPost(producer.api).replyOnce(async ()=>{//让subtask超时perpared
+                return [200,{}];
+            }) 
+
+         
+            process.env.MOCK_TODONG_TOCANCING_AFTER_LINK_SUBTASK_WAIT_TIME = '200';
+
+            process.env.SUBTASK_JOB_BACKOFF_DELAY = '10';
+            //没有await，让其在cancel之后再返回数据
+            messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                processor:"user@user.create",
+                data:{
+                    username: 'jack'
+                },
+                options:{
+                    timeout:0
+                }
+            }).then(async (tccSubtask:TccSubtask)=>{
+                expect(OnDemandFastToJson(tccSubtask)['prepareResult'].data.title).toBe(prepareResult.title);
+            
+                expect(await tccSubtask.getStatus()).toBe(SubtaskStatus.CANCELED);
+                done()
+            })  
+        
+            await messageService.cancel(producerName,message.id)// message cancle的时候，正在tcc try
+
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            expect(updatedMessage.status).toBe(MessageStatus.CANCELLING)
+            
+            await updatedMessage.loadJob()
+
+
+
+            //如果这个时候去处理掉mesasge，应该要等待 subtask 添加到subtask_ids中
+            await expect( updatedMessage.job.process()).rejects.toThrow('Message is locking can not to cancelling')
+
+            //100毫秒
+            await timeout(100);
+             //重新查询
+
+            updatedMessage = await producer.messageManager.get(message.id);
+            await updatedMessage.loadJob();
+            await updatedMessage.job.process()//再次处理message
+
+            //重新查询
+            updatedMessage = await producer.messageManager.get(message.id);
+            await updatedMessage.loadSubtasks();
+
+
+            expect(updatedMessage.status).toBe(MessageStatus.CANCELLING)
+
+            let subtask = <TccSubtask> updatedMessage.subtasks[0];
+
+            expect(subtask.status).toBe(SubtaskStatus.CANCELLING)
+            await subtask.loadJob();
+            await subtask.job.process()
+            expect(subtask.status).toBe(SubtaskStatus.CANCELED)
+            
+
+        })
+
+
+
+        it('.add subtask long time after done message can not get lock', async (done) => {
+            let producerName = 'user';
+            let messageType = MessageType.TRANSACTION;
+            let topic = 'subtask_test';
+            let message:TransactionMessage;
+           
+            message = await messageService.create(producerName,messageType,topic,{},{
+                delay:300,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+            let producer = actorManager.get(producerName);  
+            let prepareResult = {title: 'get new user'};
+            
+            mock.onPost(producer.api,{
+                asymmetricMatch:(actual)=>{
+                    // console.log(actual)
+                    return true;
+                }
+            }).replyOnce(async ()=>{//让subtask超时perpared
+                await timeout(500)
+                return [200,prepareResult];
+            }) 
+
+
+            mock.onPost(producer.api).replyOnce(async ()=>{//让subtask超时perpared
+                return [200,{}];
+            }) 
+
+         
+            process.env.MOCK_TODONG_TOCANCING_AFTER_LINK_SUBTASK_WAIT_TIME = '200';
+
+            process.env.SUBTASK_JOB_BACKOFF_DELAY = '10';
+            //没有await，让其在cancel之后再返回数据
+            messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                processor:"user@user.create",
+                data:{
+                    username: 'jack'
+                },
+                options:{
+                    timeout:0
+                }
+            }).then(async (tccSubtask:TccSubtask)=>{
+                expect(OnDemandFastToJson(tccSubtask)['prepareResult'].data.title).toBe(prepareResult.title);
+            
+                expect(await tccSubtask.getStatus()).toBe(SubtaskStatus.DONE);
+                done()
+            })  
+        
+            await messageService.confirm(producerName,message.id)// message cancle的时候，正在tcc try
+
+            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            await updatedMessage.loadJob()
+            expect(updatedMessage.status).toBe(MessageStatus.DOING)
+            
+            
+
+
+
+            //如果这个时候去处理掉mesasge，应该要等待 subtask 添加到subtask_ids中
+            await expect( updatedMessage.job.process()).rejects.toThrow('Message is locking can not to to doing')
+
+            //100毫秒
+            await timeout(100);
+            updatedMessage = await producer.messageManager.get(message.id);
+            await updatedMessage.loadJob()
+            await updatedMessage.job.process()//再次处理message
+
+
+            updatedMessage = await producer.messageManager.get(message.id);
+            await updatedMessage.loadSubtasks();
+
+            expect(updatedMessage.status).toBe(MessageStatus.DOING)
+
+            let subtask = <TccSubtask> updatedMessage.subtasks[0];
+
+            expect(subtask.status).toBe(SubtaskStatus.DOING)
+            await subtask.loadJob();
+            await subtask.job.process()
+            expect(subtask.status).toBe(SubtaskStatus.DONE)
+            
+
         })
 
     })

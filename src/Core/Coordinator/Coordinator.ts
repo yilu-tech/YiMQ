@@ -7,8 +7,10 @@ import { BusinessException } from '../../Exceptions/BusinessException';
 import { clamp } from 'lodash';
 
 export interface CoordinatorProcessResult{
-    process: 'success' | 'compensate success'
+    action?:string;
+    result: 'success' | 'compensate success'
     actor_result?:any;
+    desc?:string;
 }
 
 export abstract class Coordinator{

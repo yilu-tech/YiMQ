@@ -7,7 +7,7 @@ export class GeneralMessage extends Message{
         return this;
     }
     async toDoing(): Promise<CoordinatorProcessResult> {
-        return {process: 'success'};
+        return {result: 'success'};
     }
     statusToDoing(): Promise<Message> {
         throw new Error("Method not implemented.");

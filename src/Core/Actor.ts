@@ -17,7 +17,7 @@ import { ActorOptions } from "../Config/ActorConfig";
 import { ActorCleaner } from "./ActorCleaner";
 import { AppLogger } from "../Handlers/AppLogger";
 import { Exclude, Expose } from "class-transformer";
-import { ExposeGroups } from "../Constants/ToJsonConstants";
+import { RedisClient } from "../Handlers/redis/RedisClient";
 @Exclude()
 export class Actor{
     @Expose()
@@ -36,7 +36,7 @@ export class Actor{
 
     public coordinator:Coordinator;
 
-    public redisClient:Redis;
+    public redisClient:RedisClient;
     private nohm: NohmClass;
     public messageModel:IStaticMethods<MessageModelClass> ;
     public subtaskModel:IStaticMethods<SubtaskModelClass>

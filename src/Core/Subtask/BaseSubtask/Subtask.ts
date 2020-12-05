@@ -10,8 +10,7 @@ import { Actor } from "../../Actor";
 export abstract class Subtask{
     @Expose()
     id:number;
-    @Expose()
-    job_id:number;
+
     @Expose()
     type:SubtaskType;
     @Expose()
@@ -46,8 +45,7 @@ export abstract class Subtask{
     message:TransactionMessage;
     model:SubtaskModelClass
 
-    @Expose({groups:[ExposeGroups.SUBTASK_JOB]})
-    job:Job;
+
     constructor(message:TransactionMessage){
         
         this.message = message;
@@ -56,7 +54,6 @@ export abstract class Subtask{
     protected async initProperties(subtaskModel){
         this.model = subtaskModel;
         this.id = subtaskModel.id;
-        this.job_id = subtaskModel.property('job_id');
         // this.type = subtaskModel.property('type');
         this.status = subtaskModel.property('status');
         this.data = subtaskModel.property('data');
@@ -88,7 +85,7 @@ export abstract class Subtask{
         await subtaskModel.save() 
         await this.initProperties(subtaskModel)
     }
-    async restore(subtaskModel,full=false){
+    async restore(subtaskModel){
         await this.initProperties(subtaskModel);
     };
     abstract async prepare();
@@ -97,11 +94,6 @@ export abstract class Subtask{
     abstract async toDo();
     abstract async toCancel();
 
-    setJobId(jobId){
-        this.job_id = jobId;
-        this.model.property('job_id',this.job_id);
-        return this;
-    }
     public async getStatus(){
         return await this.message.producer.redisClient.hget(this.getDbHash(),'status');
     }
@@ -122,12 +114,12 @@ export abstract class Subtask{
         return this.message.producer.redisClient['subtaskCompleteAndSetMessageStatus'](this.id,this.message.id,'updated_at',status,messageStatus,new Date().getTime());    
     }
     public async completeAndSetMeesageStatus(status,messageStatus){
-
-            var [subtaskUpdatedStatus,
-                messageCurrentStatus,
-                pendingSubtaskTotal,
-                messageUpdatedStatus,
-            ] = await this.completeAndSetMeesageStatusByScript(status,messageStatus);    
+        
+        var [subtaskUpdatedStatus,
+            messageCurrentStatus,
+            pendingSubtaskTotal,
+            messageUpdatedStatus,
+        ] = await this.completeAndSetMeesageStatusByScript(status,messageStatus);    
   
         
         //修改instance中的值,但是不save,防止其他地方用到
@@ -143,8 +135,7 @@ export abstract class Subtask{
     public getJobID(){
         return this.model.property('job_id');
     }
-    public async delete(){
-        this.job && await this.job.remove()    
+    public async delete(){ 
         await this.model.remove();
     }
 }

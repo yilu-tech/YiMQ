@@ -65,6 +65,7 @@ describe('ActorClearTest', () => {
         messageService = app.get<MessageService>(MessageService);
         actorManager = app.get<ActorManager>(ActorManager);
         await actorManager.bootstrap(false)
+        mock.reset()
         
     });
 
@@ -90,31 +91,31 @@ describe('ActorClearTest', () => {
 
             
             for(var i =0;i<2;i++){
-                let message:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+                let message = <TransactionMessage>await userActor.messageManager.create(messageType,topic,{},{
                     delay:10,
                 });
                 await message.setStatus(MessageStatus.DONE).save();
             }
             //user增加一个pending状态
-            message = await userActor.messageManager.create(messageType,topic,{},{
+            message = <TransactionMessage>await userActor.messageManager.create(messageType,topic,{},{
                 delay:10,
             });
             await message.setStatus(MessageStatus.PENDING).save();
 
             //user增加一个MessageClearStatus.FAILED
-            message = await userActor.messageManager.create(messageType,topic,{},{
+            message = <TransactionMessage>await userActor.messageManager.create(messageType,topic,{},{
                 delay:10,
             });
             await message.setStatus(MessageStatus.DONE).setProperty('clear_status',MessageClearStatus.FAILED).save();
 
             //同数据库下增加一个member的done message
-            message = await memberActor.messageManager.create(messageType,topic,{},{
+            message = <TransactionMessage>await memberActor.messageManager.create(messageType,topic,{},{
                 delay:10,
             });
             await message.setStatus(MessageStatus.DONE).save();
 
             for(var i =0;i<10;i++){
-                let message:TransactionMessage = await contentActor.messageManager.create(messageType,topic,{},{
+                let message = <TransactionMessage>await contentActor.messageManager.create(messageType,topic,{},{
                     delay:10,
                 });
                 await message.setStatus(MessageStatus.CANCELED).save();
@@ -139,7 +140,7 @@ describe('ActorClearTest', () => {
 
             
             for(var i =0;i<5;i++){
-                let message:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+                let message = <TransactionMessage>await userActor.messageManager.create(messageType,topic,{},{
                     delay:10,
                 });
                 await message.setStatus(MessageStatus.DONE).save();
@@ -173,7 +174,7 @@ describe('ActorClearTest', () => {
            
             
             for(var i =0;i<5;i++){
-                let message:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+                let message = <TransactionMessage>await userActor.messageManager.create(messageType,topic,{},{
                     delay:10,
                 });
                 // await message.setStatus(MessageStatus.DONE).save();
@@ -207,7 +208,7 @@ describe('ActorClearTest', () => {
             let userActor = actorManager.get('user'); 
             let contentActor = actorManager.get('content'); 
 
-            let message:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+            let message = <TransactionMessage>await userActor.messageManager.create(messageType,topic,{},{
                 delay:10,
             });
             let userSubtask =  await message.addSubtask(SubtaskType.EC,{
@@ -236,7 +237,7 @@ describe('ActorClearTest', () => {
             let contentActor = actorManager.get('content'); 
            
             
-            let message:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+            let message = <TransactionMessage>await userActor.messageManager.create(messageType,topic,{},{
                 delay:10,
             });
             let userSubtask1 =  await message.addSubtask(SubtaskType.EC,{
@@ -262,7 +263,7 @@ describe('ActorClearTest', () => {
 
 
 
-            let message2:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+            let message2:TransactionMessage = <TransactionMessage>await userActor.messageManager.create(messageType,topic,{},{
                 delay:10,
             });
             let userSubtask4 =  await message2.addSubtask(SubtaskType.EC,{
@@ -318,11 +319,11 @@ describe('ActorClearTest', () => {
             let userActor = actorManager.get('user'); 
             userActor.options.clear_limit = 2; //设置清理条数
             //创建两条message开始清理
-            let message1:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+            let message1:TransactionMessage = <TransactionMessage>await userActor.messageManager.create(messageType,topic,{},{
                 delay:10,
             });
             await message1.setStatus(MessageStatus.DONE).save();
-            let message2:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+            let message2:TransactionMessage = <TransactionMessage>await userActor.messageManager.create(messageType,topic,{},{
                 delay:10,
             });
             await message2.setStatus(MessageStatus.DONE).save();
@@ -344,11 +345,11 @@ describe('ActorClearTest', () => {
             let userActor = actorManager.get('user'); 
             userActor.options.clear_limit = 2; //设置清理条数
             //创建两条message开始清理
-            let message1:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+            let message1:TransactionMessage = <TransactionMessage>await userActor.messageManager.create(messageType,topic,{},{
                 delay:10,
             });
             await message1.setStatus(MessageStatus.CANCELED).save();
-            let message2:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+            let message2:TransactionMessage = <TransactionMessage>await userActor.messageManager.create(messageType,topic,{},{
                 delay:10,
             });
             await message2.setStatus(MessageStatus.CANCELED).save();
@@ -369,7 +370,7 @@ describe('ActorClearTest', () => {
         it('runDelayTrue',async()=>{
             let userActor = actorManager.get('user'); 
             userActor.options.clear_limit = 10;
-            let message:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
+            let message = <TransactionMessage>await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
                 delay:10,
             });
             await message.setStatus(MessageStatus.DONE).save();
@@ -383,7 +384,7 @@ describe('ActorClearTest', () => {
             userActor.options.clear_limit = 10;
 
             for(var i =0;i<10;i++){
-                let message:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
+                let message = <TransactionMessage>await userActor.messageManager.create(messageType,topic,{},{
                     delay:10,
                 });
                 await message.setStatus(MessageStatus.DONE).save();
@@ -469,7 +470,7 @@ describe('ActorClearTest', () => {
                     });
                     //模拟5个完成的message给clearJob2，300毫秒后，清理message
                     for(var i =0;i<5;i++){
-                        let message:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
+                        let message = <TransactionMessage>await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
                             delay:10,
                         });
                         await message.setStatus(MessageStatus.DONE).save();
@@ -507,7 +508,7 @@ describe('ActorClearTest', () => {
             
             userActor.options.clear_interval = 8000;
  
-            let message:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
+            let message = <TransactionMessage>await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
                 delay:10000,
             });
             await message.setStatus(MessageStatus.DONE).save();
@@ -549,7 +550,7 @@ describe('ActorClearTest', () => {
             let userActor = actorManager.get('user');
 
             //done message
-            let doneMessage:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
+            let doneMessage:TransactionMessage = <TransactionMessage>await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
                 delay:10,
             });
             await doneMessage.setStatus(MessageStatus.DONE).save();
@@ -559,7 +560,7 @@ describe('ActorClearTest', () => {
             expect((await userActor.actorCleaner.getFailedClearMessageIds()).failedRetryDoneMessageIds).toEqual(doneMessageIds)
 
             //cancled message
-            let canceldMessage:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
+            let canceldMessage:TransactionMessage = <TransactionMessage>await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
                 delay:10,
             });
             await canceldMessage.setStatus(MessageStatus.CANCELED).save();
@@ -586,11 +587,11 @@ describe('ActorClearTest', () => {
 
         it('failedClearMessageRetryAll',async()=>{
             let userActor = actorManager.get('user');
-            let message1:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
+            let message1:TransactionMessage = <TransactionMessage>await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
                 delay:10,
             });
             await message1.setStatus(MessageStatus.CANCELED).save();
-            let message2:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
+            let message2:TransactionMessage = <TransactionMessage>await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
                 delay:10,
             });
             await message2.setStatus(MessageStatus.CANCELED).save();
