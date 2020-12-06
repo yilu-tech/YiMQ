@@ -21,6 +21,7 @@ import { Application } from '../../Application';
 import { ActorConfigManager } from '../../Core/ActorConfigManager';
 import { OnDemandFastToJson } from '../../Decorators/OnDemand';
 import { ContextLogger } from '../../Handlers/ContextLogger';
+import { CoordinatorCallActorAction } from '../../Constants/Coordinator';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('Subtask', () => {
@@ -627,7 +628,21 @@ describe('Subtask', () => {
             process.env.SUBTASK_JOB_DELAY = '500';//加快二次尝试，防止测试超时
             //mock添加tcc子任务时的远程调用
             let prepareResult = {title: 'get new user'};
-            mock.onPost(contentActor.api).reply(200,prepareResult)
+
+            mock.onPost(contentActor.api,{
+                asymmetricMatch:(body)=>{
+                    return body.action == CoordinatorCallActorAction.TRY;
+                }
+            }).replyOnce(200,prepareResult)
+
+            mock.onPost(contentActor.api,{
+                asymmetricMatch:(body)=>{
+                    return body.action == CoordinatorCallActorAction.CONFIRM && body.context.type == SubtaskType.TCC
+                }
+            }).replyOnce(async ()=>{
+                await timeout(100);
+                return [200,{message:'subtask process succeed'}];
+            })
             let tccSubtask:TccSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
                 processor:"content@post.create",
                 data:{
@@ -639,7 +654,11 @@ describe('Subtask', () => {
 
             //mock添加ec子任务时的远程调用
             prepareResult = {title: 'get update user'};
-            mock.onPost(producer.api).reply(200,prepareResult)
+            mock.onPost(producer.api,{
+                asymmetricMatch:(body)=>{
+                    return body.action == CoordinatorCallActorAction.CONFIRM && body.context.type == SubtaskType.EC
+                }
+            }).reply(200,prepareResult)
             let ecSubtask:EcSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,{
                 processor:"user@user.create",
                 data:{
@@ -651,50 +670,54 @@ describe('Subtask', () => {
             //把message确认
             await messageService.confirm(producerName,message.id);
 
-            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
-            await updatedMessage.loadSubtasks();
-            expect(updatedMessage.status).toBe(MessageStatus.DOING);
-            expect(updatedMessage.subtask_total).toBe(2);
-            expect(updatedMessage.pending_subtask_total).toBe(2);
+            await message.refresh();
+            await message.loadSubtasks();
+            expect(message.status).toBe(MessageStatus.DOING);
+            expect(message.subtask_total).toBe(2);
+            expect(message.pending_subtask_total).toBe(2);
             producer.coordinator.getQueue().on('failed',async(job,err)=>{
                 // console.log(job.toJSON(),err)
             })
             
-            mock.onPost(producer.api).reply(200,{message:'subtask process succeed'})
             //任务开始执行
             producer.coordinator.getQueue().on('active',async (job)=>{
-                console.debug('Job active',job.id)
-                updatedMessage = await producer.messageManager.get(message.id);
-                await updatedMessage.loadSubtasks();
+                await message.refresh();
 
                 if(message.job.id == job.id){
-                    expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
+                    expect(message.status).toBe(MessageStatus.DOING)//检查message
                     
-                }else if(updatedMessage.subtasks[0].job_id == job.id){
-                    expect(job.data.message_id).toBe(updatedMessage.id);
                 }
-                else if(updatedMessage.subtasks[1].job_id == job.id){
-                    expect(job.data.producer_id).toBe(updatedMessage.producer.id);
-
+                await ecSubtask.refresh();
+                if(ecSubtask.job_id == job.id){
+                    expect(job.data.message_id).toBe(message.id);
                 }
             })
             //任务执行完毕
             producer.coordinator.getQueue().on('completed',async (job)=>{
-                updatedMessage = await producer.messageManager.get(message.id);
-                await updatedMessage.loadSubtasks();
+                
+
                 if(message.job.id == job.id){
+                    await message.refresh();
+                    expect(message.status).toBe(MessageStatus.DOING)//检查message
                     
-                    expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
-                    
-                }else if(updatedMessage.subtasks[0].job_id == job.id){
-                    expect(updatedMessage.subtasks[0].status).toBe(SubtaskStatus.DONE);
-                }
-                else if(updatedMessage.subtasks[1].job_id == job.id){
-                    expect(updatedMessage.subtasks[1].status).toBe(SubtaskStatus.DONE);
                 }
 
-                if(updatedMessage.pending_subtask_total == 0){
-                    expect(updatedMessage.status).toBe(MessageStatus.DONE)
+                await ecSubtask.refresh();
+                if(ecSubtask.job_id == job.id){
+                    expect(ecSubtask.status).toBe(SubtaskStatus.DONE);
+                }
+            })
+
+            contentActor.coordinator.getQueue().on('completed',async (job)=>{
+                await tccSubtask.refresh();
+        
+                expect(tccSubtask.status).toBe(SubtaskStatus.DONE);
+                console.log(tccSubtask.job_id)
+                
+
+                await message.refresh();
+                if(message.pending_subtask_total == 0){
+                    expect(message.status).toBe(MessageStatus.DONE)
                     let messageIds = await producer.messageModel.find({
                         status: MessageStatus.DONE
                     })
@@ -703,7 +726,6 @@ describe('Subtask', () => {
                         status: SubtaskStatus.DONE
                     })
                     expect(subtaskIds.length).toBe(2);
-                    console.log('--->',messageIds,subtaskIds)
                     done()
                 }
             })

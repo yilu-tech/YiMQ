@@ -147,4 +147,10 @@ export abstract class Subtask{
         this.job && await this.job.remove()    
         await this.model.remove();
     }
+
+    public async refresh(){
+        let subtaskModel = await this.producer.subtaskModel.load(this.id);
+        await this.initProperties(subtaskModel);
+        return this;
+    }
 }
