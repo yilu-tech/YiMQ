@@ -269,6 +269,11 @@ export abstract class Message{
         await this.model.remove();
     }
 
+    public async refresh(){
+        this.model = await this.producer.messageModel.load(this.id);
+        await this.initProperties();
+    }
+
 }
 
 
