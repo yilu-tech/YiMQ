@@ -28,7 +28,7 @@ export class TransactionMessage extends Message{
         }
         try {
             
-            await this.updatePendingSubtaskTotalAndSubtaskIds();
+            await this.updatePendingSubtaskTotalAndSubtaskIds();//锁住后再查询 剩余子任务数量(可以写到脚本中连判断带 message的状态改变)
 
             //没有子任务直接完成message
             if(this.pending_subtask_total== 0){
@@ -55,6 +55,7 @@ export class TransactionMessage extends Message{
             throw new SystemException('Message is locking can not to cancelling');
         }
         try {
+            await this.updatePendingSubtaskTotalAndSubtaskIds();
              //没有子任务直接完成message
             if(this.pending_subtask_total == 0){
                 await this.setStatus(MessageStatus.CANCELED).save();

@@ -502,6 +502,86 @@ describe('MessageService', () => {
 
     describe('.message lock', () => {
 
+
+        it('.add subtask long time after confirm when pendinng subtask total 0',async (done) => {
+            let userActor = actorManager.get('user');
+
+            let topic = 'subtask_test';
+            let message:TransactionMessage;
+            message = await messageService.create('user',MessageType.TRANSACTION,topic,{},{})
+            process.env.MOCK_TODONG_TOCANCING_AFTER_LINK_SUBTASK_WAIT_TIME = '50';
+
+            let prepareResult = {title: 'get new user'};
+            mock.onPost(userActor.api,{
+                asymmetricMatch:(actual)=>{
+                    // console.log(actual)
+                    return true;
+                }
+            }).replyOnce(async ()=>{//让subtask超时perpared
+                await timeout(500)
+                return [200,prepareResult];
+            }) 
+            messageService.addSubtask('user',message.id,SubtaskType.TCC,{
+                processor:"user@user.create",
+                data:{
+                    username: 'jack'
+                },
+                options:{
+                    timeout:0
+                }
+            }).then(async (tccSubtask:TccSubtask)=>{
+                await message.refresh();
+                expect(message.status).toBe(MessageStatus.DOING);
+                expect(message.pending_subtask_total).toBe(1);
+                done()
+            })  
+
+            await message.confirm();
+            await message.toDoing()
+            
+           
+
+            
+        })
+
+        it('.add subtask long time after cancle when pendinng subtask total 0',async (done) => {
+            let userActor = actorManager.get('user');
+
+            let topic = 'subtask_test';
+            let message:TransactionMessage;
+            message = await messageService.create('user',MessageType.TRANSACTION,topic,{},{})
+            process.env.MOCK_TODONG_TOCANCING_AFTER_LINK_SUBTASK_WAIT_TIME = '50'; 
+
+            let prepareResult = {title: 'get new user'};
+            mock.onPost(userActor.api,{
+                asymmetricMatch:(actual)=>{
+                    // console.log(actual)
+                    return true;
+                }
+            }).replyOnce(async ()=>{//让subtask超时perpared
+                await timeout(500)
+                return [200,prepareResult];
+            }) 
+            messageService.addSubtask('user',message.id,SubtaskType.TCC,{
+                processor:"user@user.create",
+                data:{
+                    username: 'jack'
+                },
+                options:{
+                    timeout:0
+                }
+            }).then(async (tccSubtask:TccSubtask)=>{
+                await message.refresh();
+                expect(message.status).toBe(MessageStatus.CANCELLING);
+                expect(message.pending_subtask_total).toBe(1);
+                done()
+            })  
+
+            await message.cancel();
+            await message.toCancelling()
+            
+        })
+
         it('.add subtask long time after cancle message can not get lock', async (done) => {
             let producerName = 'user';
             let messageType = MessageType.TRANSACTION;
