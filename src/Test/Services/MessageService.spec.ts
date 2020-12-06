@@ -87,7 +87,8 @@ describe('MessageService', () => {
             expect(message.status).toBe(MessageStatus.PENDING)
             let producer = actorManager.get(producerName); 
 
-            producer.coordinator.getQueue().on('completed',async (job)=>{
+            await producer.process();
+            producer.coordinator.on('completed',async (job)=>{
                 if(message.job.id == job.id){
                     let updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.DONE)
@@ -95,7 +96,6 @@ describe('MessageService', () => {
                 }
             })
 
-            await producer.process();
             await messageService.prepare(producerName,message.id,{});
             let updatedMessage = await producer.messageManager.get(message.id);
             expect(updatedMessage.status).toBe(MessageStatus.PREPARED);
@@ -113,7 +113,8 @@ describe('MessageService', () => {
             expect(message.status).toBe(MessageStatus.PENDING)
             let producer = actorManager.get(producerName); 
 
-            producer.coordinator.getQueue().on('completed',async (job)=>{
+            await producer.process();
+            producer.coordinator.on('completed',async (job)=>{
                 if(message.job.id == job.id){
                     let updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.CANCELED)
@@ -121,7 +122,6 @@ describe('MessageService', () => {
                 }
             })
 
-            await producer.process();
             await messageService.prepare(producerName,message.id,{});
             let updatedMessage = await producer.messageManager.get(message.id);
             expect(updatedMessage.status).toBe(MessageStatus.PREPARED);
@@ -186,14 +186,14 @@ describe('MessageService', () => {
             mock.onPost(producer.api).reply(200,{
                 status: MessageStatus.DONE
             })
-            producer.coordinator.getQueue().on('completed',async (job)=>{
+            await producer.process();
+            producer.coordinator.on('completed',async (job)=>{
                 if(message.job.id == job.id){
                     let updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.DONE)
                     done()
                 }
             })
-            await producer.process();
             await messageService.prepare(producerName,message.id,{});
         });
 
@@ -207,14 +207,14 @@ describe('MessageService', () => {
             mock.onPost(producer.api).reply(200,{
                 status: MessageStatus.CANCELED
             })
-            producer.coordinator.getQueue().on('completed',async (job)=>{
+            await producer.process();
+            producer.coordinator.on('completed',async (job)=>{
                 if(message.job.id == job.id){
                     let updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.CANCELED)
                     done()
                 }
             })
-            await producer.process();
             await messageService.prepare(producerName,message.id,{});
         });
         
