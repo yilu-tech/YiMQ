@@ -6,6 +6,7 @@ import { join } from "path";
 import { ActorConfig, actorDefaultOptions } from "./ActorConfig";
 import { EventEmitter } from "events";
 import {AppLogger as Logger} from '../Handlers/AppLogger';
+import { OptionsConfig, optionsDefaultConfig } from "./OptionsConfig";
 
 process.env.CONFIG_DIR_PATH = process.env.CONFIG_DIR_PATH || join(process.cwd(),'config');
 
@@ -27,6 +28,7 @@ export class Config {
     }
     system: SystemConfig  = null;
     actors: Array<ActorConfig> = null;
+    options: OptionsConfig = null;
     constructor(){
 
     }
@@ -71,6 +73,11 @@ export class Config {
             actors.push(actorConfig)
         })
         this.actors = actors;
+
+        this.options = optionsDefaultConfig;
+        if(fileContent['options']){
+            this.options = Object.assign(this.options,fileContent['options']);
+        }
     }
     
 

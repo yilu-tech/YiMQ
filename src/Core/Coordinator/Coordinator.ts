@@ -9,8 +9,10 @@ import { JobStatus } from '../../Constants/JobConstants';
 import { Logger } from '@nestjs/common';
 
 export interface CoordinatorProcessResult{
-    process: 'success' | 'compensate success'
+    action?:string;
+    result: 'success' | 'compensate success'
     actor_result?:any;
+    desc?:string;
 }
 
 export abstract class Coordinator{

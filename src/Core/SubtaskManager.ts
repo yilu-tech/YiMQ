@@ -51,7 +51,7 @@ export class SubtaskManager{
 
 
     factory(message,type){
-        let subtask:any;
+        let subtask:Subtask;
         switch (type) {
             case SubtaskType.EC:
                 subtask = new EcSubtask(message);

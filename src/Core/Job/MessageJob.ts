@@ -20,19 +20,23 @@ export class MessageJob extends Job{
         this.message = message;
     }
     async process() {
-        let result:CoordinatorProcessResult = {process:null,actor_result:null};
+        let result:CoordinatorProcessResult;
         switch (this.message.status) {
             case MessageStatus.DOING:
                 result = await this.message.toDoing();
+                result.action = 'toDoing';
                 break;
             case MessageStatus.CANCELLING:
                 result = await this.message.toCancelling()
+                result.action = 'toCancelling';
                 break;
             case MessageStatus.PENDING://超时后远程检查任务状态
                 result = await this.remoteCheck();
+                result.action = 'remoteCheck';
                 break;
             case MessageStatus.PREPARED://超时后远程检查任务状态
                 result = await this.remoteCheck();
+                result.action = 'remoteCheck';
                 break;
             case MessageStatus.DONE:
                 throw new SystemException('MessageStatus is DONE.');
@@ -58,7 +62,7 @@ export class MessageJob extends Job{
             job_id: this.message.job_id,
             job_key: `bull:${this.message.producer.id}:${this.message.job_id}`
         }
-        let result:CoordinatorProcessResult = {process:null};
+        let result:CoordinatorProcessResult;
         let actor_result = await this.message.producer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.MESSAGE_CHECK,context);
         switch (actor_result.status) {
             case ActorMessageStatus.CANCELED:

@@ -52,7 +52,7 @@ export class RedisManager {
                 res(client);
             })
             client.on('error', (error) => {
-                Logger.error(`redis client error (${name}) ${error.message}`,null,`RedisManager`);
+                Logger.error(`redis client error (${name}) ${error?.message}`,null,`RedisManager`);
                 if(!this.clients[name]){ //启动的时候创建连接失败，直接退出程序, 程序已经启动的情况，只打印错误，等待重新连接
                     process.exit(); //todo:: 这里需要重新考虑
                 }

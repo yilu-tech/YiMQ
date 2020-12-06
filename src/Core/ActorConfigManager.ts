@@ -5,7 +5,6 @@ import { MasterModels } from "../Models/MasterModels";
 import { CoordinatorCallActorAction } from "../Constants/Coordinator";
 import { SystemException } from "../Exceptions/SystemException";
 import {differenceBy} from 'lodash';
-import axios from 'axios';
 import { HttpCoordinatorRequestException } from "../Exceptions/HttpCoordinatorRequestException";
 import { ActorStatus } from "../Constants/ActorConstants";
 import { ActorConfig } from "../Config/ActorConfig";
@@ -115,25 +114,30 @@ export class ActorConfigManager{
 
 
         for (const item of listenerOptions) {
-            let listenerModel;
-
-            listenerModel = (await this.masterModels.ListenerModel.findAndLoad({
-                actor_id:actor.id,
-                processor: item.processor,
-            }))[0];
-
-            if(listenerModel){
-                Logger.debug(`${item.processor}`,`Actor_Listener_Update <${actor.name}>`);
-            }else{
-                listenerModel = new this.masterModels.ListenerModel();
-                Logger.log(item,'Actor_Listener_Add');
-            }
-            
-            listenerModel.property('topic',item.topic);
-            listenerModel.property('processor',item.processor);
-            listenerModel.property('actor_id',actor.id);
-            await listenerModel.save() 
+           await this.saveOrUpdateListener(actor,item)
         }
+    }
+    public async saveOrUpdateListener(actor,item){
+        let listenerModel;
+
+        listenerModel = (await this.masterModels.ListenerModel.findAndLoad({
+            actor_id:actor.id,
+            processor: item.processor,
+        }))[0];
+
+        if(listenerModel){
+            Logger.debug(`${item.processor}`,`Actor_Listener_Update <${actor.name}>`);
+        }else{
+            listenerModel = new this.masterModels.ListenerModel();
+            Logger.log(item,'Actor_Listener_Add');
+        }
+        
+        listenerModel.property('topic',item.topic);
+        listenerModel.property('processor',item.processor);
+        listenerModel.property('actor_id',actor.id);
+        listenerModel.property('created_at',new Date().getTime());
+        await listenerModel.save() 
+
     }
 
     public async getAllActiveActorModels(){

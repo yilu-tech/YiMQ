@@ -61,11 +61,12 @@ export class MessageService {
         if(!producer){
             throw new SystemException(`Actor <${actor_id}> not exists.`)
         }
-        let message:TransactionMessage = await producer.messageManager.get(message_id);
+        let message = <TransactionMessage>await producer.messageManager.get(message_id);
         await OnDemandRun(message,[
             OnDemandSwitch.MESSAGE_JOB,
             OnDemandSwitch.MESSAGE_SUBTASKS,
             OnDemandSwitch.SUBTASK_JOB,
+            OnDemandSwitch.SUBTASK_CHILDREN,
             OnDemandSwitch.JOB_STATUS
         ],3)
         let result = OnDemandToJson(message,[

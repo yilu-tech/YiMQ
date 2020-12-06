@@ -1,13 +1,13 @@
+import { Exclude } from "class-transformer";
 import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
 import { Message, MessageControlResult } from "./Message";
-
-
+@Exclude()
 export class GeneralMessage extends Message{
     public async loadSubtasks() {
         return this;
     }
     async toDoing(): Promise<CoordinatorProcessResult> {
-        return {process: 'success'};
+        return {result: 'success'};
     }
     statusToDoing(): Promise<Message> {
         throw new Error("Method not implemented.");

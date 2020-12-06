@@ -12,7 +12,7 @@ import { MessageType, MessageStatus } from '../Constants/MessageConstants';
 import axios from 'axios';
 import MockAdapter from 'axios-mock-adapter';
 import { TransactionMessage } from '../Core/Messages/TransactionMessage';
-import { SubtaskStatus } from '../Constants/SubtaskConstants';
+import { SubtaskStatus, SubtaskType } from '../Constants/SubtaskConstants';
 import { BcstSubtask } from '../Core/Subtask/BcstSubtask';
 import { MasterModels } from '../Models/MasterModels';
 import { services } from '../app.module';
@@ -21,6 +21,8 @@ import { BroadcastMessage } from '../Core/Messages/BroadcastMessage';
 import { Application } from '../Application';
 import { ActorConfigManager } from '../Core/ActorConfigManager';
 import { ContextLogger } from '../Handlers/ContextLogger';
+import { Actor } from '../Core/Actor';
+import { MessagesDto } from '../Dto/AdminControllerDto';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('BroadcastMessage', () => {
@@ -32,6 +34,7 @@ describe('BroadcastMessage', () => {
     let application:Application;
     let actorConfigManager:ActorConfigManager;
 
+    let userActor:Actor;
 
     beforeEach(async () => {
         process.env.CONFIG_DIR_PATH = join(__dirname,'config');
@@ -63,6 +66,10 @@ describe('BroadcastMessage', () => {
         messageService = app.get<MessageService>(MessageService);
         actorConfigManager = app.get<ActorConfigManager>(ActorConfigManager);
         actorManager = app.get<ActorManager>(ActorManager);
+        await actorManager.bootstrap(false); //这行必须beforeEach启动
+        mock.reset()
+
+        userActor = actorManager.get('user');
         
     });
 
@@ -77,8 +84,59 @@ describe('BroadcastMessage', () => {
 
     describe('.create:',() => {
 
+        it('.add by message listener total 0',async ()=>{
+
+            let message = <BroadcastMessage>await userActor.messageManager.create(MessageType.BROADCAST,'test',{data:'test'},{})
+            expect(message.status).toBe(MessageStatus.DOING);
+
+            let result = await message.toDoing();
+            expect(result.desc).toBe('Not have listeners.');
+
+            let updatedMessage = <BroadcastMessage> await userActor.messageManager.get(message.id);
+
+            expect(updatedMessage.status).toBe(MessageStatus.DONE);
+            let conditions = <MessagesDto>{
+                actor_id:userActor.id,
+                status:[MessageStatus.DONE],
+                start:0,
+                size:100
+            }
+            let searchResult = await messageService.search(userActor.id,conditions)
+            expect(searchResult.total).toBe(1);
+  
+
+        })
+
+        it('add by bcst listener total 0',async ()=>{
+
+            let message = <TransactionMessage>await userActor.messageManager.create(MessageType.TRANSACTION,'test',{data:'test'},{})
+            // expect(message.status).toBe(MessageStatus.DOING);
+
+            let bcstSubtask = <BcstSubtask>await message.addSubtask(SubtaskType.BCST,{
+                topic: 'user.update'
+            })
+            await message.confirm();
+            await message.toDoing();
+
+            bcstSubtask = await userActor.subtaskManager.get(bcstSubtask.id);
+            await bcstSubtask.loadBroadcastMessage();
+            let bcstMessage = bcstSubtask.broadcastMessage;
+
+
+            expect(bcstMessage.status).toBe(MessageStatus.DOING);
+            expect(await bcstSubtask.getStatus()).toBe(SubtaskStatus.DOING);
+            expect(await message.getStatus()).toBe(MessageStatus.DOING)
+
+            await bcstMessage.toDoing();
+
+            expect(await bcstMessage.getStatus()).toBe(MessageStatus.DONE);
+            expect(await bcstSubtask.getStatus()).toBe(SubtaskStatus.DONE);
+            expect(await message.getStatus()).toBe(MessageStatus.DONE)
+
+        })
 
         it('.add by broadcast message',async (done)=>{
+
             let producerName = 'user';
             let topic = 'user.update';
             let message:TransactionMessage;
@@ -95,7 +153,7 @@ describe('BroadcastMessage', () => {
                 },
                 {
                     "processor": "Tests\\Services\\UserUpdateListener",
-                    "topic": "user@user.update",
+                    "topic": `user@${topic}`,
                     "condition": null
                 }]
             })
@@ -106,7 +164,7 @@ describe('BroadcastMessage', () => {
  
             // await actorConfigManager.loadRemoteActorsConfig()
             // await actorManager.initActors()
-            await actorManager.bootstrap(false);
+
 
             let userProducer = actorManager.get(producerName);
             let contentProducer = actorManager.get('content');
@@ -128,7 +186,7 @@ describe('BroadcastMessage', () => {
             await contentProducer.process();
 
             userProducer.coordinator.on('completed',async (job)=>{
-                updatedMessage = await userProducer.messageManager.get(message.id);
+                updatedMessage = <BroadcastMessage>await userProducer.messageManager.get(message.id);
 
 
                 let subtasks = (await updatedMessage.loadSubtasks()).subtasks;
@@ -137,7 +195,7 @@ describe('BroadcastMessage', () => {
                     expect(updatedMessage.status).toBe(MessageStatus.DOING)//检查message
                 }
        
-                if(subtasks[0].job_id == job.id){
+                if(subtasks[0]['job_id'] == job.id){
                     expect(updatedMessage.status).toBe(MessageStatus.DONE)
                     expect(updatedMessage.pending_subtask_total).toBe(0)
                     done()
@@ -184,7 +242,7 @@ describe('BroadcastMessage', () => {
             })
 
 
-            await actorManager.bootstrap(false);
+            
 
 
             let userProducer = actorManager.get(producerName);
@@ -216,12 +274,13 @@ describe('BroadcastMessage', () => {
 
 
             let listenerDoneCount = 0;
-            function doneExpect(done,updatedMessage,broadcastMessage){
+            function doneExpect(done,updatedMessage,broadcastMessage,bcstSubtask:BcstSubtask){
                 expect(broadcastMessage.status).toBe(MessageStatus.DONE)
                 expect(broadcastMessage.pending_subtask_total).toBe(0)
                 //检查message的状态
                 expect(updatedMessage.status).toBe(MessageStatus.DONE)
                 expect(updatedMessage.pending_subtask_total).toBe(0)
+                expect(bcstSubtask.status).toBe(SubtaskStatus.DONE)
                     
                 done();
             }
@@ -229,7 +288,7 @@ describe('BroadcastMessage', () => {
             await userProducer.process();
             await contentProducer.process();
             userProducer.coordinator.on('completed',async (job)=>{
-                updatedMessage = await userProducer.messageManager.get(message.id);
+                updatedMessage = <TransactionMessage>await userProducer.messageManager.get(message.id);
                 await updatedMessage.loadSubtasks();
                 let bcstSubtask:BcstSubtask = <BcstSubtask>updatedMessage.subtasks[0];
                 let broadcastMessage = (await bcstSubtask.loadBroadcastMessage()).broadcastMessage;
@@ -243,24 +302,26 @@ describe('BroadcastMessage', () => {
                     expect(broadcastMessage.status).toBe(MessageStatus.DOING)  
                 }
 
-                if(listenerSubtasks.length > 0 && listenerSubtasks[0].job_id == job.id){
-                    console.log('userProducer job_id',job.id)
+                if(listenerSubtasks.length > 0 && listenerSubtasks[0]['job_id'] == job.id){
+                    // console.log('userProducer job_id',job.id)
+                    expect(await listenerSubtasks[0].getStatus()).toBe(SubtaskStatus.DONE)
                     listenerDoneCount++
-                    if(listenerDoneCount == 2)doneExpect(done,updatedMessage,broadcastMessage);
+                    if(listenerDoneCount == 2)doneExpect(done,updatedMessage,broadcastMessage,bcstSubtask);
                 }
             })
 
             contentProducer.coordinator.on('completed',async (job)=>{
-                updatedMessage = await userProducer.messageManager.get(message.id);
+                updatedMessage = <TransactionMessage>await userProducer.messageManager.get(message.id);
                 await updatedMessage.loadSubtasks();
                 let bcstSubtask:BcstSubtask = <BcstSubtask>updatedMessage.subtasks[0];
                 let broadcastMessage = (await bcstSubtask.loadBroadcastMessage()).broadcastMessage;
                 let listenerSubtasks = (await broadcastMessage.loadSubtasks()).subtasks;
                 
-                if(listenerSubtasks.length > 0 && listenerSubtasks[1].job_id == job.id){
-                    console.log('contentProducer',job.id)
+                if(listenerSubtasks.length > 0 && listenerSubtasks[1]['job_id'] == job.id){
+                    // console.log('contentProducer',job.id)
+                    expect(await listenerSubtasks[1].getStatus()).toBe(SubtaskStatus.DONE)
                     listenerDoneCount++
-                    if(listenerDoneCount == 2)doneExpect(done,updatedMessage,broadcastMessage);
+                    if(listenerDoneCount == 2)doneExpect(done,updatedMessage,broadcastMessage,bcstSubtask);
                 }
 
             })
@@ -275,6 +336,55 @@ describe('BroadcastMessage', () => {
        
 
     });
+
+    describe('.abnormal transaction',() => {
+
+
+        it('.create listeners failed after retry',async ()=>{
+            await actorManager.bootstrap(false);
+
+            config.options.broadcast_message_delay = 1000;
+
+            let userActor = actorManager.get('user');
+            let userListenerOption = {
+                "processor": "Tests\\User\\Services\\UserUpdateListener",
+                "topic": `user@user.update`,
+                "condition": null
+            }
+            await actorConfigManager.saveOrUpdateListener(userActor,userListenerOption);
+
+            let contentActor = actorManager.get('content');
+            let contentListenerOption = {
+                "processor": "Tests\\Content\\Services\\UserUpdateListener",
+                    "topic": "user@user.update",
+                "condition": null
+            }
+            await actorConfigManager.saveOrUpdateListener(contentActor,contentListenerOption);
+
+            let message = await userActor.messageManager.create(MessageType.BROADCAST,'user.update',{data:'test'},{});
+            process.env.SUBTASK_JOB_DELAY = '3000';
+
+            await message.job.process()
+            let subtask_ids = await userActor.subtaskModel.find({message_id: message.id});
+            expect(subtask_ids.length).toBe(2);
+            
+            let jobConuts = await userActor.coordinator.getJobConuts()
+
+            expect(jobConuts.delayed).toBe(2); //message job + subtask job
+
+            await message.job.process()
+            subtask_ids = await userActor.subtaskModel.find({message_id: message.id});
+
+            expect(subtask_ids.length).toBe(2);
+            jobConuts = await userActor.coordinator.getJobConuts()
+            expect(jobConuts.delayed).toBe(2); //message job + subtask job
+            
+            expect(1).toBe(1)
+
+
+        })
+
+    })
 
 
 

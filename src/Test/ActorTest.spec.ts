@@ -47,7 +47,7 @@ describe('Subtask', () => {
 
         actorManager = app.get<ActorManager>(ActorManager);
         
-        
+        mock.reset()
         
     });
 

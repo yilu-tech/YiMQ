@@ -11,6 +11,12 @@ import { OnDemand } from "../../Decorators/OnDemand";
 import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
 import { MessageOptions } from "../../Structures/MessageOptionsStructure";
 import { JobsOptions } from "bullmq";
+import { SystemException } from "../../Exceptions/SystemException";
+import { timeout } from "../../Handlers";
+import { Logger } from "@nestjs/common";
+import { lowerCase } from "lodash";
+import { RedisClient } from "../../Handlers/redis/RedisClient";
+import IORedis from "ioredis";
 
 export interface SubtaskContext{
     consumer_id:number
@@ -56,7 +62,9 @@ export abstract class Message{
     @Expose({groups:[ExposeGroups.MESSAGE_JOB]})
     public job:Job;
     public model:MessageModelClass
-    public subtask_contexts:Array<SubtaskContext>;
+
+    @Expose()
+    public subtask_ids:string[];
 
     @Expose()
     public subtasks:Array<Subtask> = [];  //事物的子项目
@@ -72,6 +80,10 @@ export abstract class Message{
     public parent_subtask_producer:Actor;
     @Expose()
     public parent_subtask_id:string;
+
+    public parent_subtask:Subtask;
+
+    private message_lock_key:string;
 
     constructor(producer:Actor){
 
@@ -92,6 +104,9 @@ export abstract class Message{
         if(options.parent_subtask){
             let parent_subtask_info = options.parent_subtask.split('@');
             let producer = this.producer.actorManager.get(parent_subtask_info[0]);
+            if(!producer){
+                throw new SystemException(`producer not exist of parent_subtask ${options.parent_subtask}.`)
+            }
             let parent_subtask = `${producer.id}@${parent_subtask_info[1]}`;
             this.model.property('parent_subtask',parent_subtask)
         }else{
@@ -112,9 +127,11 @@ export abstract class Message{
      * @param options 
      */
     async create(topic:string, options:MessageOptions):Promise<any>{
+       
+        let delay = options.delay ? options.delay : this.producer.actorManager.config.options[`${lowerCase(this.type)}_message_delay`];
         let jobOptions:JobsOptions = {
             jobId: await this.producer.actorManager.getJobGlobalId(),
-            delay: options.delay,
+            delay: delay,
             backoff: options.backoff
         };
         this.model.property('job_id',jobOptions.jobId);//先保存job_id，如果先创建job再保存id可能产生，message未记录job_id的情况
@@ -137,8 +154,8 @@ export abstract class Message{
         this.created_at = this.model.property('created_at');
         this.subtask_total = this.model.property('subtask_total');
         this.pending_subtask_total = this.model.property('pending_subtask_total');
-        this.subtask_contexts = <Array<SubtaskContext>>this.model.property('subtask_contexts');
         this.clear_status = this.model.property('clear_status');
+        this.subtask_ids = this.model.property('subtask_ids');
 
 
         let parent_subtask_split = this.model.property('parent_subtask').split('@');
@@ -147,6 +164,7 @@ export abstract class Message{
             this.parent_subtask_id = parent_subtask_split[1];
         }
 
+        this.message_lock_key = `yimq:actor:${this.producer.id}:message:${this.id}:lock`;
 
     }
 
@@ -156,21 +174,37 @@ export abstract class Message{
     };
 
     @OnDemand(OnDemandSwitch.MESSAGE_SUBTASKS)
-    public  async loadSubtasks(full=false){
+    public async loadSubtasks() {
+
+        let subtasks:Array<Subtask> = [];
+        for(var subtask_id of this.subtask_ids){
+            let subtask = await this.producer.subtaskManager.getByMessage(this,subtask_id);
+            subtasks.push(subtask);
+        }
+        this.subtasks = subtasks;
         return this;
-    };
+    }
+    
     @OnDemand(OnDemandSwitch.MESSAGE_JOB)
     public async loadJob(){
         return this;
     }
 
+    public async loadParentSubtask(){
+        if(this.parent_subtask_id){
+            this.parent_subtask = await this.producer.subtaskManager.get(this.parent_subtask_id);
+        }
+    }
+
     abstract async toDoing():Promise<CoordinatorProcessResult>;
 
-    protected async incrPendingSubtaskTotal(){
+    protected async incrPendingSubtaskTotalAndLinkSubtask(subtask:Subtask){
         let multi = this.producer.redisClient.multi();
+        multi['message_link_subtask_id'](this.getMessageHash(),subtask.id)
         multi.hincrby(this.getMessageHash(),'subtask_total',1);
         multi.hincrby(this.getMessageHash(),'pending_subtask_total',1);
-        await multi.exec();
+        let result = await multi.exec();
+    
     }
     public getMessageHash(){
         return `${this.model['nohmClass'].prefix.hash}${this.model.modelName}:${this.id}`;
@@ -187,16 +221,46 @@ export abstract class Message{
         this.status = status;
         return this;
     }
+
+    async setStatusAndUpdate(redisClient:RedisClient|IORedis.Pipeline,status:MessageStatus){
+        let updated_at = new Date().getTime();
+        return await redisClient['setMessageStatus'](this.id,'updated_at',status,updated_at);
+    }
     async save(){
         this.model.property('updated_at',new Date().getTime());
         return this.model.save();
     }
     async getStatus(){
-        return this.status;
+        // return this.status;
+        // return await this.message.producer.redisClient.hget(this.getDbHash(),'status');
+        return await this.producer.redisClient.hget(this.getMessageHash(),'status');
+    }
+
+    /**
+     * 重写nohm后可以取消锁
+     */
+    async lock(action){
+        let millisecond = 200;
+        let lockAction = await this.producer.redisClient.get(this.message_lock_key);
+        for(var i=0;i < 5; i++){
+            let lock = await this.producer.redisClient.set(this.message_lock_key,action,"PX",millisecond,'NX');
+            if(lock){
+                i > 0 && Logger.warn(`Actor:${this.producer.id} message:${this.id} (${action}) get ${i} times lock by ${lockAction}`,`Message`)
+                return true;
+            }
+            await timeout(20);
+        }
+        
+        Logger.warn(`Actor:${this.producer.id} message:${this.id} (${action}) get ${i} times failed lock by ${lockAction}`,`Message`)
+       
+        return false;
+    }
+    async unlock(){
+        return await this.producer.redisClient.del(this.message_lock_key);
     }
 
     public async delete() {
-        await this.loadSubtasks(true);
+        await this.loadSubtasks();
         for (const subtask of this.subtasks) {
             await subtask.delete();
         }

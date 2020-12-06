@@ -19,6 +19,8 @@ import { ActorConfigManager } from '../../Core/ActorConfigManager';
 import { ContextLogger } from '../../Handlers/ContextLogger';
 import { SubtaskStatus, SubtaskType } from '../../Constants/SubtaskConstants';
 import { XaSubtask } from '../../Core/Subtask/XaSubtask';
+import { TccSubtask } from '../../Core/Subtask/TccSubtask';
+import { OnDemandFastToJson } from '../../Decorators/OnDemand';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('MessageService', () => {
@@ -61,13 +63,13 @@ describe('MessageService', () => {
         messageService = app.get<MessageService>(MessageService);
         actorManager = app.get<ActorManager>(ActorManager);
         await actorManager.bootstrap(false)
+        mock.reset()
     });
 
     afterEach(async()=>{
     
         await actorManager.shutdown();
         await redisManager.closeAll();
-        mock.reset();
 
     })
 
@@ -87,7 +89,7 @@ describe('MessageService', () => {
 
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 if(message.job.id == job.id){
-                    let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+                    let updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.DONE)
                     done()
                 }
@@ -95,7 +97,7 @@ describe('MessageService', () => {
 
             await producer.process();
             await messageService.prepare(producerName,message.id,{});
-            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            let updatedMessage = await producer.messageManager.get(message.id);
             expect(updatedMessage.status).toBe(MessageStatus.PREPARED);
 
             let result = await messageService.confirm(producerName,message.id);
@@ -113,7 +115,7 @@ describe('MessageService', () => {
 
             producer.coordinator.getQueue().on('completed',async (job)=>{
                 if(message.job.id == job.id){
-                    let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+                    let updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.CANCELED)
                     done()
                 }
@@ -121,7 +123,7 @@ describe('MessageService', () => {
 
             await producer.process();
             await messageService.prepare(producerName,message.id,{});
-            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            let updatedMessage = await producer.messageManager.get(message.id);
             expect(updatedMessage.status).toBe(MessageStatus.PREPARED);
 
             let result = await messageService.cancel(producerName,message.id);
@@ -141,7 +143,7 @@ describe('MessageService', () => {
 
             await producer.process();
             await messageService.prepare(producerName,message.id,{});
-            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            let updatedMessage = await producer.messageManager.get(message.id);
             expect(updatedMessage.status).toBe(MessageStatus.PREPARED);
 
             await expect(messageService.prepare(producerName,message.id,{})).rejects.toThrow('The status of this message is PREPARED instead of PENDING');
@@ -161,7 +163,7 @@ describe('MessageService', () => {
 
             await producer.process();
             await messageService.prepare(producerName,message.id,{});
-            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            let updatedMessage = <TransactionMessage>await producer.messageManager.get(message.id);
             expect(updatedMessage.status).toBe(MessageStatus.PREPARED);
        
 
@@ -175,8 +177,8 @@ describe('MessageService', () => {
         });
 
         it('.prepared  after timeout check done', async (done) => {
-            process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
             message = await messageService.create(producerName,messageType,topic,{},{
+                delay:100
             });
             expect(message.topic).toBe(topic);
             let producer = actorManager.get(producerName); 
@@ -196,8 +198,8 @@ describe('MessageService', () => {
         });
 
         it('.prepared  after timeout check cancel', async (done) => {
-            process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
             message = await messageService.create(producerName,messageType,topic,{},{
+                delay:100
             });
             expect(message.topic).toBe(topic);
             let producer = actorManager.get(producerName); 
@@ -237,7 +239,7 @@ describe('MessageService', () => {
             await producer.process();
             producer.coordinator.on('completed',async (job)=>{
                 if(message.job.id == job.id){
-                    let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+                    let updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.DONE)
                     done()
                 }
@@ -246,18 +248,18 @@ describe('MessageService', () => {
             
 
             let result = await messageService.confirm(producerName,message.id);
-            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            let updatedMessage = await producer.messageManager.get(message.id);
             expect(updatedMessage.status).toBe(MessageStatus.DOING);
         });
 
         it('.cancel after confirm',async (done) => {
             let userActor = actorManager.get('user');
-            let message:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'test',{},{delay:5000});
+            let message:TransactionMessage =  <TransactionMessage>await userActor.messageManager.create(MessageType.TRANSACTION,'test',{},{delay:5000});
             await userActor.process();
             userActor.coordinator.on('completed',async (job)=>{
                 if(message.job.id == job.id){
                     //process后
-                    let updatedMessage:TransactionMessage = await userActor.messageManager.get(message.id);
+                    let updatedMessage = <TransactionMessage>await userActor.messageManager.get(message.id);
                     await expect(updatedMessage.confirm()).rejects.toThrow(`The status of this message is ${MessageStatus.CANCELED}.`)
                     done()
                 }
@@ -268,15 +270,14 @@ describe('MessageService', () => {
             expect(await message.getStatus()).toBe(MessageStatus.CANCELLING)
             
             //未process前    (需要重新查询一次message，否则状态未更新)
-            let updatedMessage:TransactionMessage = await userActor.messageManager.get(message.id);
+            let updatedMessage = <TransactionMessage>await userActor.messageManager.get(message.id);
             await expect(updatedMessage.confirm()).rejects.toThrow(`The status of this message is ${MessageStatus.CANCELLING}.`)
             
         })
 
         it('.remote status pending after done', async (done) => {
-            process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
             message = await messageService.create(producerName,messageType,topic,{},{
-                delay:50,
+                delay:100,
                 backoff:{
                     type:'exponential',
                     delay: 100  
@@ -292,7 +293,7 @@ describe('MessageService', () => {
             producer.coordinator.on('failed',async (job)=>{
                 let updatedMessage = await producer.messageManager.get(message.id);
                 if(message.job.id == job.id && job.attemptsMade == 1){//第一次获取失败
-                    expect(job.opts.delay).toBe(Number(process.env.TRANSACATION_MESSAGE_JOB_DELAY));
+                    expect(job.opts.delay).toBe(100);
                     expect(job.attemptsMade).toBe(1)
                     mock.onPost(producer.api).reply(200,{
                         status: MessageStatus.PENDING
@@ -327,8 +328,8 @@ describe('MessageService', () => {
             let messageType = MessageType.TRANSACTION;
             let topic = 'posts_create';
             let message:Message;
-            process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
             message = await messageService.create(producerName,messageType,topic,{},{
+                delay:100
 
             });
             expect(message.topic).toBe(topic);
@@ -373,7 +374,7 @@ describe('MessageService', () => {
             //message确认后，移除message的检测job
             producer.coordinator.on('completed',async (job)=>{
                 if(message.job.id == job.id){
-                    let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+                    let updatedMessage = await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.CANCELED)
                     done()
                 }
@@ -381,18 +382,18 @@ describe('MessageService', () => {
            
             await messageService.cancel(producerName,message.id);
 
-            let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+            let updatedMessage = await producer.messageManager.get(message.id);
             expect(updatedMessage.status).toBe(MessageStatus.CANCELLING);
         });
 
         it('.confirm after cancel',async (done) => {
             let userActor = actorManager.get('user');
-            let message:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'test',{},{delay:5000});
+            let message:TransactionMessage = <TransactionMessage>await userActor.messageManager.create(MessageType.TRANSACTION,'test',{},{delay:5000});
             await userActor.process();
             userActor.coordinator.on('completed',async (job)=>{
                 if(message.job.id == job.id){
                     //process后
-                    let updatedMessage:TransactionMessage = await userActor.messageManager.get(message.id);
+                    let updatedMessage = <TransactionMessage>await userActor.messageManager.get(message.id);
                     await expect(updatedMessage.cancel()).rejects.toThrow(`The status of this message is ${MessageStatus.DONE}.`)
                     done()
                 }
@@ -403,14 +404,14 @@ describe('MessageService', () => {
             expect(await message.getStatus()).toBe(MessageStatus.DOING)
             
             //未process前    (需要重新查询一次message，否则状态未更新)
-            let updatedMessage:TransactionMessage = await userActor.messageManager.get(message.id);
+            let updatedMessage = <TransactionMessage>await userActor.messageManager.get(message.id);
             await expect(updatedMessage.cancel()).rejects.toThrow(`The status of this message is ${MessageStatus.DOING}.`)
             
         })
 
         it('.timeout check cancel', async (done) => {
-            process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
             message = await messageService.create(producerName,messageType,topic,{},{
+                delay:100
             });
             expect(message.topic).toBe(topic);
             let producer = actorManager.get(producerName); 
@@ -448,7 +449,7 @@ describe('MessageService', () => {
             await producer.process();
             producer.coordinator.on('completed',async (job)=>{
                 if(message.job.id == job.id){
-                    let updatedMessage:TransactionMessage = await producer.messageManager.get(message.id);
+                    let updatedMessage = <TransactionMessage>await producer.messageManager.get(message.id);
                     expect(updatedMessage.status).toBe(MessageStatus.CANCELED)
                     let result = await updatedMessage.cancel()
                     expect(result.message).toBe(`Message already ${MessageStatus.CANCELED}.`)
@@ -494,6 +495,188 @@ describe('MessageService', () => {
             });
 
             expect(childMessage1.parent_subtask_id).toBe(subtask.id)
+        })
+
+    })
+
+
+    describe('.message lock', () => {
+
+        it('.add subtask long time after cancle message can not get lock', async (done) => {
+            let producerName = 'user';
+            let messageType = MessageType.TRANSACTION;
+            let topic = 'subtask_test';
+            let message:TransactionMessage;
+           
+            message = await messageService.create(producerName,messageType,topic,{},{
+                delay:300,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+            let producer = actorManager.get(producerName);  
+            let prepareResult = {title: 'get new user'};
+            
+            mock.onPost(producer.api,{
+                asymmetricMatch:(actual)=>{
+                    // console.log(actual)
+                    return true;
+                }
+            }).replyOnce(async ()=>{//让subtask超时perpared
+                await timeout(500)
+                return [200,prepareResult];
+            }) 
+
+            mock.onPost(producer.api).replyOnce(async ()=>{//让subtask超时perpared
+                return [200,{}];
+            }) 
+
+         
+            process.env.MOCK_TODONG_TOCANCING_AFTER_LINK_SUBTASK_WAIT_TIME = '200';
+
+            process.env.SUBTASK_JOB_BACKOFF_DELAY = '10';
+            //没有await，让其在cancel之后再返回数据
+            messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                processor:"user@user.create",
+                data:{
+                    username: 'jack'
+                },
+                options:{
+                    timeout:0
+                }
+            }).then(async (tccSubtask:TccSubtask)=>{
+                expect(OnDemandFastToJson(tccSubtask)['prepareResult'].data.title).toBe(prepareResult.title);
+            
+                expect(await tccSubtask.getStatus()).toBe(SubtaskStatus.CANCELED);
+                done()
+            })  
+        
+            await messageService.cancel(producerName,message.id)// message cancle的时候，正在tcc try
+
+            let updatedMessage = await producer.messageManager.get(message.id);
+            expect(updatedMessage.status).toBe(MessageStatus.CANCELLING)
+            
+            await updatedMessage.loadJob()
+
+
+
+            //如果这个时候去处理掉mesasge，应该要等待 subtask 添加到subtask_ids中
+            await expect( updatedMessage.job.process()).rejects.toThrow('Message is locking can not to cancelling')
+
+            //100毫秒
+            await timeout(100);
+             //重新查询
+
+            updatedMessage = await producer.messageManager.get(message.id);
+            await updatedMessage.loadJob();
+            await updatedMessage.job.process()//再次处理message
+
+            //重新查询
+            updatedMessage = await producer.messageManager.get(message.id);
+            await updatedMessage.loadSubtasks();
+
+
+            expect(updatedMessage.status).toBe(MessageStatus.CANCELLING)
+
+            let subtask = <TccSubtask> updatedMessage.subtasks[0];
+
+            expect(subtask.status).toBe(SubtaskStatus.CANCELLING)
+            await subtask.loadJob();
+            await subtask.job.process()
+            expect(subtask.status).toBe(SubtaskStatus.CANCELED)
+            
+
+        })
+
+
+
+        it('.add subtask long time after done message can not get lock', async (done) => {
+            let producerName = 'user';
+            let messageType = MessageType.TRANSACTION;
+            let topic = 'subtask_test';
+            let message:TransactionMessage;
+           
+            message = await messageService.create(producerName,messageType,topic,{},{
+                delay:300,
+                backoff:{
+                    type:'exponential',
+                    delay: 100  
+                }
+            });
+            expect(message.status).toBe(MessageStatus.PENDING)
+            let producer = actorManager.get(producerName);  
+            let prepareResult = {title: 'get new user'};
+            
+            mock.onPost(producer.api,{
+                asymmetricMatch:(actual)=>{
+                    // console.log(actual)
+                    return true;
+                }
+            }).replyOnce(async ()=>{//让subtask超时perpared
+                await timeout(500)
+                return [200,prepareResult];
+            }) 
+
+
+            mock.onPost(producer.api).replyOnce(async ()=>{//让subtask超时perpared
+                return [200,{}];
+            }) 
+
+         
+            process.env.MOCK_TODONG_TOCANCING_AFTER_LINK_SUBTASK_WAIT_TIME = '200';
+
+            process.env.SUBTASK_JOB_BACKOFF_DELAY = '10';
+            //没有await，让其在cancel之后再返回数据
+            messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
+                processor:"user@user.create",
+                data:{
+                    username: 'jack'
+                },
+                options:{
+                    timeout:0
+                }
+            }).then(async (tccSubtask:TccSubtask)=>{
+                expect(OnDemandFastToJson(tccSubtask)['prepareResult'].data.title).toBe(prepareResult.title);
+            
+                expect(await tccSubtask.getStatus()).toBe(SubtaskStatus.DONE);
+                done()
+            })  
+        
+            await messageService.confirm(producerName,message.id)// message cancle的时候，正在tcc try
+
+            let updatedMessage = await producer.messageManager.get(message.id);
+            await updatedMessage.loadJob()
+            expect(updatedMessage.status).toBe(MessageStatus.DOING)
+            
+            
+
+
+
+            //如果这个时候去处理掉mesasge，应该要等待 subtask 添加到subtask_ids中
+            await expect( updatedMessage.job.process()).rejects.toThrow('Message is locking can not to to doing')
+
+            //100毫秒
+            await timeout(100);
+            updatedMessage = await producer.messageManager.get(message.id);
+            await updatedMessage.loadJob()
+            await updatedMessage.job.process()//再次处理message
+
+
+            updatedMessage = await producer.messageManager.get(message.id);
+            await updatedMessage.loadSubtasks();
+
+            expect(updatedMessage.status).toBe(MessageStatus.DOING)
+
+            let subtask = <TccSubtask> updatedMessage.subtasks[0];
+
+            expect(subtask.status).toBe(SubtaskStatus.DOING)
+            await subtask.loadJob();
+            await subtask.job.process()
+            expect(subtask.status).toBe(SubtaskStatus.DONE)
+            
+
         })
 
     })
