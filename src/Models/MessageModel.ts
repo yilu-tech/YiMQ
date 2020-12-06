@@ -7,6 +7,7 @@ interface MessageProperties {
     actor_id:number,
     topic: string;
     type:string;
+    parent_subtask:string;
     context:string;
     data:string;
     subtask_total:number;
@@ -38,6 +39,10 @@ export class MessageModelClass extends NohmModel<MessageProperties> {
             type: 'string',
             index:true,
             validations: ['notEmpty']
+        },
+        parent_subtask:{
+            type:'string',
+            index:true,
         },
         type: {
             type: 'string',

@@ -85,7 +85,6 @@ describe('Subtask', () => {
             let producer = actorManager.get(producerName);
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:300,
-                attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 100  
@@ -115,7 +114,6 @@ describe('Subtask', () => {
             let contentActor = actorManager.get('content'); 
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:300,
-                attempts:5,
                 backoff:{
                     type:'exponential',
                     delay: 100  

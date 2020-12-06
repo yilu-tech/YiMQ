@@ -6,18 +6,18 @@ import { BusinessException } from '../Exceptions/BusinessException';
 import { Actor } from './Actor';
 import { SystemException } from '../Exceptions/SystemException';
 import { BroadcastMessage } from './Messages/BroadcastMessage';
-import { JobsOptions } from 'bullmq';
+import { MessageOptions } from '../Structures/MessageOptionsStructure';
 export class MessageManager {
     constructor(private producer:Actor){
 
     }
 
-    async create(type:MessageType, topic:string,data,jobOptions:JobsOptions={}):Promise<any> {
+    async create(type:MessageType, topic:string,data,options:MessageOptions):Promise<any> {
        
         
         let message:Message = this.messageFactory(type,this.producer);
-        await message.createMessageModel(topic,data);
-        await (<Message>message).create(topic,jobOptions);//创建job
+        await message.createMessageModel(topic,data,options);
+        await (<Message>message).create(topic,options);//创建job
         return message;
     }
     async get(id):Promise<any>{

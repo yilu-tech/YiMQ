@@ -16,6 +16,8 @@ export class CreateMessageDto{
     @IsInt()
     delay:number;
 
+    parent_subtask:string;
+
     data:JSON;
 }
 
@@ -38,6 +40,25 @@ export class AddSubtaskDto{
     data:JSON;
     options:JSON;
 }
+
+
+export class MessageConfirmDao{
+    @IsDefined()
+    actor:string;
+
+    @IsDefined()
+    message_id:string;
+}
+
+export class MessageCancelDao{
+    @IsDefined()
+    actor:string;
+
+    @IsDefined()
+    message_id:string;
+}
+
+
 
 
 

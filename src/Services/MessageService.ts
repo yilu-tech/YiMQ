@@ -12,19 +12,19 @@ import { OnDemandRun, OnDemandToJson } from "../Decorators/OnDemand";
 import { Actor } from "../Core/Actor";
 import { intersectionBy, unionBy } from "lodash";
 import { timestampToDateString } from "../Handlers";
-import { JobsOptions } from "bullmq";
+import { MessageOptions } from "../Structures/MessageOptionsStructure";
 @Injectable()
 export class MessageService {
     constructor(private actorManger:ActorManager){
 
     }
-    async create<P>(producerName:string,type:MessageType, topic:string,data,jobOptions?:JobsOptions):Promise<P> {
+    async create<P>(producerName:string,type:MessageType, topic:string,data,options?:MessageOptions):Promise<P> {
         let message:any;
         let producer = this.actorManger.get(producerName);
         if(!producer){
             throw new SystemException(`Producer <${producerName}> not exists.`)
         }
-        message =  await producer.messageManager.create(type,topic,data,jobOptions);
+        message =  await producer.messageManager.create(type,topic,data,options);
         return message;
     }
     async confirm(producerName:string,messageId):Promise<MessageControlResult>{
@@ -65,12 +65,14 @@ export class MessageService {
         await OnDemandRun(message,[
             OnDemandSwitch.MESSAGE_JOB,
             OnDemandSwitch.MESSAGE_SUBTASKS,
-            OnDemandSwitch.SUBTASK_JOB
-        ])
+            OnDemandSwitch.SUBTASK_JOB,
+            OnDemandSwitch.JOB_STATUS
+        ],3)
         let result = OnDemandToJson(message,[
             ExposeGroups.MESSAGE_JOB,
             ExposeGroups.RELATION_ACTOR,
-            ExposeGroups.SUBTASK_JOB
+            ExposeGroups.SUBTASK_JOB,
+            ExposeGroups.JOB_FULL,
         ])
         return result;
     }
@@ -133,7 +135,7 @@ export class MessageService {
         let sorIds = await producer.messageModel.sort({
             field:'id',
             direction: conditions.sort,
-            limit:[conditions.start,conditions.size]
+            limit:[Number(conditions.start),Number(conditions.size)]
         },ids);
         let messages = this.findResultToJson(await producer.messageModel.loadMany(sorIds));
         for (const message of messages) {

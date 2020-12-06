@@ -8,6 +8,7 @@ import { Expose } from "class-transformer";
 import { OnDemand } from "../../../Decorators/OnDemand";
 import { ExposeGroups, OnDemandSwitch } from "../../../Constants/ToJsonConstants";
 import { JobsOptions } from "bullmq";
+import { CoordinatorProcessResult } from "../../Coordinator/Coordinator";
 
 export abstract class ConsumerSubtask extends Subtask{
     @Expose({groups:[ExposeGroups.RELATION_ACTOR]})
@@ -58,8 +59,8 @@ export abstract class ConsumerSubtask extends Subtask{
     public async cancel(){
         await this.setStatusAddJobFor(SubtaskStatus.CANCELLING)
     }
-    abstract async toDo();
-    abstract async toCancel();
+    abstract async toDo():Promise<CoordinatorProcessResult>;
+    abstract async toCancel():Promise<CoordinatorProcessResult>;;
 
     private async setStatusAddJobFor(status:SubtaskStatus.DOING|SubtaskStatus.CANCELLING){
         this.status = status;
@@ -70,5 +71,4 @@ export abstract class ConsumerSubtask extends Subtask{
         await this.setStatus(status).save();//先添加job有可能会导致job开始执行，subtask的状态还未修改，导致出错
         this.job = await this.consumer.jobManager.add(this,JobType.SUBTASK,jobOptions)
     }
-
 }

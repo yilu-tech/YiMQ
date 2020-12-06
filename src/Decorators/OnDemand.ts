@@ -49,8 +49,8 @@ export function OnDemandFastToJson(target,exposeGroups:ExposeGroups[]=[]){
     return json;
 }
 
-export async function OnDemandRun(object, switchs,layer = 3) {
-    let origin = { layer: layer,total: 0, tree: { _layer: 1 },objects:{} };
+export async function OnDemandRun(object, switchs,layer = 2) {
+    let origin = { layer: layer,total: 0, tree: { _layer: 0 },objects:{} };
 
     //如果不是数组，放入数组中
     if(!Array.isArray(object)){
@@ -75,7 +75,7 @@ async function OnDemandRunChildren(origin, tree, object, switchs) {
         let target = object[targetKey];
         let runResult = await OnDemandRunTargetRun(origin,targetKey,target, switchs)
         if (['is_not_ondemand_object','is_ondemand_object'].includes(runResult)) {
-            if (tree._layer >= origin.layer) return;// 大于4层就不再向下搜索
+            if (tree._layer > origin.layer) return;// 大于4层就不再向下搜索
             tree[targetKey] = { _layer: tree._layer + 1 };//创建层并且记录层级，向下传递当前层
             await OnDemandRunChildren(origin, tree[targetKey], target, switchs)//继续搜索子对象
         }

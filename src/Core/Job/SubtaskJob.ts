@@ -5,6 +5,7 @@ import { SystemException } from "../../Exceptions/SystemException";
 import { Exclude, Expose } from "class-transformer";
 import { ExposeGroups } from "../../Constants/ToJsonConstants";
 import { Job as BullJob} from 'bullmq';
+import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
 @Exclude()
 export class SubtaskJob extends Job{
     @Expose()
@@ -17,7 +18,7 @@ export class SubtaskJob extends Job{
         this.subtask_id = subtask.id;
     }
     async process() {
-        let result;
+        let result:CoordinatorProcessResult={process:null};
         switch (this.subtask.status) {
             //重复做到成功为止
             case SubtaskStatus.DOING:

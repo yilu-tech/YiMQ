@@ -1,3 +1,4 @@
+import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
 import { Message, MessageControlResult } from "./Message";
 
 
@@ -5,8 +6,8 @@ export class GeneralMessage extends Message{
     public async loadSubtasks() {
         return this;
     }
-    toDoing(): Promise<Message> {
-        throw new Error("Method not implemented.");
+    async toDoing(): Promise<CoordinatorProcessResult> {
+        return {process: 'success'};
     }
     statusToDoing(): Promise<Message> {
         throw new Error("Method not implemented.");

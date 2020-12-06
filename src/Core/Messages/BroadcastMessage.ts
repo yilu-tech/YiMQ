@@ -2,15 +2,16 @@ import { Message } from "./Message";
 import { MessageStatus,MessageType } from "../../Constants/MessageConstants";
 import { LstrSubtask } from "../Subtask/LstrSubtask";
 import { SubtaskType } from "../../Constants/SubtaskConstants";
-import { SubtaskModelClass } from "../../Models/SubtaskModel";
+import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
+import { MessageOptions } from "../../Structures/MessageOptionsStructure";
 
 
 export class BroadcastMessage extends Message{
     public type = MessageType.BROADCAST;
     public context:object = {};
 
-    async createMessageModel(topic:string,data){
-        await super.createMessageModel(topic,data);
+    async createMessageModel(topic:string,data,options:MessageOptions){
+        await super.createMessageModel(topic,data,options);
         this.model.property('status',MessageStatus.DOING);//等待最后一个子任务完成时来标记message为done状态
         return this;
     }
@@ -24,12 +25,12 @@ export class BroadcastMessage extends Message{
         this.model.property('context',context);
     }
 
-    async toDoing() {
+    async toDoing():Promise<CoordinatorProcessResult> {
         let listeners = await this.getListeners()
         await this.setProperty('subtask_contexts',listeners).save();
         await this.createListenerSubtasks(listeners)
         await this.setStatus(MessageStatus.DOING).save();
-        return this;
+        return {process: 'success'};
     }
 
     private async getListeners(){

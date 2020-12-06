@@ -5,9 +5,9 @@ import { TransactionMessage } from '../Messages/TransactionMessage';
 import { MessageStatus } from '../../Constants/MessageConstants';
 import { ConsumerSubtask } from './BaseSubtask/ConsumerSubtask';
 import { HttpCoordinatorRequestException } from '../../Exceptions/HttpCoordinatorRequestException';
-import { OnDemandFastToJson } from '../../Decorators/OnDemand';
 import { Exclude, Expose } from 'class-transformer';
 import { Logger } from '@nestjs/common';
+import { CoordinatorProcessResult } from '../Coordinator/Coordinator';
 
 export class TccSubtaskPrepareResult{
     constructor(public status:any=null,public message:any=null, public data:any=null){
@@ -37,6 +37,7 @@ export class TccSubtask extends ConsumerSubtask{
             id: this.id,
             type: this.type,
             message_id: this.message.id,
+            producer: this.message.producer.name,
             processor: this.processor,
             data: this.data,
             options:options
@@ -72,28 +73,34 @@ export class TccSubtask extends ConsumerSubtask{
         
     }
 
-    async toDo(){
+    async toDo():Promise<CoordinatorProcessResult>{
         let callContext = {
             id: this.id,
             type: this.type,
             message_id: this.message.id,
             processor: this.processor
         }
-        let result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CONFIRM,callContext);
+        let actor_result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CONFIRM,callContext);
 
         await this.completeAndSetMeesageStatus(SubtaskStatus.DONE,MessageStatus.DONE);
-        return result;
+        return {
+            process:'success',
+            actor_result
+        }
     }
-    async toCancel(){
+    async toCancel():Promise<CoordinatorProcessResult>{
         let callContext = {
             id: this.id,
             type: this.type,
             message_id: this.message.id,
             processor: this.processor
         }
-        let result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CANCEL,callContext);
+        let actor_result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CANCEL,callContext);
         await this.completeAndSetMeesageStatus(SubtaskStatus.CANCELED,MessageStatus.CANCELED);
-        return result;
+        return {
+            process:'success',
+            actor_result
+        }
     }
 
     public setPrepareResult(prepareResult){

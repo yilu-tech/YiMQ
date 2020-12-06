@@ -8,6 +8,8 @@ import {  Expose, Transform } from "class-transformer";
 import { format } from "date-fns";
 import {  ExposeGroups, OnDemandSwitch } from "../../Constants/ToJsonConstants";
 import { OnDemand } from "../../Decorators/OnDemand";
+import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
+import { MessageOptions } from "../../Structures/MessageOptionsStructure";
 import { JobsOptions } from "bullmq";
 
 export interface SubtaskContext{
@@ -66,12 +68,17 @@ export abstract class Message{
     @Expose()
     public clear_status:string;
 
+    @Expose({groups:[ExposeGroups.RELATION_ACTOR]})
+    public parent_subtask_producer:Actor;
+    @Expose()
+    public parent_subtask_id:string;
+
     constructor(producer:Actor){
 
         this.producer = producer;
     }
 
-    async createMessageModel(topic,data){
+    async createMessageModel(topic,data,options:MessageOptions){
         this.model = new this.producer.messageModel();
         
         this.model.id = String(await this.producer.actorManager.getMessageGlobalId());
@@ -81,6 +88,16 @@ export abstract class Message{
         this.model.property('type',this.type);
         this.model.property('status',MessageStatus.PENDING);
         this.model.property('clear_status',MessageClearStatus.WAITING);
+
+        if(options.parent_subtask){
+            let parent_subtask_info = options.parent_subtask.split('@');
+            let producer = this.producer.actorManager.get(parent_subtask_info[0]);
+            let parent_subtask = `${producer.id}@${parent_subtask_info[1]}`;
+            this.model.property('parent_subtask',parent_subtask)
+        }else{
+            this.model.property('parent_subtask','-1')
+        }
+
         if(data){
             this.model.property('data',data)
         }
@@ -94,8 +111,12 @@ export abstract class Message{
      * 创建message对应的job
      * @param options 
      */
-    async create(topic:string, jobOptions:JobsOptions):Promise<any>{
-        jobOptions.jobId = await this.producer.actorManager.getJobGlobalId();
+    async create(topic:string, options:MessageOptions):Promise<any>{
+        let jobOptions:JobsOptions = {
+            jobId: await this.producer.actorManager.getJobGlobalId(),
+            delay: options.delay,
+            backoff: options.backoff
+        };
         this.model.property('job_id',jobOptions.jobId);//先保存job_id，如果先创建job再保存id可能产生，message未记录job_id的情况
         await this.save();
         await this.initProperties();
@@ -120,6 +141,13 @@ export abstract class Message{
         this.clear_status = this.model.property('clear_status');
 
 
+        let parent_subtask_split = this.model.property('parent_subtask').split('@');
+        if(parent_subtask_split.length > 0){
+            this.parent_subtask_producer = this.producer.actorManager.getById(Number(parent_subtask_split[0]));
+            this.parent_subtask_id = parent_subtask_split[1];
+        }
+
+
     }
 
     async restore(messageModel){
@@ -136,7 +164,7 @@ export abstract class Message{
         return this;
     }
 
-    abstract async toDoing():Promise<Message>;
+    abstract async toDoing():Promise<CoordinatorProcessResult>;
 
     protected async incrPendingSubtaskTotal(){
         let multi = this.producer.redisClient.multi();

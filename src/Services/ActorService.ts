@@ -11,6 +11,7 @@ import { OnDemandRun, OnDemandToJson } from "../Decorators/OnDemand";
 import { MessageStatus } from "../Constants/MessageConstants";
 import { sortBy } from "lodash";
 import { Actor } from "../Core/Actor";
+import { JobStatus } from "../Constants/JobConstants";
 
 
 
@@ -123,7 +124,7 @@ export class ActorService{
         let asc = sort == 'ASC' ? true : false;
         let end = start + size - 1;
 
-        let jobs = await actor.coordinator.getJobs(status,start,end,asc)
+        let [jobs,abnormal_jobs] = await actor.coordinator.getJobs(status,start,end,asc)
 
         let OnDemandSwitchs = []
 
@@ -147,9 +148,22 @@ export class ActorService{
             size: size,
             sort: sort, 
             jobs: items,
+            abnormal_jobs: abnormal_jobs,
+            abnormal_jobs_total: abnormal_jobs.length
         };
     }
 
+    public async abnormalJob(actor_id){
+        let actor = this.actorManager.getById(actor_id);    
+        if(!actor){
+            throw new BusinessException(`actor_id ${actor_id} is not exists.`)
+        }
+        let [jobs,abnormal_jobs] = await actor.coordinator.getJobs([JobStatus.ACTIVE,JobStatus.COMPLETED,JobStatus.DELAYED,JobStatus.FAILED,JobStatus.PAUSED,JobStatus.WAITING])
+        return {
+            abnormal_jobs_total: abnormal_jobs.length,
+            abnormal_jobs:abnormal_jobs
+        }
+    }
     public async job(actor_id,job_id){
         let actor = this.actorManager.getById(actor_id);    
         if(!actor){

@@ -102,6 +102,10 @@ export abstract class Job{
         return status;
     }
 
+    public async promote(){
+        await this.context.promote();
+    }
+
     // public async retry():Promise<void>{
     //     await this.context.retry();
 

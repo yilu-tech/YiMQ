@@ -39,8 +39,8 @@ export class JobManager{
                     message_id: message.id,
                     type: type,
                 };
-                let defaultDelay = 2000;
-                jobOptions.delay = jobOptions.delay > defaultDelay ? jobOptions.delay : Number(process.env.TRANSACATION_MESSAGE_JOB_DELAY) || defaultDelay;
+                let defaultDelay = 1000*5;
+                jobOptions.delay = jobOptions.delay >= 1000 ? jobOptions.delay : Number(process.env.TRANSACATION_MESSAGE_JOB_DELAY) || defaultDelay;
                 jobContext = await this.actor.coordinator.add(message.topic,data,jobOptions);
                 job = new MessageJob(message,jobContext);
                 break;
@@ -85,7 +85,7 @@ export class JobManager{
                 }
                 let subtask = await producer.subtaskManager.get(jobContext.data.subtask_id);
                 if(!subtask){
-                    throw new SystemException(`Actor [${this.actor.name}-${this.actor.id}] Job ${jobContext.id} not found Subtask ${jobContext.data.subtask_id}.`)
+                    throw new SystemException(`Actor [${this.actor.name}-${this.actor.id}] Job ${jobContext.id} not found producer [${jobContext.data.producer_id}] Subtask ${jobContext.data.subtask_id}.`)
                 }
                 
                 //生成subtask实例

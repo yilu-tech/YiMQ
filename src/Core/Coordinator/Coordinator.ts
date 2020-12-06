@@ -7,6 +7,12 @@ import { clamp } from 'lodash';
 import { JobsOptions, Queue , Job as BullJob ,Worker, QueueScheduler, QueueOptions, RateLimiterOptions, WorkerOptions, QueueSchedulerOptions} from 'bullmq';
 import { JobStatus } from '../../Constants/JobConstants';
 import { Logger } from '@nestjs/common';
+
+export interface CoordinatorProcessResult{
+    process: 'success' | 'compensate success'
+    actor_result?:any;
+}
+
 export abstract class Coordinator{
     public queueRedisClient:RedisClient;
     public workerRedisClient:RedisClient;
@@ -145,14 +151,21 @@ export abstract class Coordinator{
         return this.queue.getJobCountByTypes.apply(this.queue,types);
     }
 
-    public async getJobs(types:[], start?: number, end?: number, asc?: boolean):Promise<Job[]>{
+    public async getJobs(types:any[], start?: number, end?: number, asc?: boolean){
         let  jobContexts = await this.queue.getJobs(types,start,end,asc);
         let jobs = [];
+        let abnormal_jobs = []
         for (const jobContext of jobContexts) {
-            let job = await this.actor.jobManager.restoreByContext(jobContext);
-            jobs.push(job);
+            try {
+                let job = await this.actor.jobManager.restoreByContext(jobContext);
+                jobs.push(job);   
+            } catch (error) {
+                let jobJson = jobContext.toJSON();
+                jobJson['error_message'] = error.message;
+                abnormal_jobs.push(jobJson);
+            }
         }
-        return jobs;
+        return [jobs,abnormal_jobs];
     }
 
     public async retry(job_ids:string[]|string){
