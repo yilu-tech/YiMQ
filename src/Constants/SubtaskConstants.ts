@@ -22,4 +22,5 @@ export enum SubtaskStatus{
 export interface SubtaskOptions{
     attempts?:number;
     timeout?:number;
+    delay?:number;
 }

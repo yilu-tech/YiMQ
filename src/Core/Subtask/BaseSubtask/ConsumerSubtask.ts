@@ -85,13 +85,12 @@ export abstract class ConsumerSubtask extends Subtask{
         }else{
             this.setJobId(await this.message.producer.actorManager.getJobGlobalId()) //先保存job_id占位
         }
-
         await this.setStatus(status).save()
-        
-        //先添加job有可能会导致job开始执行，subtask的状态还未修改，导致出错
+        //先添加job有可能会导致job开始执行，subtask的状态还未修改，导致出错,如果创建失败，message会重试，最终job会创建成功
         if(!this.job){ //如果job不存在就添加job
             let jobOptions:bull.JobOptions = {
-                jobId: this.job_id
+                jobId: this.job_id,
+                delay: this.options.delay
             }
             this.job = await this.consumer.jobManager.add(this,JobType.SUBTASK,jobOptions)
         }

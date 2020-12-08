@@ -3,7 +3,7 @@ import { MasterModels } from "../Models/MasterModels";
 import { Config } from "../Config";
 
 import { BusinessException } from "../Exceptions/BusinessException";
-import { NohmModel } from "nohm";
+import { NohmModel } from "yinohm";
 import { ActorModelClass } from "../Models/ActorModel";
 import { ActorManager } from "../Core/ActorManager";
 import { ExposeGroups, OnDemandSwitch } from "../Constants/ToJsonConstants";

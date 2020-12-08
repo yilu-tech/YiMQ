@@ -67,7 +67,7 @@ export abstract class Message{
     public subtask_ids:string[];
 
     @Expose()
-    public subtasks:Array<Subtask> = [];  //事物的子项目
+    public subtasks:Subtask[] = [];  //事物的子项目
     @Expose()
     public subtask_total:number;
     @Expose()
@@ -198,12 +198,11 @@ export abstract class Message{
 
     abstract async toDoing():Promise<CoordinatorProcessResult>;
 
-    protected async incrPendingSubtaskTotalAndLinkSubtask(subtask:Subtask){
-        let multi = this.producer.redisClient.multi();
-        multi['message_link_subtask_id'](this.getMessageHash(),subtask.id)
-        multi.hincrby(this.getMessageHash(),'subtask_total',1);
-        multi.hincrby(this.getMessageHash(),'pending_subtask_total',1);
-        let result = await multi.exec();
+    protected async incrPendingSubtaskTotalAndLinkSubtask(redisMulti:IORedis.Pipeline,subtask:Subtask){
+
+        redisMulti['message_link_subtask_id'](this.getMessageHash(),subtask.id)
+        redisMulti.hincrby(this.getMessageHash(),'subtask_total',1);
+        redisMulti.hincrby(this.getMessageHash(),'pending_subtask_total',1);
     
     }
     public getMessageHash(){
@@ -230,30 +229,29 @@ export abstract class Message{
         this.model.property('updated_at',new Date().getTime());
         return this.model.save();
     }
-    async getStatus(){
-        // return this.status;
-        // return await this.message.producer.redisClient.hget(this.getDbHash(),'status');
-        return await this.producer.redisClient.hget(this.getMessageHash(),'status');
+    async getStatus():Promise<MessageStatus>{
+        return <MessageStatus>await this.producer.redisClient.hget(this.getMessageHash(),'status');
     }
 
     /**
      * 重写nohm后可以取消锁
      */
-    async lock(action){
-        let millisecond = 200;
-        let lockAction = await this.producer.redisClient.get(this.message_lock_key);
+    async lock(action,millisecond = 1000){
+        let lockingAction = null;
         for(var i=0;i < 5; i++){
-            let lock = await this.producer.redisClient.set(this.message_lock_key,action,"PX",millisecond,'NX');
-            if(lock){
-                i > 0 && Logger.warn(`Actor:${this.producer.id} message:${this.id} (${action}) get ${i} times lock by ${lockAction}`,`Message`)
+            var [lockingActionResult,lockResult] = await this.producer.redisClient
+            .multi()
+            .get(this.message_lock_key)
+            .set(this.message_lock_key,action,"PX",millisecond,'NX')
+            .exec()
+            lockingAction = lockingActionResult[1] ? lockingActionResult[1]: lockingAction;
+            if(lockResult[1] == 'OK'){
+                i > 0 && Logger.warn(`Actor:${this.producer.id} message:${this.id} (${action}) get ${i} times lock by ${lockingAction}`,`Message`)
                 return true;
             }
             await timeout(20);
         }
-        
-        Logger.warn(`Actor:${this.producer.id} message:${this.id} (${action}) get ${i} times failed lock by ${lockAction}`,`Message`)
-       
-        return false;
+        throw new SystemException(`Message ${action} can't get the lock locked by ${lockingAction}.`)
     }
     async unlock(){
         return await this.producer.redisClient.del(this.message_lock_key);

@@ -14,6 +14,7 @@ export class MessageJob extends Job{
     public message_id:number | string;
     @Expose({groups:[ExposeGroups.JOB_PARENT]})
     public message:TransactionMessage;//TransactionMessage ---> Message
+    public check_timeout = 1000*10;
     constructor(message:TransactionMessage,public readonly context:bull.Job){
         super(context)
         this.message_id = message.id;
@@ -21,35 +22,43 @@ export class MessageJob extends Job{
     }
     async process() {
         let result:CoordinatorProcessResult;
-        switch (this.message.status) {
-            case MessageStatus.DOING:
-                result = await this.message.toDoing();
-                result.action = 'toDoing';
-                break;
-            case MessageStatus.CANCELLING:
-                result = await this.message.toCancelling()
-                result.action = 'toCancelling';
-                break;
-            case MessageStatus.PENDING://超时后远程检查任务状态
-                result = await this.remoteCheck();
-                result.action = 'remoteCheck';
-                break;
-            case MessageStatus.PREPARED://超时后远程检查任务状态
-                result = await this.remoteCheck();
-                result.action = 'remoteCheck';
-                break;
-            case MessageStatus.DONE:
-                throw new SystemException('MessageStatus is DONE.');
-                // result = {process:'compensate done'}
-                // break;
-            case MessageStatus.CANCELED:
-                throw new SystemException('MessageStatus is CANCELED.');
-                // result = {process:'compensate canceled'}
-                // break;
-            default:
-                throw new SystemException(`MessageStatus <${this.message.status}> is not exists.`);
+
+        await this.message.lock('process',this.check_timeout * 1.5)
+        await this.message.refresh();
+
+        try{
+            switch (this.message.status) {
+                case MessageStatus.DOING:
+                    result = await this.message.toDoing();
+                    result.action = 'toDoing';
+                    break;
+                case MessageStatus.CANCELLING:
+                    result = await this.message.toCancelling()
+                    result.action = 'toCancelling';
+                    break;
+                case MessageStatus.PENDING://超时后远程检查任务状态
+                    result = await this.remoteCheck();
+                    result.action = 'remoteCheck';
+                    break;
+                case MessageStatus.PREPARED://超时后远程检查任务状态
+                    result = await this.remoteCheck();
+                    result.action = 'remoteCheck';
+                    break;
+                case MessageStatus.DONE:
+                    throw new SystemException('MessageStatus is DONE.');
+                    // result = {process:'compensate done'}
+                    // break;
+                case MessageStatus.CANCELED:
+                    throw new SystemException('MessageStatus is CANCELED.');
+                    // result = {process:'compensate canceled'}
+                    // break;
+                default:
+                    throw new SystemException(`MessageStatus <${this.message.status}> is not exists.`);
+            }
+            return result;
+        }finally{
+            await this.message.unlock();
         }
-        return result;
 
     
     }
@@ -63,13 +72,18 @@ export class MessageJob extends Job{
             job_key: `bull:${this.message.producer.id}:${this.message.job_id}`
         }
         let result:CoordinatorProcessResult;
-        let actor_result = await this.message.producer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.MESSAGE_CHECK,context);
+        let options = {
+            timeout: this.check_timeout
+        }
+        let actor_result = await this.message.producer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.MESSAGE_CHECK,context,options);
         switch (actor_result.status) {
             case ActorMessageStatus.CANCELED:
-                result = await this.message.toCancelling();
+                await this.message.setStatus(MessageStatus.CANCELLING).save();
+                result = await this.message.toCancelling()
                 break;
             case ActorMessageStatus.DONE:
-                result = await this.message.toDoing();
+                await this.message.setStatus(MessageStatus.DOING).save();
+                result = await this.message.toDoing()
                 break;
             case ActorMessageStatus.PENDING:
                 throw new SystemException(`ActorMessageStatus is ${actor_result.status}`);

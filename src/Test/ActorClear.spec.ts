@@ -178,7 +178,7 @@ describe('ActorClearTest', () => {
                     delay:10,
                 });
                 // await message.setStatus(MessageStatus.DONE).save();
-                let subtask:EcSubtask =  await message.addSubtask(SubtaskType.EC,{
+                let subtask:EcSubtask =  <EcSubtask>await message.addSubtask(SubtaskType.EC,{
                     processor:userActor.name,
                     data:{
                         'name':1

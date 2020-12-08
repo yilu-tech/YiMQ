@@ -52,7 +52,7 @@ export class JobManager{
                     subtask_id: subtask.id,
                     type: JobType.SUBTASK,
                 }
-                jobOptions.delay = Number(process.env.SUBTASK_JOB_DELAY) || 0;//单元测试部分地方需要延时
+                // jobOptions.delay = Number(process.env.SUBTASK_JOB_DELAY) || 0;//单元测试部分地方需要延时
                 jobOptions.attempts = subtask.options.attempts ? subtask.options.attempts : 3;
                 jobOptions.attempts = this.actor.options.subtask_force_attempts ? this.actor.options.subtask_force_attempts: jobOptions.attempts;
                 jobOptions.backoff = {

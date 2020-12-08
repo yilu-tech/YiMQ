@@ -265,7 +265,9 @@ describe('Subtask', () => {
             await updatedMessage.loadSubtasks();
             expect(updatedMessage.subtasks.length).toBe(2);
             expect(updatedMessage.subtasks['0'].data).toMatchObject(body.prepare_subtasks[0].data);
+            expect(updatedMessage.subtasks['0'].status).toBe(SubtaskStatus.PREPARED);
             expect(updatedMessage.subtasks['1'].data).toMatchObject(body.prepare_subtasks[1].data)
+            expect(updatedMessage.subtasks['1'].status).toBe(SubtaskStatus.PREPARED);
         })
 
         it('.add tcc failed', async () => {
@@ -382,11 +384,13 @@ describe('Subtask', () => {
 
             let prepareResult = {title: 'get update user'};
             mock.onPost(producer.api).reply(200,prepareResult)
-            process.env.SUBTASK_JOB_DELAY = '2000';//延迟subtask的job执行，便于只测试message job
             let ecSubtask:EcSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,{
                 processor:"content@post.create",
                 data:{
                     title: 'new post'
+                },
+                options:{
+                    delay:2000
                 }
             })   
 
@@ -433,7 +437,6 @@ describe('Subtask', () => {
 
             
             let producer = actorManager.get(producerName); 
-            process.env.SUBTASK_JOB_DELAY = '2000';//延迟subtask的job执行，便于只测试message job
             //mock添加tcc子任务时的远程调用
             let prepareResult = {title: 'get new user'};
             mock.onPost(contentActor.api).reply(200,prepareResult)
@@ -441,6 +444,9 @@ describe('Subtask', () => {
                 processor:"content@post.create",
                 data:{
                     title: 'new post'
+                },
+                options:{
+                    delay:2000
                 }
             })          
             expect(OnDemandFastToJson(tccSubtask)['prepareResult'].data.title).toBe(prepareResult.title);
@@ -451,6 +457,9 @@ describe('Subtask', () => {
                 processor:"content@post.create",
                 data:{
                     title: 'new post'
+                },
+                options:{
+                    delay:2000
                 }
             })   
 
@@ -515,7 +524,7 @@ describe('Subtask', () => {
                 data:{
                     title: 'new post'
                 }
-            })).rejects.toThrow('The status of this message is DOING instead of PENDING')
+            })).rejects.toThrow('The message status is already DOING')
 
 
             await expect(messageService.addSubtask(producerName,message.id,SubtaskType.EC,{
@@ -523,7 +532,7 @@ describe('Subtask', () => {
                 data:{
                     title: 'new post'
                 }
-            })).rejects.toThrow('The status of this message is DOING instead of PENDING')
+            })).rejects.toThrow('The message status is already DOING')
 
         });
 
@@ -620,7 +629,6 @@ describe('Subtask', () => {
             expect(message.status).toBe(MessageStatus.PENDING)
         
             let producer = actorManager.get(producerName); 
-            process.env.SUBTASK_JOB_DELAY = '500';//加快二次尝试，防止测试超时
             //mock添加tcc子任务时的远程调用
             let prepareResult = {title: 'get new user'};
 
@@ -707,7 +715,6 @@ describe('Subtask', () => {
                 await tccSubtask.refresh();
         
                 expect(tccSubtask.status).toBe(SubtaskStatus.DONE);
-                console.log(tccSubtask.job_id)
                 
 
                 await message.refresh();
@@ -831,7 +838,7 @@ describe('Subtask', () => {
         
             let producer = actorManager.get(producerName); 
 
-            process.env.SUBTASK_JOB_DELAY = '200';//子任务延迟，否则会有一定几率比message的job先执行完毕
+
 
             //mock添加tcc子任务时的远程调用
             let prepareResult = {title: 'get new user'};
@@ -1165,7 +1172,7 @@ describe('Subtask', () => {
         
             let producer = actorManager.get(producerName); 
 
-            process.env.SUBTASK_JOB_DELAY = '200';//子任务延迟，否则会有一定几率比message的job先执行完毕
+
 
             //mock添加tcc子任务时的远程调用
             let prepareResult = {message: 'username exists.'};
@@ -1192,10 +1199,12 @@ describe('Subtask', () => {
                 processor:"user@user.create",
                 data:{
                     title: 'new post'
+                },
+                options:{
+                    delay:1000
                 }
             });
 
-            process.env.SUBTASK_JOB_DELAY = '3000';
 
             await message.confirm();
             await message.toDoing();

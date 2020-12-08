@@ -1,12 +1,12 @@
 import { SubtaskType, SubtaskStatus, SubtaskOptions } from "../../../Constants/SubtaskConstants";
 import { SubtaskModelClass } from "../../../Models/SubtaskModel";
-import { Job } from "../../Job/Job";
 import { TransactionMessage } from "../../Messages/TransactionMessage";
 import { MessageStatus } from "../../../Constants/MessageConstants";
 import { Expose, Transform } from "class-transformer";
 import { format } from "date-fns";
 import { ExposeGroups } from "../../../Constants/ToJsonConstants";
 import { Actor } from "../../Actor";
+import IORedis from "ioredis";
 export abstract class Subtask{
     @Expose()
     id:number;
@@ -80,22 +80,26 @@ export abstract class Subtask{
         return subtaskModel;
     }
 
-    public async create(body){
+    public async create(redisMulti:IORedis.Pipeline,body){
         let subtaskModel  = await this.createSubtaskModel(body);
-        await subtaskModel.save() 
+        await subtaskModel.save({silent:true,redisMulti: <any>redisMulti}) 
         await this.initProperties(subtaskModel)
     }
     async restore(subtaskModel){
         await this.initProperties(subtaskModel);
     };
-    abstract async prepare();
+    async prepare() {
+        await this.refresh(); //由于是用multi执行的创建，需要重新加载model，否则会再次执行所有数据更新，造成覆盖//这句应该移动到创建之后
+        await this.setStatus(SubtaskStatus.PREPARED).save();//最终一致由于不用try，直接进入准备成功状态
+        return this;
+    }
     abstract async confirm();
     abstract async cancel();
     abstract async toDo();
     abstract async toCancel();
 
     public async getStatus(){
-        return await this.message.producer.redisClient.hget(this.getDbHash(),'status');
+        return <SubtaskStatus>await this.message.producer.redisClient.hget(this.getDbHash(),'status');
     }
     setStatus(status:SubtaskStatus){
         this.status = status;

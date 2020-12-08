@@ -42,22 +42,24 @@ export class TccSubtask extends ConsumerSubtask{
             data: this.data,
             options:options
         }
-        this.prepareResult = new TccSubtaskPrepareResult();
+        let prepareResult = new TccSubtaskPrepareResult();
         try {
-            this.prepareResult.status = 200;
+            prepareResult.status = 200;
          
-            this.prepareResult.data = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.TRY,callContext,options);     
+            prepareResult.data = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.TRY,callContext,options);     
 
             // if((await this.getStatus()) == SubtaskStatus.CANCELLING){
             //     Logger.warn(`Actor:${this.producer.id} Subtask:${this.id} status is CANCELLING after prepared.`,`TccSubtask ${this.type}`)
             // }else{
             //     this.setStatus(SubtaskStatus.PREPARED);
             // }
-            let status = await this.getStatus();
-            if(status == SubtaskStatus.PREPARING){
+            // let status = await this.getStatus();
+            await this.refresh();//multi创建后需要重新获取数据
+            
+            if(this.status == SubtaskStatus.PREPARING){ //如果已经不是PREPARING状态，所以已经进入回滚或者确认处理，不再修改状态
                 this.setStatus(SubtaskStatus.PREPARED);
             }else{
-                Logger.warn(`Actor:${this.producer.id} Subtask:${this.id} status is ${status} after prepared.`,`TccSubtask ${this.type}`)
+                Logger.warn(`Actor:${this.producer.id} Subtask:${this.id} status is ${this.status} after prepared.`,`TccSubtask ${this.type}`)
             }         
 
         } catch (error) {
@@ -65,7 +67,7 @@ export class TccSubtask extends ConsumerSubtask{
                throw error;
             }
             //如果是 HttpCoordinatorRequestException 不抛出异常，以200状态码返回
-            this.prepareResult = {
+            prepareResult = {
                 status: error.statusCode,
                 message: error.message,
                 data: error.response,
@@ -74,7 +76,7 @@ export class TccSubtask extends ConsumerSubtask{
             // Logger.debug(`Subtask ${this.id} ${error.message}`,`TccSubtask ${this.type}`)
         }
         
-        await this.setPrepareResult(this.prepareResult)
+        await this.setPrepareResult(prepareResult)
         .save()
         return this;
         

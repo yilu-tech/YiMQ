@@ -9,15 +9,16 @@ import { LstrSubtask } from "./Subtask/LstrSubtask";
 import { BusinessException } from "../Exceptions/BusinessException";
 import { Subtask } from "./Subtask/BaseSubtask/Subtask";
 import { Message } from "./Messages/Message";
+import IORedis from "ioredis";
 export class SubtaskManager{
     constructor(private actor:Actor){
 
     }
 
-    async addSubtask(message:Message,type,body):Promise<Subtask>{
+    async addSubtask(redisMulti:IORedis.Pipeline,message:Message,type,body):Promise<Subtask>{
 
         let subtask =  this.factory(message,type);
-        await subtask.create(body);
+        await subtask.create(redisMulti,body);
         return subtask;
     }
 

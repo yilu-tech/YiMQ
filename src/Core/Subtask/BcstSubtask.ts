@@ -43,12 +43,6 @@ export class BcstSubtask extends Subtask{
         return this;
     }
 
-
-    async prepare() {
-        await this.setStatus(SubtaskStatus.PREPARED).save();
-        return this;
-    }
-
     async confirm(){
         // this.broadcastMessage = await this.message.producer.messageManager.create(MessageType.BROADCAST,this.context.topic);
         this.broadcastMessage = new BroadcastMessage(this.message.producer);

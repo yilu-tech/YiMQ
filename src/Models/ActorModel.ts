@@ -1,5 +1,5 @@
 
-import { NohmModel, TTypedDefinitions } from "nohm";
+import { NohmModel, TTypedDefinitions } from "yinohm";
 import { RedisOptions } from "ioredis";
 
 

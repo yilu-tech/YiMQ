@@ -12,8 +12,7 @@
 ###环境变量
 
 1. CONFIG_DIR_PATH (配置文件路径)
-2. SUBTASK_JOB_DELAY (subtask job 延迟时间 )
-3. SUBTASK_JOB_BACKOFF_DELAY (subtask job重试延迟时间 )
+2. SUBTASK_JOB_BACKOFF_DELAY (subtask job重试延迟时间 )
 
 ##命令
 

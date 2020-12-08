@@ -30,7 +30,7 @@ export class SubtaskJob extends Job{
                 result.action = 'toCancel';
                 break;
             case SubtaskStatus.PREPARING:
-                throw new SystemException('SubtaskStatus is PENDING');
+                throw new SystemException('SubtaskStatus is PREPARING');
             case SubtaskStatus.PREPARED:
                 throw new SystemException('SubtaskStatus is PREPARED');
             case SubtaskStatus.DONE://todo:: 已经done情况可以考虑return job成功，因为job里面调整了subtask状态为done，只是job失败了

@@ -9,11 +9,6 @@ import { CoordinatorProcessResult } from '../Coordinator/Coordinator';
 export class EcSubtask extends ConsumerSubtask{
     public type:SubtaskType = SubtaskType.EC;
 
-    async prepare() {
-        await this.setStatus(SubtaskStatus.PREPARED).save();//最终一致由于不用try，直接进入准备成功状态
-        return this;
-    }
-
     /**
      * confirm 的时候需要传递data
      */

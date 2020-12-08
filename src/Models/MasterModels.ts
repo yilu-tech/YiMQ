@@ -1,5 +1,5 @@
-import { Injectable, Inject } from "@nestjs/common";
-import { NohmClass, IStaticMethods, NohmModel } from "nohm";
+import { Injectable } from "@nestjs/common";
+import { NohmClass, IStaticMethods, NohmModel } from "yinohm";
 import { ActorModelClass } from "./ActorModel";
 import { ListenerModelClass } from "./ListenerModel";
 import { RedisManager } from "../Handlers/redis/RedisManager";
@@ -16,7 +16,7 @@ export class MasterModels {
     public async register(){
         let redisClient = await this.redisManager.client();
         this.masterNohm = new NohmClass({})
-        this.masterNohm.setClient(redisClient);
+        this.masterNohm.setClient(<any>redisClient);
         this.ActorModel  = this.masterNohm.register(ActorModelClass);
         this.ListenerModel = this.masterNohm.register(ListenerModelClass);
     }

@@ -6,11 +6,13 @@ import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
 import { MessageOptions } from "../../Structures/MessageOptionsStructure";
 import { RedisClient } from "../../Handlers/redis/RedisClient";
 import { Exclude } from "class-transformer";
+import IORedis from "ioredis";
 
 @Exclude()
 export class BroadcastMessage extends Message{
     public type = MessageType.BROADCAST;
     public context:object = {};
+    public subtasks:LstrSubtask[] = [];
 
     async createMessageModel(topic:string,data,options:MessageOptions){
         await super.createMessageModel(topic,data,options);
@@ -26,6 +28,7 @@ export class BroadcastMessage extends Message{
             return {result: 'success',desc:'Not have listeners.'};
         }
         await this.createListenerSubtasks(listener_contexts)
+        await this.confirmListenerSubtaks(this.subtasks);
         await this.setStatus(MessageStatus.DOING).save();
         return {result: 'success',desc:`Broadcast to ${this.subtasks.length} listeners.`};
     }
@@ -38,8 +41,7 @@ export class BroadcastMessage extends Message{
         if(this.parent_subtask){
             this.parent_subtask.completeAndSetMeesageStatusByScript(multi,SubtaskStatus.DONE,MessageStatus.DONE);//修改parent_bcst_subtask状态
         }
-        let multiResult = await multi.exec();
-        // console.debug('BroadcastMessage notHaveListenerToDone',multiResult)
+        let multiResult = await multi.exec();//todo: 判断结果
     }
 
     private async getListeners(){
@@ -60,14 +62,16 @@ export class BroadcastMessage extends Message{
     }
     
     private async createListenerSubtasks(listeners){
+        let redisMulti = this.producer.redisClient.multi();
         this.subtasks = [];
         for (const listener of listeners) {
             //重写nohm后 可以吧 hasListener addSubtask incrPendingSubtaskTotal放在一个事务中
             if(!await this.hasListener(this.producer.redisClient,listener.consumer_id,listener.processor)){
-                let subtask = await this.addListenerSubtask(listener)
-                await this.incrPendingSubtaskTotalAndLinkSubtask(subtask);
+                let subtask = await this.addListenerSubtask(redisMulti,listener)
+                this.subtasks.push(subtask);
             }
         }
+        await redisMulti.exec(); //todo: 判断结果
     }
 
     private async hasListener(redisClient:RedisClient,consumer_id,processor){
@@ -79,20 +83,23 @@ export class BroadcastMessage extends Message{
         return await redisClient['message_has_subtask'](message_has_subtask_ids_tmp_key,subtask_message_id_index_key,subtask_consumer_id_index_key,subtask_processor_index_key)
     }
 
-    async addListenerSubtask(listener){
+    async addListenerSubtask(redisMulti:IORedis.Pipeline,listener){
         let body = {
             subtask_id: listener.subtask_id,
             consumer_id: listener.consumer_id,
             processor: listener.processor,
             data:{},
         }
-        let subtask = await this.producer.subtaskManager.get(listener.subtask_id);
+        let subtask = <LstrSubtask>await this.producer.subtaskManager.get(listener.subtask_id);
         if(!subtask){
-            subtask = <LstrSubtask>(await this.producer.subtaskManager.addSubtask(this,SubtaskType.LSTR,body)) 
+            subtask = <LstrSubtask>(await this.producer.subtaskManager.addSubtask(redisMulti,this,SubtaskType.LSTR,body)) 
+            await this.incrPendingSubtaskTotalAndLinkSubtask(redisMulti,subtask);
         }     
-
-        await subtask.confirm();
-        this.subtasks.push(subtask);
         return subtask;
+    }
+    async confirmListenerSubtaks(subtasks:LstrSubtask[]){
+        for (const subtask of subtasks) {
+            await subtask.confirm();
+        }
     }
 }

@@ -1,7 +1,6 @@
 
 import { RedisManager } from "../Handlers/redis/RedisManager";
-import { NohmClass, IStaticMethods } from "nohm";
-import { Redis } from "ioredis";
+import { NohmClass, IStaticMethods } from "yinohm";
 import { Coordinator } from "./Coordinator/Coordinator";
 import { HttpCoordinator } from "./Coordinator/HttpCoordinator";
 import { GrpcCoordinator } from "./Coordinator/GrpcCoordinator";

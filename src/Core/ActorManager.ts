@@ -8,7 +8,7 @@ import { MasterModels } from '../Models/MasterModels';
 import { ActorStatus } from '../Constants/ActorConstants';
 import {AppLogger} from '../Handlers/AppLogger';
 import { Application } from '../Application';
-import NohmModel, { IDictionary } from 'nohm/tsOut/model';
+import NohmModel, { IDictionary } from 'yinohm/tsOut/model';
 import { BusinessException } from '../Exceptions/BusinessException';
 import { ActorConfigManager } from './ActorConfigManager';
 
@@ -141,7 +141,7 @@ export class ActorManager{
     }
     public async getSubtaskGlobalId():Promise<string>{
         let masterRedisClient = await this.redisManager.client();
-        return String(await masterRedisClient.incr('global:ids:subtask'));
+        return String(await masterRedisClient.incr('global:ids:subtask'));  //todo: 有性能问题 考虑生成uuid
     }
 
 }

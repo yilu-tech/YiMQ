@@ -1,5 +1,5 @@
 
-import { NohmModel, TTypedDefinitions } from "nohm";
+import { NohmModel, TTypedDefinitions } from "yinohm";
 import { MessageStatus } from "../Constants/MessageConstants";
 
 interface MessageProperties {
