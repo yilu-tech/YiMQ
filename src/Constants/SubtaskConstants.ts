@@ -1,3 +1,4 @@
+import { BackoffOptions } from "bull";
 
 export enum SubtaskType{
     EC = 'EC',
@@ -23,4 +24,5 @@ export interface SubtaskOptions{
     attempts?:number;
     timeout?:number;
     delay?:number;
+    backoff?:BackoffOptions
 }

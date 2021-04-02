@@ -1,6 +1,18 @@
 import * as Ioredis from 'ioredis'
+import { RedisManager } from './RedisManager';
 
 export class RedisClient extends Ioredis{
+
+    async defineCommands(redisManager:RedisManager){
+        for(let script of redisManager.scripts){
+            let commandName = `${script.name}_command`;
+            this.defineCommand(commandName,{
+                numberOfKeys: script.numberOfKeys,
+                lua: script.lua
+            });
+
+        }
+    }
 
     async getInfo(){
         let info = await this.info();
@@ -37,6 +49,9 @@ export class RedisClient extends Ioredis{
         }
 
         return {server, memory, clients}
+    }
 
+    async messageHealthCheck(message_key:string){
+        return await this[`messageHealthCheck_command`](message_key);
     }
 }

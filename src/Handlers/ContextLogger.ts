@@ -11,14 +11,22 @@ export class ContextLogger{
         if(!existsSync(logDir)){
             mkdirSync(logDir);
         }
-        let logFile = join(logDir,'context.log')
-        this.logger =  pino(pino.destination({
-            dest: logFile
-        }))
+        if(process.env.NODE_ENV == 'test1'){
+            this.logger =  pino({
+                prettyPrint:true
+            })
+        }else{
+            let logFile = join(logDir,'context.log')
+            this.logger =  pino(pino.destination({
+                dest: logFile
+            }))
+        }
     }
 
     info(...args){
-        this.logger.info.apply(this.logger,args);
+        if(process.env.NODE_ENV != 'test'){
+            this.logger.info.apply(this.logger,args);
+        }
     }
     error(...args){
         this.logger.error.apply(this.logger,args);

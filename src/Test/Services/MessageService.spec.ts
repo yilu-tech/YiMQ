@@ -684,7 +684,4 @@ describe('MessageService', () => {
         })
 
     })
-
-
-
 });

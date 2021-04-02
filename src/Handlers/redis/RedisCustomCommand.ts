@@ -118,7 +118,7 @@ export function redisCustomCommand(client){
     `
 
     client.defineCommand('subtaskCompleteAndSetMessageStatus',{
-        numberOfKeys:3,
+        numberOfKeys:2,
         lua:`
             local subtask_id = KEYS[1];
             local subtask_status = ARGV[1];
@@ -134,7 +134,7 @@ export function redisCustomCommand(client){
      * LstrSubtask专用，含有处理由BcstSubtask创建的广播消息，广播之后完成任务状态的逻辑
      */
     client.defineCommand('LstrSubtaskCompleteAndSetMessageStatus',{
-        numberOfKeys:3,
+        numberOfKeys:2,
         lua:`
         local subtask_id = KEYS[1];
         local subtask_status = ARGV[1];

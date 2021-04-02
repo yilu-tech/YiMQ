@@ -6,18 +6,20 @@ import { SystemException } from "../../Exceptions/SystemException";
 import { Exclude, Expose } from "class-transformer";
 import { ExposeGroups } from "../../Constants/ToJsonConstants";
 import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
+import { ConsumerSubtask } from "../Subtask/BaseSubtask/ConsumerSubtask";
 @Exclude()
 export class SubtaskJob extends Job{
     @Expose()
     public subtask_id:Number;
     @Expose({groups:[ExposeGroups.JOB_PARENT]})
-    public subtask:Subtask;
-    constructor(subtask:Subtask,public readonly context:bull.Job){
+    public subtask:ConsumerSubtask;
+    constructor(subtask:ConsumerSubtask,public readonly context:bull.Job){
         super(context);
         this.subtask = subtask;
         this.subtask_id = subtask.id;
     }
     async process() {
+       try {
         let result:CoordinatorProcessResult;
         switch (this.subtask.status) {
             //重复做到成功为止
@@ -38,6 +40,12 @@ export class SubtaskJob extends Job{
             default:
                 throw new SystemException(`SubtaskStatus <${this.subtask.status}> is not exists.`);
         }
+        await this.subtask.setHealth(true)
         return result;
+           
+       } catch (error) {
+           await this.subtask.setHealth(false)
+           throw error;
+       }
     }
 }

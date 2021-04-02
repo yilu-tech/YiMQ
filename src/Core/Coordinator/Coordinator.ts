@@ -2,7 +2,6 @@ import * as bull from 'bull';
 import { Actor } from '../Actor';
 import {AppLogger} from '../../Handlers/AppLogger';
 import { RedisClient } from '../../Handlers/redis/RedisClient';
-import { Job } from '../Job/Job';
 import { BusinessException } from '../../Exceptions/BusinessException';
 import { clamp } from 'lodash';
 
@@ -11,6 +10,41 @@ export interface CoordinatorProcessResult{
     result: 'success' | 'compensate success'
     actor_result?:any;
     desc?:string;
+}
+/**
+ * 如果消息重试16次后仍然失败，消息将不再投递。
+ * 如果严格按照上述重试时间间隔计算，某条消息在一直消费失败的前提下，
+ * 将会在接下来的4小时46分钟之内进行16次重试，超过这个时间范围消息将不再重试投递。
+ */
+
+function standardBackOff(attemptsMade, err){
+    let unit_time = process.env.STANDARD_BACKOFF_UNIT_TIME ? Number(process.env.STANDARD_BACKOFF_UNIT_TIME) : 1000;
+    let standardBackOffStrategyTimes = {
+        1: unit_time * 5, //与上次重试的间隔时间
+        2: unit_time * 10,
+        3: unit_time * 30,
+        4: unit_time * 60,
+        5: unit_time * 60*2,
+        6: unit_time * 60*3,
+        7: unit_time * 60*4,
+        8: unit_time * 60*5,
+        9: unit_time * 60*6,
+        10: unit_time * 60*7,
+        11: unit_time * 60*8,
+        12: unit_time * 60*9,
+        13: unit_time * 60*10,
+        14: unit_time * 60*20,
+        15: unit_time * 60*30,
+        16: unit_time * 60*60,
+        17: unit_time * 60*60*2,
+    };
+    
+    if(standardBackOffStrategyTimes[attemptsMade]){
+        console.log('----->',standardBackOffStrategyTimes[attemptsMade])
+        return standardBackOffStrategyTimes[attemptsMade];
+    }else{
+        return -1;
+    }
 }
 
 export abstract class Coordinator{
@@ -44,6 +78,11 @@ export abstract class Coordinator{
             },
             defaultJobOptions:{
                 stackTraceLimit:3
+            },
+            settings:{
+                backoffStrategies:{
+                    standard: standardBackOff
+                }
             }
         };
         let defaultLimiter:bull.RateLimiter =  {

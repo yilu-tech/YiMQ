@@ -8,7 +8,6 @@ export interface ActorOptions{
     clear_interval:number;
     clear_limit:number;
     clear_backoff:number | BackoffOptions;
-    subtask_force_attempts:number;
     coordinator_limiter:RateLimiter;
 }
 
@@ -20,7 +19,6 @@ export const actorDefaultOptions:ActorOptions = {
         type:'exponential',
         delay: 1000*5
     },
-    subtask_force_attempts: 3,
     coordinator_limiter:{
         max: 500,
         duration: 1000*5

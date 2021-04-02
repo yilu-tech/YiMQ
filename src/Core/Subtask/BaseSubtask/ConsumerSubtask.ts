@@ -87,12 +87,41 @@ export abstract class ConsumerSubtask extends Subtask{
         }
         await this.setStatus(status).save()
         //先添加job有可能会导致job开始执行，subtask的状态还未修改，导致出错,如果创建失败，message会重试，最终job会创建成功
+        let defaultBackoff = {
+            type:'standard',
+        }
         if(!this.job){ //如果job不存在就添加job
             let jobOptions:bull.JobOptions = {
                 jobId: this.job_id,
-                delay: this.options.delay
+                delay: this.options.delay || 0,
+                attempts: this.options.attempts || 18,
+                backoff: this.options.backoff || defaultBackoff
             }
             this.job = await this.consumer.jobManager.add(this,JobType.SUBTASK,jobOptions)
+        }
+    }
+
+    public async setHealth(procesSuccess:boolean){
+        let redisMulti = this.producer.redisClient.multi();
+        if(procesSuccess == false && this.job.attemptsMade >= 2 ){ //0，1，2 第二次尝试之后
+            this.model.property('is_health',false)
+            
+        }else{
+            this.model.property('is_health',true)
+            
+        }
+
+        await this.model.save({redisMulti: redisMulti});
+        redisMulti['messageHealthCheck_command'](this.message.getMessageHash())
+        let results = await redisMulti.exec();
+        this.throwMulitError(results)
+    }
+
+    throwMulitError(results){
+        for(let result of results){
+            if(result[0] != null){
+                throw new Error(JSON.stringify(result[0]))
+            }
         }
     }
 

@@ -566,7 +566,6 @@ describe('Subtask', () => {
             mock.onPost(producer.api).timeoutOnce();
             mock.onPost(producer.api).replyOnce(400,{'username':'username is locked'});
             mock.onPost(producer.api).replyOnce(200,{user_id:1});
-            process.env.SUBTASK_JOB_BACKOFF_DELAY = '100';//加快二次尝试，防止测试超时
             let body  = {
                 processor:"user@user.create",
                 data:{
@@ -574,6 +573,10 @@ describe('Subtask', () => {
                 },
                 options:{
                     attempts: 3,
+                    backoff:{
+                        type:'fixed',
+                        delay: 10
+                    }
                 }
             }
             let ecSubtask:EcSubtask= await messageService.addSubtask(producerName,message.id,SubtaskType.EC,body)   
@@ -761,6 +764,12 @@ describe('Subtask', () => {
                 processor:"user@user.create",
                 data:{
                     username: 'jack'
+                },
+                options:{
+                    backoff:{
+                        type:'fixed',
+                        delay: 10
+                    }
                 }
             })          
             expect(OnDemandFastToJson(tccSubtask)['prepareResult'].data.title).toBe(prepareResult.title);
@@ -773,7 +782,6 @@ describe('Subtask', () => {
             expect(updatedMessage.status).toBe(MessageStatus.DOING);
 
         
-            process.env.SUBTASK_JOB_BACKOFF_DELAY = '100';//加快二次尝试，防止测试超时
             mock.onPost(producer.api).timeout()//模拟超时
             producer.coordinator.getQueue().on('failed',async(job,err)=>{
                 updatedMessage = <TransactionMessage>await producer.messageManager.get(message.id);
@@ -963,6 +971,9 @@ describe('Subtask', () => {
                 processor:"user@user.create",
                 data:{
                     username: 'jack'
+                },
+                options:{
+                    delay:50
                 }
             })   
 
@@ -1025,6 +1036,12 @@ describe('Subtask', () => {
                 processor:"user@user.create",
                 data:{
                     username: 'jack'
+                },
+                options:{
+                    backoff:{
+                        type:'fixed',
+                        delay: 10
+                    }
                 }
             })          
             expect(OnDemandFastToJson(tccSubtask)['prepareResult'].data.title).toBe(prepareResult.title);
@@ -1037,7 +1054,6 @@ describe('Subtask', () => {
             expect(updatedMessage.status).toBe(MessageStatus.CANCELLING);
 
         
-            process.env.SUBTASK_JOB_BACKOFF_DELAY = '100';//加快二次尝试，防止测试超时
             mock.onPost(producer.api).timeout()//模拟超时
             producer.coordinator.getQueue().on('failed',async(job,err)=>{
                 
@@ -1125,7 +1141,6 @@ describe('Subtask', () => {
             // await actorManager.bootstrapActorsCoordinatorprocessor();
             await producer.process();
 
-            process.env.SUBTASK_JOB_BACKOFF_DELAY = '10';
             //没有await，让其在cancel之后再返回数据
             messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
                 processor:"user@user.create",
@@ -1133,7 +1148,11 @@ describe('Subtask', () => {
                     username: 'jack'
                 },
                 options:{
-                    timeout:0
+                    timeout:0,
+                    backoff:{
+                        type:'fixed',
+                        delay: 10
+                    }
                 }
             }).then(async (tccSubtask:TccSubtask)=>{
                 expect(OnDemandFastToJson(tccSubtask)['prepareResult'].data.title).toBe(prepareResult.title);

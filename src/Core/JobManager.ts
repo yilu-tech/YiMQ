@@ -10,6 +10,7 @@ import { TransactionMessage } from "./Messages/TransactionMessage";
 import { Subtask } from "./Subtask/BaseSubtask/Subtask";
 import { ActorClearJob } from "./Job/ActorClearJob";
 import { SystemException } from "../Exceptions/SystemException";
+import { ConsumerSubtask } from "./Subtask/BaseSubtask/ConsumerSubtask";
 export class JobManager{
     constructor(private actor:Actor){
     }
@@ -24,14 +25,6 @@ export class JobManager{
         let message:any;
         let jobContext;
         let data;
-        let defaultOptions:bull.JobOptions = {
-            attempts:3,
-            backoff:{
-                type:'exponential',
-                delay: 5000  // delay*1  delay*3 delay*7 delay*15     delay*(times*2+1) times开始于0
-            }
-        };
-        jobOptions = Object.assign(defaultOptions,jobOptions);
         switch (type) {
             case JobType.MESSAGE:
                 message = <TransactionMessage>from;
@@ -39,25 +32,16 @@ export class JobManager{
                     message_id: message.id,
                     type: type,
                 };
-                // let defaultDelay = 1000*5;
-                // jobOptions.delay = jobOptions.delay >= 1000 ? jobOptions.delay : Number(process.env.TRANSACATION_MESSAGE_JOB_DELAY) || defaultDelay;
                 jobContext = await this.actor.coordinator.add(message.topic,data,jobOptions);
                 job = new MessageJob(message,jobContext);
                 break;
             case JobType.SUBTASK:
-                let subtask = <Subtask>from;
+                let subtask = <ConsumerSubtask>from;
                 data = {
                     producer_id: subtask.message.producer.id,
                     message_id: subtask.message.id,
                     subtask_id: subtask.id,
                     type: JobType.SUBTASK,
-                }
-                // jobOptions.delay = Number(process.env.SUBTASK_JOB_DELAY) || 0;//单元测试部分地方需要延时
-                jobOptions.attempts = subtask.options.attempts ? subtask.options.attempts : 3;
-                jobOptions.attempts = this.actor.options.subtask_force_attempts ? this.actor.options.subtask_force_attempts: jobOptions.attempts;
-                jobOptions.backoff = {
-                    type:'exponential',
-                    delay: Number(process.env.SUBTASK_JOB_BACKOFF_DELAY) || 5000 // delay*1  delay*3 delay*7 delay*15     delay*(times*2+1) times开始于0
                 }
                 jobContext = await this.actor.coordinator.add(subtask.message.topic,data,jobOptions);
                 job = new SubtaskJob(subtask,jobContext);
@@ -83,13 +67,14 @@ export class JobManager{
                 if(!producer){
                     throw new SystemException(`Job ${jobContext.id} of Actor ${this.actor.id} not found ${jobContext.data.producer_id} producer.`)
                 }
-                let subtask = await producer.subtaskManager.get(jobContext.data.subtask_id);
+                let subtask = <ConsumerSubtask>await producer.subtaskManager.get(jobContext.data.subtask_id);
                 if(!subtask){
                     throw new SystemException(`Actor [${this.actor.name}-${this.actor.id}] Job ${jobContext.id} not found producer [${jobContext.data.producer_id}] Subtask ${jobContext.data.subtask_id}.`)
                 }
                 
                 //生成subtask实例
                 job = new SubtaskJob(subtask,jobContext);
+                subtask.job = job;
                 break;
             case JobType.ACTOR_CLEAR:
                 job = new ActorClearJob(this.actor,jobContext);

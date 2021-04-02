@@ -18,7 +18,7 @@ export class LstrSubtask extends EcSubtask{
 
     }
     public async completeAndSetMeesageStatusByScript(redisClient,status,messageStatus:MessageStatus){
-        return redisClient['LstrSubtaskCompleteAndSetMessageStatus'](this.id,this.message.id,'updated_at',status,messageStatus,new Date().getTime());  
+        return redisClient['LstrSubtaskCompleteAndSetMessageStatus'](this.id,this.message.id,status,messageStatus,new Date().getTime());  
     }
 
 }

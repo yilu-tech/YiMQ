@@ -41,6 +41,9 @@ export abstract class Message{
     status: MessageStatus;
 
     @Expose()
+    is_health:boolean;
+
+    @Expose()
     data:any;
 
     @Expose()
@@ -99,6 +102,7 @@ export abstract class Message{
         this.model.property('topic',topic);
         this.model.property('type',this.type);
         this.model.property('status',MessageStatus.PENDING);
+        this.model.property('is_health',true);
         this.model.property('clear_status',MessageClearStatus.WAITING);
 
         if(options.parent_subtask){
@@ -129,11 +133,18 @@ export abstract class Message{
     async create(topic:string, options:MessageOptions):Promise<any>{
        
         let delay = options.delay ? options.delay : this.producer.actorManager.config.options[`${lowerCase(this.type)}_message_delay`];
+
+        let defaultBackoff = {
+            type:'standard',
+        }
+
         let jobOptions:bull.JobOptions = {
             jobId: await this.producer.actorManager.getJobGlobalId(),
             delay: delay,
-            backoff: options.backoff
+            attempts: 10,
+            backoff: options.backoff || defaultBackoff
         };
+        
         this.model.property('job_id',jobOptions.jobId);//先保存job_id，如果先创建job再保存id可能产生，message未记录job_id的情况
         await this.save();
         await this.initProperties();
@@ -148,6 +159,7 @@ export abstract class Message{
         this.topic = this.model.property('topic');
         this.full_topic = `${this.producer.name}@${this.topic}`;
         this.status = this.model.property('status');
+        this.is_health = this.model.property('is_health');
         this.data = this.model.property('data');
         this.job_id = this.model.property('job_id')
         this.updated_at = this.model.property('updated_at');
@@ -255,6 +267,9 @@ export abstract class Message{
     }
     async unlock(){
         return await this.producer.redisClient.del(this.message_lock_key);
+    }
+    async healthCheck(){
+        let result = await this.producer.redisClient.messageHealthCheck(this.getMessageHash());
     }
 
     public async delete() {

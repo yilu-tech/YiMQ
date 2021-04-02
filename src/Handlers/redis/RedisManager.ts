@@ -8,15 +8,37 @@ import { AppLogger as Logger} from '../../Handlers/AppLogger';
 import { redisCustomCommand } from "./RedisCustomCommand";
 import { Application } from "../../Application";
 import { ApplicationStatus } from "../../Constants/ApplicationConstants";
+import { basename, extname, join } from "path";
+import { readdirSync, readFileSync } from "fs";
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 
 @Injectable()
 export class RedisManager {
     public application:Application;
     private clients:Object = {}; //TODO 改为用map存
+    public scripts:{name:string,numberOfKeys:number,lua:string}[] = [];
 
     constructor(private config:Config){
+        this.loadScripts();
     }
+
+    loadScripts(){
+        let scriptsPath = join(__dirname,'scripts');
+        let scripts = readdirSync(scriptsPath);
+        for(let scriptFilename of scripts){
+            if(extname(scriptFilename)){
+                let [name,numberOfKeys] = basename(scriptFilename,extname(scriptFilename)).split('-');
+                let scriptPath = join(scriptsPath,scriptFilename);
+                let lua = readFileSync(scriptPath,'utf-8')
+                this.scripts.push({
+                    name:name,
+                    numberOfKeys:Number(numberOfKeys),
+                    lua:lua
+                })
+            }
+        }
+    }
+
 
     public setApplication(application:Application){
         this.application = application;
@@ -39,6 +61,7 @@ export class RedisManager {
             connectionName: name
         }
         let client = new RedisClient(opionts);
+        await client.defineCommands(this)
         await redisCustomCommand(client);
 
         return new Promise((res,rej)=>{

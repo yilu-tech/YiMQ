@@ -15,6 +15,8 @@ export abstract class Subtask{
     type:SubtaskType;
     @Expose()
     status: SubtaskStatus;
+    @Expose()
+    is_health:boolean;
 
     @Expose()
     data:string|object;
@@ -56,6 +58,7 @@ export abstract class Subtask{
         this.id = subtaskModel.id;
         // this.type = subtaskModel.property('type');
         this.status = subtaskModel.property('status');
+        this.is_health = subtaskModel.property('is_health')
         this.data = subtaskModel.property('data');
         this.options = subtaskModel.property('options');
         this.created_at = subtaskModel.property('created_at');
@@ -73,6 +76,7 @@ export abstract class Subtask{
         subtaskModel.property('job_id',-1);//默认值必须手动设置，否则在重新设置值的时候，不会从默认值中删除索引
         subtaskModel.property('type',this.type);
         subtaskModel.property('status',SubtaskStatus.PREPARING);
+        subtaskModel.property('is_health',true);
         subtaskModel.property('data',body.data);
         subtaskModel.property('options',body.options);
         subtaskModel.property('updated_at',new Date().getTime());
@@ -115,10 +119,9 @@ export abstract class Subtask{
         return `${this.model['nohmClass'].prefix.hash}${this.model.modelName}:${this.id}`;
     }
     public async completeAndSetMeesageStatusByScript(redisClient,status,messageStatus:MessageStatus){
-        return redisClient['subtaskCompleteAndSetMessageStatus'](this.id,this.message.id,'updated_at',status,messageStatus,new Date().getTime());    
+        return redisClient['subtaskCompleteAndSetMessageStatus'](this.id,this.message.id,status,messageStatus,new Date().getTime());    
     }
     public async completeAndSetMeesageStatus(status,messageStatus){
-        
         var [subtaskUpdatedStatus,
             messageOriginStatus,
             messageUpdatedStatus,

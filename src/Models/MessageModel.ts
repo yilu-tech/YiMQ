@@ -12,6 +12,7 @@ interface MessageProperties {
     subtask_total:number;
     pending_subtask_total: number;
     status: MessageStatus;
+    is_health:boolean;
     job_id: number;
     subtask_ids:string[];
     clear_status:string;
@@ -61,6 +62,10 @@ export class MessageModelClass extends NohmModel<MessageProperties> {
             type: 'string',
             index: true,
             validations: ['notEmpty']
+        },
+        is_health:{
+            type: 'boolean',
+            index: true
         },
         job_id: {
             type: 'integer',

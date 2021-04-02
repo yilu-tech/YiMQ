@@ -57,6 +57,7 @@ export class MessageJob extends Job{
             }
             return result;
         }finally{
+            await this.message.healthCheck();
             await this.message.unlock();
         }
 
@@ -69,7 +70,8 @@ export class MessageJob extends Job{
             message_id: this.message_id,
             actor_id: this.message.producer.id,
             job_id: this.message.job_id,
-            job_key: `bull:${this.message.producer.id}:${this.message.job_id}`
+            job_key: `bull:${this.message.producer.id}:${this.message.job_id}`,
+            attemptsMade: this.attemptsMade
         }
         let result:CoordinatorProcessResult;
         let options = {
