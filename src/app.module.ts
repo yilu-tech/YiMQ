@@ -15,6 +15,7 @@ import { JobService } from './Services/JobService';
 import { ActorConfigManager } from './Core/ActorConfigManager';
 import { AdminService } from './Services/AdminService';
 import { ContextLogger } from './Handlers/ContextLogger';
+import { Database } from './Database';
 
 export const services = [
   ActorService,
@@ -33,6 +34,7 @@ export const services = [
     AdminController
   ],
   providers: [
+    Database,
     Application,
     Config,
     ContextLogger,

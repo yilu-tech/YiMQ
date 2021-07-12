@@ -7,6 +7,8 @@ import { BroadcastMessage } from "../Messages/BroadcastMessage";
 import { Exclude, Expose } from "class-transformer";
 import { OnDemand } from "../../Decorators/OnDemand";
 import { OnDemandSwitch } from "../../Constants/ToJsonConstants";
+import { TransactionCallback } from "../../Handlers";
+import { ClientSession } from "mongoose";
 
 export interface BcstSubtaskContext{
     topic:string;
@@ -17,6 +19,9 @@ export interface BcstSubtaskContext{
  */
 @Exclude()
 export class BcstSubtask extends Subtask{
+    create(body: any, session: ClientSession): Promise<any> {
+        throw new Error("Method not implemented.");
+    }
     public type = SubtaskType.BCST;
     @Expose()
     public context:BcstSubtaskContext = null;
@@ -29,9 +34,9 @@ export class BcstSubtask extends Subtask{
         this.context = {
             'topic' : body.topic
         }
-        let subtaskModel =  await super.createSubtaskModel(body);
-        subtaskModel.property('context',this.context);
-        return subtaskModel;
+        // let subtaskModel =  await super.createSubtaskModel(body);
+        // subtaskModel.property('context',this.context);
+        // return subtaskModel;
     }
     public async restore(subtaskModel){
         await super.restore(subtaskModel);
@@ -54,10 +59,10 @@ export class BcstSubtask extends Subtask{
         });//创建job
 
         this.context.message_id = Number(this.broadcastMessage.id);
-        await this.setProperty('context',this.context).setStatus(SubtaskStatus.DOING).save();
+        // await this.setProperty('context',this.context).setStatus(SubtaskStatus.DOING).save();
     }
     async cancel() {
-        await this.completeAndSetMeesageStatus(SubtaskStatus.CANCELED,MessageStatus.CANCELED);
+        // await this.completeAndSetMeesageStatus(SubtaskStatus.CANCELED,MessageStatus.CANCELED);
     }
 
     toDo() {

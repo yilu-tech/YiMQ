@@ -19,7 +19,7 @@ export class RedisManager {
     public scripts:{name:string,numberOfKeys:number,lua:string}[] = [];
 
     constructor(private config:Config){
-        this.loadScripts();
+        // this.loadScripts();
     }
 
     loadScripts(){

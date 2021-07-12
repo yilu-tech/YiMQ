@@ -12,7 +12,7 @@ import { OnDemandRun, OnDemandToJson } from "../Decorators/OnDemand";
 import { Actor } from "../Core/Actor";
 import { intersectionBy, unionBy } from "lodash";
 import { timestampToDateString } from "../Handlers";
-import { MessageOptions } from "../Structures/MessageOptionsStructure";
+import { MessageOptions } from "../Interfaces/MessageInterfaces";
 @Injectable()
 export class MessageService {
     constructor(private actorManger:ActorManager){
@@ -62,6 +62,7 @@ export class MessageService {
             throw new SystemException(`Actor <${actor_id}> not exists.`)
         }
         let message = <TransactionMessage>await producer.messageManager.get(message_id);
+
         await OnDemandRun(message,[
             OnDemandSwitch.MESSAGE_JOB,
             OnDemandSwitch.MESSAGE_SUBTASKS,

@@ -8,8 +8,10 @@ import {JobStatus} from "../../Constants/JobConstants"
 import { OnDemandFastToJson } from "../../Decorators/OnDemand";
 import { Exclude } from "class-transformer";
 import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
-import { MessageOptions } from "../../Structures/MessageOptionsStructure";
 import IORedis from "ioredis";
+import { MessageOptions } from "../../Interfaces/MessageInterfaces";
+import { ClientSession } from "mongoose";
+import { TccSubtask } from "../Subtask/TccSubtask";
 @Exclude()
 export class TransactionMessage extends Message{
     type = MessageType.TRANSACTION;
@@ -17,18 +19,28 @@ export class TransactionMessage extends Message{
 
     async createMessageModel(topic:string,data,options:MessageOptions){
         await super.createMessageModel(topic,data,options);
-        this.model.property('status',MessageStatus.PENDING);
+        // this.model.property('status',MessageStatus.PENDING);
+        this.model.status = MessageStatus.PENDING;
         return this;
     }
 
     async toDoing():Promise<CoordinatorProcessResult>{
-        await this.updatePendingSubtaskTotalAndSubtaskIds();//锁住后再查询 剩余子任务数量(可以写到脚本中连判断带 message的状态改变)
 
+
+        if(this.status != MessageStatus.DOING){
+            throw new BusinessException(`The status of this message is ${this.status}.`);
+        }
         //没有子任务直接完成message
-        if(this.pending_subtask_total== 0){
-            await this.setStatus(MessageStatus.DONE).save();
+        /**
+         * ?: 考虑是否用findOneUpdate({_id:id,pending_subtask_total:0})来进行判断和修改状态,
+         * 这种方式每次会多一次数据库查询。
+         * 状态为doning状态时，pending_subtask_total 绝对不会变动，可以直接判断
+         */
+        if(this.pending_subtask_total== 0){ 
+            await this.setStatusWithTransacation(MessageStatus.DOING,MessageStatus.DONE,null);
             return {result: 'success',desc:'not have subtask'};
         }
+        //TODO 工作到这里
         await this.loadSubtasks();
         //并行执行
         await Promise.all(this.subtasks.map((subtask)=>{
@@ -38,11 +50,15 @@ export class TransactionMessage extends Message{
     }
 
     async toCancelling():Promise<CoordinatorProcessResult>{
-        await this.updatePendingSubtaskTotalAndSubtaskIds();
+
+        if(this.status != MessageStatus.CANCELLING){
+            throw new BusinessException(`The status of this message is ${this.status}.`);
+        }
+
         //没有子任务直接完成message
         if(this.pending_subtask_total == 0){
-            await this.setStatus(MessageStatus.CANCELED).save();
-            return {result: 'success'};
+            await this.setStatusWithTransacation(MessageStatus.CANCELLING,MessageStatus.CANCELED,null);
+            return {result: 'success',desc:'not have subtask'};
         }
         await this.loadSubtasks();
 
@@ -54,155 +70,157 @@ export class TransactionMessage extends Message{
 
     async cancel():Promise<MessageControlResult>{
 
-        await this.lock('cancel')
-        
-        try{
-           let result:MessageControlResult=<MessageControlResult>{};
-            await this.loadJob();
-            let status = await this.getStatus();
+        let result:MessageControlResult=<MessageControlResult>{};
+        await this.loadJob();
 
-            if([MessageStatus.DOING,MessageStatus.DONE].includes(status)){
-                throw new BusinessException(`The status of this message is ${status}.`);
-            }else if([MessageStatus.CANCELED,MessageStatus.CANCELLING].includes(status)){
-                result.message = `Message already ${status}.`;
-            }else if(await this.job.getStatus() != JobStatus.DELAYED ){
-                result.message = `Message job status is ${await this.job.getStatus()} for timeout check.`;
-            }else if([MessageStatus.PENDING,MessageStatus.PREPARED].includes(status)){
-                await this.setStatus(MessageStatus.CANCELLING).save();
-                await this.job.context.promote();//立即执行job
-                result.message = 'success';
-            }else{
-                throw new BusinessException(`The status of this message is ${status}.`);
-            }
-            return result;
-       }finally{
-           await this.unlock();
-       }
+        if([MessageStatus.DOING,MessageStatus.DONE].includes(this.status)){
+            throw new BusinessException(`The status of this message is ${this.status}.`);
+        }else if([MessageStatus.CANCELED,MessageStatus.CANCELLING].includes(this.status)){
+            result.message = `Message already ${this.status}.`;
+        }else if(await this.job.getStatus() != JobStatus.DELAYED ){
+            result.message = `Message job status is ${await this.job.getStatus()} for timeout check.`;
+        }else if([MessageStatus.PENDING,MessageStatus.PREPARED].includes(this.status)){
+
+            // await this.setStatusWithTransacation(this.status,MessageStatus.CANCELLING,async (session)=>{
+            //     await this.job.promote(session);//立即执行job
+            // })
+            result.message = 'success';
+            await this.job.promote(async(session)=>{
+                await this.setStatus(this.status,MessageStatus.CANCELLING,session);
+            })
+        }else{
+            throw new BusinessException(`The status of this message is ${this.status}.`);
+        }
+        return result;
+   
     }
 
     async confirm():Promise<MessageControlResult>{
-        await this.lock('confirm')
-        try{
-            let result:MessageControlResult=<MessageControlResult>{};
-            await this.loadJob();
-            if([MessageStatus.CANCELLING,MessageStatus.CANCELED].includes(this.status)){
-                throw new BusinessException(`The status of this message is ${this.status}.`);
-            }
-            else if([MessageStatus.DOING,MessageStatus.DONE].includes(this.status)){
-                result.message = `Message already ${this.status}.`;
-            }else if(await this.job.getStatus() != JobStatus.DELAYED ){
-                result.message = `Message job status is ${await this.job.getStatus()} for timeout check.`;
-            }else if([MessageStatus.PENDING,MessageStatus.PREPARED].includes(this.status)){
-                await this.setStatus(MessageStatus.DOING).save();
-                await this.job.context.promote();//立即执行job
-                result.message = 'success';
-            }else{
-                throw new BusinessException(`The status of this message is ${this.status}.`);
-            }
-            return result;
-        }finally{
-            await this.unlock();
+
+        let result:MessageControlResult=<MessageControlResult>{};
+        await this.loadJob();
+        if([MessageStatus.CANCELLING,MessageStatus.CANCELED].includes(this.status)){
+            throw new BusinessException(`The status of this message is ${this.status}.`);
         }
+        else if([MessageStatus.DOING,MessageStatus.DONE].includes(this.status)){
+            result.message = `Message already ${this.status}.`;
+        }else if(await this.job.getStatus() != JobStatus.DELAYED ){
+            result.message = `Message job status is ${await this.job.getStatus()} for timeout check.`;
+        }else if([MessageStatus.PENDING,MessageStatus.PREPARED].includes(this.status)){
+
+            // await this.setStatusWithTransacation(this.status,MessageStatus.DOING,async (session)=>{
+            //     await this.job.promote();//立即执行job
+            // })
+            await this.job.promote(async (session)=>{
+                await this.setStatus(this.status,MessageStatus.DOING,session)
+            })
+            
+            result.message = 'success';
+        }else{
+            throw new BusinessException(`The status of this message is ${this.status}.`);
+        }
+        return result;
+
     }
     async prepare(body){
 
-        await this.lock('prepare',2000)
 
-        try {
-            let status = await this.getStatus();
-            if(status != MessageStatus.PENDING){//todo:: this.status改为从数据库实时获取
-                throw new BusinessException(`The status of this message is ${status}.`);
-            }
-            let data = {
-                id:  this.id,
-                prepare_subtasks : []
-            };
-            if(body.prepare_subtasks && body.prepare_subtasks.length > 0 ){
-                var subtasks = await this.createSubtasks(body.prepare_subtasks);
-                data.prepare_subtasks = await this.prepareSubtasks(subtasks);//create 和 prepare虽然不在一个事务，但是preapre失败报错导致本地回滚，不会存在事务问题
-            }
-            await this.setStatus(MessageStatus.PREPARED).save();
-            return data;  
-            
-        }finally{
-            await this.unlock(); 
+        if(this.status != MessageStatus.PENDING){//todo:: this.status改为从数据库实时获取
+            throw new BusinessException('MESSAGE_PREPARE_STATUS_MISTAKE',{currentStatus:this.status});
         }
+        let data = {
+            id:  this.id,
+            prepare_subtasks : []
+        };
+        let session = await this.database.connection.startSession();
+        await session.withTransaction(async()=>{
+            if(body.prepare_subtasks && body.prepare_subtasks.length > 0 ){
+                this.subtasks = await this.createSubtasks(body.prepare_subtasks,session);
+            }
+            await this.setStatus(MessageStatus.PENDING,MessageStatus.PREPARED,session);
+        })
+        await session.endSession();
+        await this.initProperties();
+
+
+     
+        return data;  
    
     }
-    private async createSubtasks(prepareSubtasksBody){
+    private async createSubtasks(prepareSubtasksBody,session:ClientSession){
         let subtasks:Subtask[] = [];
-        let redisMulti = this.producer.redisClient.multi();
+
         for (const subtaskBody of prepareSubtasksBody) {
             // let subtask:Subtask = await this.addSubtask(subtaskBody.type,subtaskBody);
-            let subtask:Subtask = await this.createSubtask(redisMulti,subtaskBody.type,subtaskBody);
-            subtasks.push(subtask);
+            let subtask:Subtask = await this.createSubtask(subtaskBody.type,subtaskBody,session);
         }
-        await redisMulti.exec()//todo: 判断结果
         return subtasks;
     }
 
-    public async prepareSubtasks(subtasks){
-        let prepareSubtasksResult = [];
-        for (const subtask of subtasks) {
-            await subtask.prepare()
-            prepareSubtasksResult.push(OnDemandFastToJson(subtask));
-        }
-        return prepareSubtasksResult;
-    }
+    // public async prepareSubtasks(subtasks){
+    //     let prepareSubtasksResult = [];
+    //     for (const subtask of subtasks) {
+    //         await subtask.prepare()
+    //         prepareSubtasksResult.push(OnDemandFastToJson(subtask));
+    //     }
+    //     return prepareSubtasksResult;
+    // }
 
 
     public async loadJob(){
-        let jobContext = await this.producer.coordinator.getJob(this.job_id);
-        this.job = new MessageJob(this,jobContext);
-        await this.job.restore();
+        let jobModel = await this.producer.jobManager.getJobModel(this.job_id);
+        this.job = new MessageJob(this);
+        await this.job.restore(jobModel);
         return this;
     }
 
     async addSubtask(type,body){
-        await this.lock('addSubtask')
 
-        try {
-            let status = await this.getStatus();
-            if(status != MessageStatus.PENDING){//锁住message,获取状态再判断
-                throw new BusinessException(`The message status is already ${status}`);
+
+        if(this.status != MessageStatus.PENDING){//锁住message,获取状态再判断
+            throw new BusinessException('MESSAGE_ADD_SUBTASK_STATUS_MISTAKE',{currentStatus:this.status});
+        }
+        let session = await this.database.connection.startSession();
+        let subtask:Subtask;
+        await session.withTransaction(async()=>{
+            subtask = await this.createSubtask(type,body,session);
+        })
+        await session.endSession();
+        
+        if(subtask instanceof TccSubtask){ //如果是Tcc类型的subtask执行prepare
+            let tccSubtask = <TccSubtask>subtask;
+            await tccSubtask.prepare();
+        }
+        await this.initProperties();
+        return subtask;
+    }
+
+    async createSubtask(type,body,session:ClientSession){
+        let subtask = this.producer.subtaskManager.factory(this,type);
+        await subtask.create(body,session);
+        await this.incSubtaskTotal(subtask,session);
+        return subtask;
+    }
+
+
+    async incSubtaskTotal(subtask:Subtask,session:ClientSession){
+        let updateResult = await this.database.MessageModel
+        .findOneAndUpdate({_id:this.id ,status:MessageStatus.PENDING},{
+            $inc:{
+                pending_subtask_total: +1,
+                subtask_total: +1
             }
-            let redisMulti = this.producer.redisClient.multi();
-            var subtask = await this.createSubtask(redisMulti,type,body);
-            await redisMulti.exec();//todo判断结果
-    
-            this.subtasks.push(subtask);
-            
-        }finally{
-            await this.unlock(); //tcc类子任务prepare时间可能过程，提前释放锁
-        }
-        await subtask.prepare();//try抛出错误的情况不会再prepare
-        return subtask;
-    }
+        },{session,new:true})
+        this.model = updateResult;
 
-    async createSubtask(redisMulti:IORedis.Pipeline,type,body){
-        body.subtask_id = await this.producer.actorManager.getSubtaskGlobalId();
-            
-        if(type == SubtaskType.BCST){
-            body.consumer_id = this.producer.id
-            body.processor = null; 
-        }else{
-            let {consumer,consumerProcessorName} = this.producer.subtaskManager.getConsumerAndProcessor(body.processor);
-            body.consumer_id = consumer.id;
-            body.processor = consumerProcessorName;
+        if(!updateResult){
+            let exists = await this.database.MessageModel.exists({_id: this.id});
+            if(!exists){
+                throw new BusinessException('MESSAGE_INC_SUBTASK_TOTAL_NOT_FOUND')
+            }
+            let currentStatus = await this.getStatus();
+            throw new BusinessException('MESSAGE_INC_SUBTASK_TOTAL_ORIGIN_STATUS_MISTAKE',{currentStatus,originStatus:MessageStatus.PENDING})
         }
-        
-        
-        var subtask = await this.producer.subtaskManager.addSubtask(redisMulti,this,type,body);
-        await this.incrPendingSubtaskTotalAndLinkSubtask(redisMulti,subtask);
-        return subtask;
-    }
-
-    public getMessageHash(){
-        return `${this.model['nohmClass'].prefix.hash}${this.model.modelName}:${this.id}`;
-    }
-    async updatePendingSubtaskTotalAndSubtaskIds(){
-        let [pending_subtask_total,subtask_ids] = await this.producer.redisClient.hmget(this.getMessageHash(),'pending_subtask_total','subtask_ids')
-        this.pending_subtask_total = Number(pending_subtask_total);
-        this.subtask_ids = JSON.parse(subtask_ids);
+        this.subtasks.push(subtask);
     }
 }

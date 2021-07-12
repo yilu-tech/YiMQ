@@ -7,23 +7,36 @@ import { SystemException } from "../../Exceptions/SystemException";
 import { Exclude, Expose } from "class-transformer";
 import { ExposeGroups } from "../../Constants/ToJsonConstants";
 import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
+import { Message } from "../Messages/Message";
+import { JobStatus, JobType } from "../../Constants/JobConstants";
+import { JobCreateTransactionCallback, TransactionCallback } from "../../Handlers";
+import { JobOptions } from "../../Interfaces/JobOptions";
+import { ClientSession } from "mongoose";
 
 @Exclude()
 export class MessageJob extends Job{
     @Expose()
-    public message_id:number | string;
+    // public message_id:any;
     @Expose({groups:[ExposeGroups.JOB_PARENT]})
     public message:TransactionMessage;//TransactionMessage ---> Message
     public check_timeout = 1000*10;
-    constructor(message:TransactionMessage,public readonly context:bull.Job){
-        super(context)
-        this.message_id = message.id;
+    
+    type = JobType.MESSAGE
+    constructor(message:TransactionMessage){
+        super(message.producer)
+        this.relation_id = message.id;
         this.message = message;
+    }
+
+    public async create(jobOptions:JobOptions,session:ClientSession){
+        this.model.status = JobStatus.DELAYED;
+        await super.create(jobOptions,session);
+        return this;
     }
     async process() {
         let result:CoordinatorProcessResult;
 
-        await this.message.lock('process',this.check_timeout * 1.5)
+        // await this.message.lock('process',this.check_timeout * 1.5)
         await this.message.refresh();
 
         try{
@@ -58,7 +71,7 @@ export class MessageJob extends Job{
             return result;
         }finally{
             await this.message.healthCheck();
-            await this.message.unlock();
+            // await this.message.unlock();
         }
 
     
@@ -67,11 +80,11 @@ export class MessageJob extends Job{
     private async remoteCheck():Promise<CoordinatorProcessResult>{
 
         let context = {
-            message_id: this.message_id,
+            message_id: this.relation_id,
             actor_id: this.message.producer.id,
             job_id: this.message.job_id,
             job_key: `bull:${this.message.producer.id}:${this.message.job_id}`,
-            attemptsMade: this.attemptsMade
+            attempts_made: this.attempts_made
         }
         let result:CoordinatorProcessResult;
         let options = {
@@ -80,11 +93,11 @@ export class MessageJob extends Job{
         let actor_result = await this.message.producer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.MESSAGE_CHECK,context,options);
         switch (actor_result.status) {
             case ActorMessageStatus.CANCELED:
-                await this.message.setStatus(MessageStatus.CANCELLING).save();
+                // await this.message.setStatus(MessageStatus.CANCELLING).save();
                 result = await this.message.toCancelling()
                 break;
             case ActorMessageStatus.DONE:
-                await this.message.setStatus(MessageStatus.DOING).save();
+                // await this.message.setStatus(MessageStatus.DOING).save();
                 result = await this.message.toDoing()
                 break;
             case ActorMessageStatus.PENDING:

@@ -7,17 +7,31 @@ import { Exclude, Expose } from "class-transformer";
 import { ExposeGroups } from "../../Constants/ToJsonConstants";
 import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
 import { ConsumerSubtask } from "../Subtask/BaseSubtask/ConsumerSubtask";
+import { JobStatus, JobType } from "../../Constants/JobConstants";
+import { JobCreateTransactionCallback, TransactionCallback } from "../../Handlers";
+import { JobOptions } from "../../Interfaces/JobOptions";
+import { ClientSession } from "mongoose";
 @Exclude()
 export class SubtaskJob extends Job{
     @Expose()
-    public subtask_id:Number;
+    public subtask_id:string;
     @Expose({groups:[ExposeGroups.JOB_PARENT]})
     public subtask:ConsumerSubtask;
-    constructor(subtask:ConsumerSubtask,public readonly context:bull.Job){
-        super(context);
+
+
+    public type = JobType.SUBTASK
+    constructor(subtask:ConsumerSubtask){
+        super(subtask.producer);
         this.subtask = subtask;
-        this.subtask_id = subtask.id;
+        this.relation_id = subtask.id;
     }
+
+    public async create(jobOptions:JobOptions,session:ClientSession){
+        this.model.status = JobStatus.PENDING;
+        await super.create(jobOptions,session);
+        return this;
+    }
+
     async process() {
        try {
         let result:CoordinatorProcessResult;

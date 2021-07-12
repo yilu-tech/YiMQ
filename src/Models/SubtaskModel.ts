@@ -1,6 +1,9 @@
 
+import { Document, ObjectId, Schema, Types } from "mongoose";
 import { NohmModel, TTypedDefinitions } from "yinohm";
-import { SubtaskType, SubtaskStatus } from "../Constants/SubtaskConstants";
+import { SubtaskType, SubtaskStatus, SubtaskOptions } from "../Constants/SubtaskConstants";
+// import { TccSubtaskPrepareResult } from "../Core/Subtask/TccSubtask";
+import { JobOptions } from "../Interfaces/JobOptions";
 
 interface SubtaskProperties {
     message_id: Number; //TODO 还原为message_id
@@ -84,3 +87,53 @@ export class SubtaskModelClass extends NohmModel<SubtaskProperties> {
     };
 }
 
+export interface SubtaskPrepareResultModel extends Document{
+    status: number;
+    message:string;
+    data:string|object;
+}
+
+export const SubtaskPrepareResultSchema:Schema = new Schema({
+    status: {type: Schema.Types.Number,required:false},
+    message: {type: Schema.Types.String,required:false},
+    data: {type: Schema.Types.Mixed,required:false},
+},{
+    _id:false
+})
+
+export interface SubtaskModel extends Document{
+    message_id: Types.ObjectId; //TODO 还原为message_id
+    job_id: Types.ObjectId;
+    type:SubtaskType;
+    status: SubtaskStatus;
+    is_health:boolean;
+    data: any;
+    options:JobOptions;
+    producer_id:number;
+    consumer_id:number;
+    processor:string;
+    context:string;
+    prepareResult:SubtaskPrepareResultModel;
+    updated_at: number;
+    created_at: number;
+}
+
+
+
+export const SubtaskSchema:Schema = new Schema({
+    message_id:{type: Schema.Types.ObjectId,required:true},
+    job_id: {type: Schema.Types.ObjectId,required:true},
+    type:{type:'string',required:true},
+    status:{type:'string',required:true},
+    // is_health:{type:'string',required:true},
+    // options:{type: subtaskOptionsSchema,required:true},
+    producer_id: {type: Schema.Types.String,required:true},
+    consumer_id: {type: Schema.Types.String,required:true},
+    processor:{type:Schema.Types.String,required:true},
+    context: {type:Schema.Types.String,required:false},
+    prepareResult:SubtaskPrepareResultSchema,
+    // updated_at:{type:Schema.Types.String,required:true},
+    // created_at: {type:Schema.Types.Date,required:true},
+},{
+    timestamps: {createdAt:'created_at',updatedAt:false}
+})

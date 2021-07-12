@@ -1,7 +1,6 @@
 import { IsDefined,ValidateNested,IsNumber, IsIn, IsInt, IsJSON } from 'class-validator';
 import { MessageType } from '../Constants/MessageConstants';
 import { SubtaskType } from '../Constants/SubtaskConstants';
-import { isNumber } from 'util';
 
 export class CreateMessageDto{
     @IsDefined()

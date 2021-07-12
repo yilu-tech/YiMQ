@@ -1,6 +1,7 @@
 import { Exclude } from "class-transformer";
 import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
-import { Message, MessageControlResult } from "./Message";
+import {Message, MessageControlResult } from "./Message";
+
 @Exclude()
 export class GeneralMessage extends Message{
     public async loadSubtasks() {

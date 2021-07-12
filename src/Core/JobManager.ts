@@ -11,8 +11,25 @@ import { Subtask } from "./Subtask/BaseSubtask/Subtask";
 import { ActorClearJob } from "./Job/ActorClearJob";
 import { SystemException } from "../Exceptions/SystemException";
 import { ConsumerSubtask } from "./Subtask/BaseSubtask/ConsumerSubtask";
+import { Application } from "../Application";
+import { BusinessException } from "../Exceptions/BusinessException";
+import { JobModel } from "../Models/JobModel";
+import { TestJob } from "./Job/TestJob";
 export class JobManager{
+    public application:Application;
     constructor(private actor:Actor){
+        this.application = actor.actorManager.application;
+    }
+
+    public factory(from:Message|Subtask,type:JobType){
+        switch(type){
+            case JobType.MESSAGE:
+                return new MessageJob(<TransactionMessage>from);
+            case JobType.SUBTASK:
+                return new SubtaskJob(<ConsumerSubtask>from);
+            default:
+                throw new BusinessException('JobType is not exists.');
+        }
     }
 
 
@@ -20,45 +37,14 @@ export class JobManager{
     //     let jobContext = await this.actor.coordinator.getJob(id);
     //     return this.restore(jobContext);
     // }
-    public async add(from:Message|Subtask,type:JobType,jobOptions:bull.JobOptions={}){
-        let job:Job;
-        let message:any;
-        let jobContext;
-        let data;
-        switch (type) {
-            case JobType.MESSAGE:
-                message = <TransactionMessage>from;
-                data = {
-                    message_id: message.id,
-                    type: type,
-                };
-                jobContext = await this.actor.coordinator.add(message.topic,data,jobOptions);
-                job = new MessageJob(message,jobContext);
-                break;
-            case JobType.SUBTASK:
-                let subtask = <ConsumerSubtask>from;
-                data = {
-                    producer_id: subtask.message.producer.id,
-                    message_id: subtask.message.id,
-                    subtask_id: subtask.id,
-                    type: JobType.SUBTASK,
-                }
-                jobContext = await this.actor.coordinator.add(subtask.message.topic,data,jobOptions);
-                job = new SubtaskJob(subtask,jobContext);
-                break;
-            default:
-                throw new Error('JobType is not exists.');
-        }      
-        return job;
-
-    }
+   
     public async restoreByContext(jobContext:bull.Job){
         let job:Job;
         let message;
         switch (jobContext.data.type) {
             case JobType.MESSAGE:
                 message = await this.actor.messageManager.get(jobContext.data.message_id);
-                job = new MessageJob(message,jobContext);
+                job = new MessageJob(message);
                 break;
             case JobType.SUBTASK:
                 //由于subtask的job不一定和它的subjob在同一个actor，也就不一定在同一个redis，所以直接通过id无法查找
@@ -73,16 +59,36 @@ export class JobManager{
                 }
                 
                 //生成subtask实例
-                job = new SubtaskJob(subtask,jobContext);
-                subtask.job = job;
+                job = new SubtaskJob(subtask);
+                subtask.job = <SubtaskJob>job;
                 break;
             case JobType.ACTOR_CLEAR:
-                job = new ActorClearJob(this.actor,jobContext);
+                job = new ActorClearJob(this.actor);
                 break;
             default:
                 throw new Error('JobType is not exists.');
         }
-        await job.restore();      
+        // await job.restore();      
+        return job;
+    }
+    
+    public async restoreByModel(jobModel:JobModel){
+        let job:Job;
+        switch(jobModel.type){
+            case JobType.MESSAGE:
+                let message = <TransactionMessage>await this.actor.messageManager.get(jobModel.relation_id);
+                job = new MessageJob(message);
+                await job.restore(jobModel);
+                break;
+            case JobType.SUBTASK:
+                break;
+            case JobType.TEST:
+                job = new TestJob(this.actor);
+                await job.restore(jobModel)
+                break;
+            default:
+                throw new BusinessException('JOBTYPE_IS_NOT_EXISTS');
+        }
         return job;
     }
 
@@ -95,5 +101,9 @@ export class JobManager{
             return null;
         }
         return this.restoreByContext(jobContext);
+    }
+
+    public async getJobModel(id){
+        return await this.application.database.JobModel.where({_id:id}).findOne();
     }
 }

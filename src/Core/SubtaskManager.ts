@@ -1,53 +1,52 @@
 import { Actor } from "./Actor";
 
 import { SubtaskType, SubtaskStatus } from "../Constants/SubtaskConstants";
-import { EcSubtask } from "./Subtask/EcSubtask";
-import { TccSubtask } from "./Subtask/TccSubtask";
-import { XaSubtask } from "./Subtask/XaSubtask";
-import { BcstSubtask } from "./Subtask/BcstSubtask";
-import { LstrSubtask } from "./Subtask/LstrSubtask";
+
 import { BusinessException } from "../Exceptions/BusinessException";
 import { Subtask } from "./Subtask/BaseSubtask/Subtask";
 import { Message } from "./Messages/Message";
-import IORedis from "ioredis";
+import { SubtaskModel } from "../Models/SubtaskModel";
+import { Database } from "../Database";
 export class SubtaskManager{
-    constructor(private actor:Actor){
-
+    private database:Database;
+    subtaskClasses = {
+        EcSubtask: require("./Subtask/EcSubtask").EcSubtask,
+        TccSubtask: require("./Subtask/TccSubtask").TccSubtask,
+        XaSubtask: require("./Subtask/XaSubtask").XaSubtask,
+        BcstSubtask: require("./Subtask/BcstSubtask").BcstSubtask,
+        LstrSubtask: require("./Subtask/LstrSubtask").LstrSubtask,
     }
-
-    async addSubtask(redisMulti:IORedis.Pipeline,message:Message,type,body):Promise<Subtask>{
-
-        let subtask =  this.factory(message,type);
-        await subtask.create(redisMulti,body);
-        return subtask;
+    constructor(private actor:Actor){
+        this.database = actor.actorManager.application.database;
     }
 
     async get(subtask_id):Promise<any>{
         
-        try{
-            var subtaskModel = await this.actor.subtaskModel.load(subtask_id);
-        }catch(error){
-            if(error && error.message === 'not found'){
-                return null;
-            }
-            throw error;
+
+        var subtaskModel = await this.database.SubtaskModel.findById(subtask_id);
+        if(!subtaskModel){
+            return null;
         }
-
-        // let subtaskModel = await this.actor.subtaskModel.load(subtask_id);
-
-        let message = await this.actor.messageManager.get(subtaskModel.property('message_id'));
         
-        let subtask:Subtask =  this.factory(message,subtaskModel.property('type'));
+        let message = await this.actor.messageManager.get(subtaskModel.message_id);
+    
+        let subtask = this.factory(message,subtaskModel.type);
         await subtask.restore(subtaskModel);
         return subtask;
 
     }
-    async getByMessage(message,subtask_id){
-        let subtaskModel = await this.actor.subtaskModel.load(subtask_id);
-        let subtask:Subtask =  this.factory(message,subtaskModel.property('type'));
+    // async getByMessage(message,subtask_id){
+    //     let subtaskModel = await this.actor.subtaskModel.load(subtask_id);
+    //     let subtask:Subtask =  this.factory(message,subtaskModel.property('type'));
+    //     await subtask.restore(subtaskModel);
+    //     return subtask;
+
+    // }
+    
+    async restoreByModel(message:Message,subtaskModel:SubtaskModel){
+        let subtask = this.factory(message,subtaskModel.type);
         await subtask.restore(subtaskModel);
         return subtask;
-
     }
 
 
@@ -55,19 +54,19 @@ export class SubtaskManager{
         let subtask:Subtask;
         switch (type) {
             case SubtaskType.EC:
-                subtask = new EcSubtask(message);
+                subtask = new this.subtaskClasses.EcSubtask(message);
                 break;
             case SubtaskType.TCC:
-                subtask = new TccSubtask(message);
+                subtask = new this.subtaskClasses.TccSubtask(message);
                 break;
             case SubtaskType.XA:
-                subtask = new XaSubtask(message);
+                subtask = new this.subtaskClasses.XaSubtask(message);
                 break;
             case SubtaskType.BCST:
-                subtask = new BcstSubtask(message);
+                subtask = new this.subtaskClasses.BcstSubtask(message);
                 break;
             case SubtaskType.LSTR:
-                subtask = new LstrSubtask(message);
+                subtask = new this.subtaskClasses.LstrSubtask(message);
                 break;
         
             default:
@@ -83,5 +82,9 @@ export class SubtaskManager{
             throw new BusinessException(`Consumer <${consumerName}> not exists.`)
         }
         return {consumer,consumerProcessorName};
+    }
+
+    async getSubtaskModel(id){
+        return await this.database.SubtaskModel.where({_id:id}).findOne();
     }
 }

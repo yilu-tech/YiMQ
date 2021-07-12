@@ -37,8 +37,8 @@ export class Actor{
 
     public redisClient:RedisClient;
     private nohm: NohmClass;
-    public messageModel:IStaticMethods<MessageModelClass> ;
-    public subtaskModel:IStaticMethods<SubtaskModelClass>
+    // public messageModel:IStaticMethods<MessageModelClass> ;
+    // public subtaskModel:IStaticMethods<SubtaskModelClass>
     public messageManager:MessageManager;
     public jobManager:JobManager;
     public subtaskManager:SubtaskManager
@@ -51,7 +51,7 @@ export class Actor{
 
     public async bootstrap() {
         await this.prepare();
-        await this.actorCleaner.setupClearJob();
+        // await this.actorCleaner.setupClearJob();
         await this.process();
         
     }
@@ -97,8 +97,8 @@ export class Actor{
     private initNohm(){
         this.nohm = new NohmClass({});
         this.nohm.setClient(this.redisClient);
-        this.messageModel = this.nohm.register(MessageModelClass)
-        this.subtaskModel = this.nohm.register(SubtaskModelClass)
+        // this.messageModel = this.nohm.register(MessageModelClass)
+        // this.subtaskModel = this.nohm.register(SubtaskModelClass)
     }
 
 

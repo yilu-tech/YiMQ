@@ -10,6 +10,7 @@ import { ApplicationStatus } from './Constants/ApplicationConstants';
 import { BusinessException } from './Exceptions/BusinessException';
 import { timeout } from './Handlers';
 import { ContextLogger } from './Handlers/ContextLogger';
+import { Database } from './Database';
 let pacakage = require('../package.json');
 @Injectable()
 export class Application implements OnApplicationShutdown,OnApplicationBootstrap,OnModuleInit{
@@ -24,7 +25,8 @@ export class Application implements OnApplicationShutdown,OnApplicationBootstrap
         public actorConfigManager:ActorConfigManager,
         public actorManager:ActorManager,
         public config:Config,
-        public contextLogger:ContextLogger
+        public contextLogger:ContextLogger,
+        public database:Database
         ){
         this.actorManager.setApplication(this);
         this.redisManager.setApplication(this);
@@ -73,6 +75,7 @@ export class Application implements OnApplicationShutdown,OnApplicationBootstrap
     }
 
     async baseBootstrap(){
+        await this.database.init();
         await this.masterModels.register()
         await this.actorConfigManager.saveConfigFileToMasterRedis()
     }
@@ -132,6 +135,7 @@ export class Application implements OnApplicationShutdown,OnApplicationBootstrap
         await this.masterModels.shutdown();
         Logger.log('RedisManager shutdown.......','Application');
         await this.redisManager.shutdown();
+        await this.database.close()
 
     }
 

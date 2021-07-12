@@ -5,15 +5,16 @@ import Bull = require("bull");
 
 export class ActorClearJob extends Job{
 
-    constructor(public actor:Actor,public readonly context:Bull.Job){
-        super(context);
+    constructor(public actor:Actor){
+        super(actor);
     }
     async process() {
         await this.actor.actorCleaner.clearSelfJob(); //清理除这个job以外的actor_clear_job
         let result =  await this.actor.actorCleaner.run();
         // await timeout(1000*10);
         await this.actor.actorCleaner.setNextClearJob(this);
-        return result;
+        // return result;
+        return null
     }
 
     // public toJson(){

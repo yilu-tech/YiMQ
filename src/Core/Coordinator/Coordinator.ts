@@ -4,6 +4,12 @@ import {AppLogger} from '../../Handlers/AppLogger';
 import { RedisClient } from '../../Handlers/redis/RedisClient';
 import { BusinessException } from '../../Exceptions/BusinessException';
 import { clamp } from 'lodash';
+import { Database } from '../../Database';
+import {  JobEventType, JobStatus } from '../../Constants/JobConstants';
+import { Job } from '../Job/Job';
+import { timeout } from '../../Handlers';
+import { EventEmitter } from 'events';
+import { JobEventListener } from '../../Interfaces/JobInterfaces';
 
 export interface CoordinatorProcessResult{
     action?:string;
@@ -40,7 +46,7 @@ function standardBackOff(attemptsMade, err){
     };
     
     if(standardBackOffStrategyTimes[attemptsMade]){
-        console.log('----->',standardBackOffStrategyTimes[attemptsMade])
+        // console.log('----->',standardBackOffStrategyTimes[attemptsMade])
         return standardBackOffStrategyTimes[attemptsMade];
     }else{
         return -1;
@@ -48,14 +54,22 @@ function standardBackOff(attemptsMade, err){
 }
 
 export abstract class Coordinator{
+    public closing:boolean = false;
+    public concurrency:number = 5;
+
+
     public clientRedisClient:RedisClient;
     public subscriberRedisClient:RedisClient;
     public bclientRedisClient:RedisClient;
     private retry_local_key:string;
+    private database:Database;
+    public processPromises:Map<string,Promise<any>> = new Map();
     
     protected queue:bull.Queue;
+    public event:EventEmitter = new EventEmitter();
     constructor(public actor:Actor){
         this.retry_local_key = `actor:${this.actor.id}:retry:lock`;
+        this.database = this.actor.actorManager.application.database;
     }
 
     public async initQueue(){
@@ -116,15 +130,20 @@ export abstract class Coordinator{
 
     }
 
-    public abstract async processBootstrap();
-    public abstract async callActor(producer,action,context?,options?);
+    public abstract processBootstrap();
+    public abstract callActor(producer,action,context?,options?);
 
     public getQueue():bull.Queue{
         return this.queue;
     }
     public async close(){
-        await this.queue.close();
-        await this.queue.removeAllListeners();
+        // await this.queue.close();
+        // await this.queue.removeAllListeners();
+        if(this.closing){
+            return;
+        }
+        this.closing = true;
+        return Promise.all(this.processPromises.values());
         AppLogger.log(`Coordinator closed...... (${this.actor.name}) `,`Coordinator`)
     }
 
@@ -199,4 +218,90 @@ export abstract class Coordinator{
             total: jobs.length
         }
     }
+
+    public async run(){
+        if(this.closing){
+            return;
+        }
+
+        while(!this.closing){
+
+            if(this.processPromises.size >= this.concurrency){
+                console.log('超过并发，等待...')
+                await timeout(50);
+                continue;
+            }
+
+            let job = await this.getNextJob();
+
+            if(!job){
+                // console.log('没有job了，等待下次...')
+                await timeout(100);
+                continue;
+            }
+            this.processJob(job);
+            
+
+        }
+        return this.processPromises;
+    }
+
+    public processJob(job:Job){
+        
+        
+        let promise = job.process().then(async (result)=>{
+            this.event.emit(JobEventType.COMPLETED,job,result);
+            await job.moveToCompleted();
+
+        }).catch(async (error)=>{
+            this.event.emit(JobEventType.FAILED,job,error);
+            await job.moveToFailed();
+
+        }).finally(()=>{
+            this.processPromises.delete(job.id.toHexString());
+        })
+
+        this.processPromises.set(job.id.toHexString(),promise)
+
+        return promise
+        
+    }
+
+    public pop(){
+
+    }
+
+    public async getNextJob(){
+
+        let nextJobModel = await this.database.JobModel.findOneAndUpdate({
+            actor_id:this.actor.id,
+            status:JobStatus.WAITING,
+            available_at:{$lte:new Date()}
+        },{
+            $set:{
+                status: JobStatus.ACTIVE,
+                reserved_at: new Date()
+            }
+        },{new:true})
+
+        if(!nextJobModel){
+            return null;
+        }
+        return await this.actor.jobManager.restoreByModel(nextJobModel);
+    }
+
+    public async on(eventType:JobEventType,listener:JobEventListener){
+        this.event.on(eventType,listener);
+    }
 }
+
+/**
+ * 
+ * reserved_at
+ * 处理的时候每5秒更新一次finished_at,
+ * 如果5秒后检测，current_time - finished_at > 6, 取消远程请求，取消定时 ，抛出错误
+ * 
+ * 
+ * 如果avalibel状态，current_time - finished_at > 10 ，把任务移动到delay任务中
+ * 
+ */

@@ -16,7 +16,7 @@ export class BroadcastMessage extends Message{
 
     async createMessageModel(topic:string,data,options:MessageOptions){
         await super.createMessageModel(topic,data,options);
-        this.model.property('status',MessageStatus.DOING);//等待最后一个子任务完成时来标记message为done状态
+        // this.model.property('status',MessageStatus.DOING);//等待最后一个子任务完成时来标记message为done状态
         return this;
     }
 
@@ -29,7 +29,7 @@ export class BroadcastMessage extends Message{
         }
         await this.createListenerSubtasks(listener_contexts)
         await this.confirmListenerSubtaks(this.subtasks);
-        await this.setStatus(MessageStatus.DOING).save();
+        // await this.setStatus(MessageStatus.DOING).save();
         return {result: 'success',desc:`Broadcast to ${this.subtasks.length} listeners.`};
     }
 
@@ -39,7 +39,7 @@ export class BroadcastMessage extends Message{
         let multi = this.producer.redisClient.multi();
         await this.setStatusAndUpdate(multi,MessageStatus.DONE)
         if(this.parent_subtask){
-            this.parent_subtask.completeAndSetMeesageStatusByScript(multi,SubtaskStatus.DONE,MessageStatus.DONE);//修改parent_bcst_subtask状态
+            // this.parent_subtask.completeAndSetMeesageStatusByScript(multi,SubtaskStatus.DONE,MessageStatus.DONE);//修改parent_bcst_subtask状态
         }
         let multiResult = await multi.exec();//todo: 判断结果
     }
@@ -92,8 +92,8 @@ export class BroadcastMessage extends Message{
         }
         let subtask = <LstrSubtask>await this.producer.subtaskManager.get(listener.subtask_id);
         if(!subtask){
-            subtask = <LstrSubtask>(await this.producer.subtaskManager.addSubtask(redisMulti,this,SubtaskType.LSTR,body)) 
-            await this.incrPendingSubtaskTotalAndLinkSubtask(redisMulti,subtask);
+            // subtask = <LstrSubtask>(await this.producer.subtaskManager.addSubtask(redisMulti,this,SubtaskType.LSTR,body)) 
+            // await this.incrPendingSubtaskTotalAndLinkSubtask(redisMulti,subtask);
         }     
         return subtask;
     }

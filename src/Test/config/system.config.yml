@@ -1,4 +1,5 @@
 version: 1
+mongodb_uri: mongodb://localhost:27017,localhost:27027,localhost:27037/yimq?replicaSet=rs0
 default: master
 redis:
   master:
