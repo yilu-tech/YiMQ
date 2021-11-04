@@ -38,7 +38,7 @@ export class ActorCleaner{
         let waitingClearProcessorIds = await this.getWaitingClearConsumeProcessorIds();//获取等待清理的processers
         let total = doneMessageIds.length + canceldMessageIds.length + waitingClearProcessorIds.length;
 
-        if(total < this.actor.options.clear_limit){
+        if(total < this.actor.options.clear_keep_total){
             let message = `<${this.actor.name}> actor not have enough message and process to clear ${total}`;
             // Logger.log(message,'ActorCleaner');
             return {message,delay:true}

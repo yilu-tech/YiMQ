@@ -316,6 +316,7 @@ describe('ActorClearTest', () => {
 
         it('run doneMessage more than limit',async()=>{
             let userActor = actorManager.get('user'); 
+            userActor.options.clear_keep_total = 0;
             userActor.options.clear_limit = 2; //设置清理条数
             //创建两条message开始清理
             let message1:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
@@ -342,6 +343,7 @@ describe('ActorClearTest', () => {
 
         it('run canceledMessage more than limit',async()=>{
             let userActor = actorManager.get('user'); 
+            userActor.options.clear_keep_total = 0;
             userActor.options.clear_limit = 2; //设置清理条数
             //创建两条message开始清理
             let message1:TransactionMessage = await userActor.messageManager.create(messageType,topic,{},{
@@ -368,6 +370,7 @@ describe('ActorClearTest', () => {
 
         it('runDelayTrue',async()=>{
             let userActor = actorManager.get('user'); 
+            userActor.options.clear_keep_total = 20;
             userActor.options.clear_limit = 10;
             let message:TransactionMessage = await userActor.messageManager.create(MessageType.TRANSACTION,'topic',{},{
                 delay:10,
@@ -380,6 +383,7 @@ describe('ActorClearTest', () => {
 
         it('runDelayFalse',async()=>{
             let userActor = actorManager.get('user'); 
+            userActor.options.clear_keep_total = 9;
             userActor.options.clear_limit = 10;
 
             for(var i =0;i<10;i++){
@@ -436,8 +440,9 @@ describe('ActorClearTest', () => {
             })
         })
 
-        it('test clear by real job',async(done)=>{
+        it('test clear by real job',async(done)=>{ 
             let userActor = actorManager.get('user'); 
+            userActor.options.clear_keep_total = 5;
             userActor.options.clear_limit = 5;
 
             
@@ -502,6 +507,7 @@ describe('ActorClearTest', () => {
         it('.clear failed job attempt',async (done)=>{
 
             let userActor = actorManager.get('user'); 
+            userActor.options.clear_keep_total = 0;
             userActor.options.clear_limit = 1;
 
             

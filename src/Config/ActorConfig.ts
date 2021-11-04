@@ -5,6 +5,7 @@ import { RateLimiter, BackoffOptions } from "bull";
 
 export interface ActorOptions{
     headers:object;
+    clear_keep_total:number;
     clear_interval:number;
     clear_limit:number;
     clear_backoff:number | BackoffOptions;
@@ -14,6 +15,7 @@ export interface ActorOptions{
 
 export const actorDefaultOptions:ActorOptions = {
     headers:{},
+    clear_keep_total: 20,
     clear_interval:1000*60*60,
     clear_limit:1000,
     clear_backoff:{
