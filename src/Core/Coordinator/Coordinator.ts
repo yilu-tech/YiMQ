@@ -75,8 +75,8 @@ export abstract class Coordinator{
 
     }
 
-    public abstract async processBootstrap();
-    public abstract async callActor(producer,action,context?,options?);
+    public abstract  processBootstrap();
+    public abstract  callActor(producer,action,context?,options?);
 
     public getQueue():bull.Queue{
         return this.queue;
@@ -133,7 +133,7 @@ export abstract class Coordinator{
         let jobs:bull.Job[] = [];
         if(job_ids == '*'){
             let failedCount = await this.queue.getFailedCount();
-            let lockTime = clamp(failedCount * 0.05,10,60)
+            let lockTime = clamp(Math.round(failedCount * 0.05),10,60)
             let getLock = await this.actor.redisClient.set(this.retry_local_key,1,"EX",lockTime,'NX')
             if(!getLock){
                 let lockWatingTime = await this.actor.redisClient.ttl(this.retry_local_key);
