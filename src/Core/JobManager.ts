@@ -10,6 +10,7 @@ import { TransactionMessage } from "./Messages/TransactionMessage";
 import { Subtask } from "./Subtask/BaseSubtask/Subtask";
 import { ActorClearJob } from "./Job/ActorClearJob";
 import { SystemException } from "../Exceptions/SystemException";
+import { merge } from "lodash";
 export class JobManager{
     constructor(private actor:Actor){
     }
@@ -25,13 +26,14 @@ export class JobManager{
         let jobContext;
         let data;
         let defaultOptions:bull.JobOptions = {
-            attempts:3,
+            attempts: this.actor.options.job_attempts_total,
             backoff:{
                 type:'exponential',
-                delay: 5000  // delay*1  delay*3 delay*7 delay*15     delay*(times*2+1) times开始于0
+                // type:'fixed',
+                delay: this.actor.options.job_attempts_delay  // delay*1  delay*3 delay*7 delay*15     delay*(times*2+1) times开始于0
             }
         };
-        jobOptions = Object.assign(defaultOptions,jobOptions);
+        jobOptions = merge(defaultOptions,jobOptions);
         switch (type) {
             case JobType.MESSAGE:
                 message = <TransactionMessage>from;
@@ -53,12 +55,9 @@ export class JobManager{
                     type: JobType.SUBTASK,
                 }
                 jobOptions.delay = Number(process.env.SUBTASK_JOB_DELAY) || 0;//单元测试部分地方需要延时
-                jobOptions.attempts = subtask.options.attempts ? subtask.options.attempts : 3;
-                jobOptions.attempts = this.actor.options.subtask_force_attempts ? this.actor.options.subtask_force_attempts: jobOptions.attempts;
-                jobOptions.backoff = {
-                    type:'exponential',
-                    delay: Number(process.env.SUBTASK_JOB_BACKOFF_DELAY) || 5000 // delay*1  delay*3 delay*7 delay*15     delay*(times*2+1) times开始于0
-                }
+                jobOptions.attempts = subtask.options.attempts || jobOptions.attempts;
+
+
                 jobContext = await this.actor.coordinator.add(subtask.message.topic,data,jobOptions);
                 job = new SubtaskJob(subtask,jobContext);
                 break;

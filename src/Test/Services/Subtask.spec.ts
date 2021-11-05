@@ -565,7 +565,7 @@ describe('Subtask', () => {
             mock.onPost(producer.api).timeoutOnce();
             mock.onPost(producer.api).replyOnce(400,{'username':'username is locked'});
             mock.onPost(producer.api).replyOnce(200,{user_id:1});
-            process.env.SUBTASK_JOB_BACKOFF_DELAY = '100';//加快二次尝试，防止测试超时
+            producer.options.job_attempts_delay = 100; //加快二次尝试，防止测试超时
             let body  = {
                 processor:"user@user.create",
                 data:{
@@ -771,7 +771,7 @@ describe('Subtask', () => {
             expect(updatedMessage.status).toBe(MessageStatus.DOING);
 
         
-            process.env.SUBTASK_JOB_BACKOFF_DELAY = '100';//加快二次尝试，防止测试超时
+            producer.options.job_attempts_delay = 100; //加快二次尝试，防止测试超时
             mock.onPost(producer.api).timeout()//模拟超时
             producer.coordinator.getQueue().on('failed',async(job,err)=>{
                 updatedMessage = await producer.messageManager.get(message.id);
@@ -1035,7 +1035,7 @@ describe('Subtask', () => {
             expect(updatedMessage.status).toBe(MessageStatus.CANCELLING);
 
         
-            process.env.SUBTASK_JOB_BACKOFF_DELAY = '100';//加快二次尝试，防止测试超时
+            producer.options.job_attempts_delay = 100; //加快二次尝试，防止测试超时
             mock.onPost(producer.api).timeout()//模拟超时
             producer.coordinator.getQueue().on('failed',async(job,err)=>{
                 
@@ -1123,7 +1123,7 @@ describe('Subtask', () => {
             // await actorManager.bootstrapActorsCoordinatorprocessor();
             await producer.process();
 
-            process.env.SUBTASK_JOB_BACKOFF_DELAY = '10';
+            producer.options.job_attempts_delay = 100; //加快二次尝试，防止测试超时
             //没有await，让其在cancel之后再返回数据
             messageService.addSubtask(producerName,message.id,SubtaskType.TCC,{
                 processor:"user@user.create",
