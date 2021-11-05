@@ -121,8 +121,15 @@ export abstract class Coordinator{
                 let job = await this.actor.jobManager.restoreByContext(jobContext);
                 jobs.push(job);   
             } catch (error) {
-                let jobJson = jobContext.toJSON();
+                let jobJson = {}
+                try{
+                    jobJson = jobContext.toJSON();  
+                }catch(err){
+                    jobJson['id'] = jobContext.id
+                }
+                
                 jobJson['error_message'] = error.message;
+                
                 abnormal_jobs.push(jobJson);
             }
         }
