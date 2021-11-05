@@ -175,11 +175,13 @@ describe('MessageService', () => {
         });
 
         it('.prepared  after timeout check done', async (done) => {
-            process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
+            let producer = actorManager.get(producerName); 
+            producer.options.message_check_min_delay = 100;
             message = await messageService.create(producerName,messageType,topic,{},{
+                delay:100
             });
             expect(message.topic).toBe(topic);
-            let producer = actorManager.get(producerName); 
+           
 
             mock.onPost(producer.api).reply(200,{
                 status: MessageStatus.DONE
@@ -196,11 +198,13 @@ describe('MessageService', () => {
         });
 
         it('.prepared  after timeout check cancel', async (done) => {
-            process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
+            let producer = actorManager.get(producerName); 
+            producer.options.message_check_min_delay = 100;
             message = await messageService.create(producerName,messageType,topic,{},{
+                delay:100
             });
             expect(message.topic).toBe(topic);
-            let producer = actorManager.get(producerName); 
+
 
             mock.onPost(producer.api).reply(200,{
                 status: MessageStatus.CANCELED
@@ -273,7 +277,8 @@ describe('MessageService', () => {
         })
 
         it('.remote status pending after done', async (done) => {
-            process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
+            let producer = actorManager.get(producerName); 
+            producer.options.message_check_min_delay = 0;
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:50,
                 backoff:{
@@ -282,7 +287,7 @@ describe('MessageService', () => {
                 }
             });
             expect(message.topic).toBe(topic);
-            let producer = actorManager.get(producerName); 
+
             //模拟500错误
             mock.onPost(producer.api).reply(500,{
 
@@ -291,7 +296,7 @@ describe('MessageService', () => {
             producer.coordinator.getQueue().on('failed',async (job)=>{
                 let updatedMessage = await producer.messageManager.get(message.id);
                 if(message.job.id == job.id && job.attemptsMade == 1){//第一次获取失败
-                    expect(job.opts.delay).toBe(Number(process.env.TRANSACATION_MESSAGE_JOB_DELAY));
+                    expect(job.opts.delay).toBe(50);
                     expect(job.attemptsMade).toBe(1)
                     mock.onPost(producer.api).reply(200,{
                         status: MessageStatus.PENDING
@@ -326,12 +331,13 @@ describe('MessageService', () => {
             let messageType = MessageType.TRANSACTION;
             let topic = 'posts_create';
             let message:Message;
-            process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
+            let producer = actorManager.get(producerName); 
+            producer.options.message_check_min_delay = 100;
             message = await messageService.create(producerName,messageType,topic,{},{
-
+                delay:100
             });
             expect(message.topic).toBe(topic);
-            let producer = actorManager.get(producerName); 
+
 
             mock.onPost(producer.api).reply(200,{
                 status: ActorMessageStatus.DONE
@@ -405,11 +411,13 @@ describe('MessageService', () => {
         })
 
         it('.timeout check cancel', async (done) => {
-            process.env.TRANSACATION_MESSAGE_JOB_DELAY = '100';
+            let producer = actorManager.get(producerName); 
+            producer.options.message_check_min_delay = 100;
             message = await messageService.create(producerName,messageType,topic,{},{
+                delay:100
             });
             expect(message.topic).toBe(topic);
-            let producer = actorManager.get(producerName); 
+            
 
             mock.onPost(producer.api).reply(200,{
                 status: MessageStatus.CANCELED
@@ -430,13 +438,15 @@ describe('MessageService', () => {
             let messageType = MessageType.TRANSACTION;
             let topic = 'user_create';
             let message:Message;
+            let producer = actorManager.get(producerName); 
+            producer.options.message_check_min_delay = 0;
            
             message = await messageService.create(producerName,messageType,topic,{},{
                 delay:1000, //设置超过5秒，检查confirm后是否立即执行job
             });
             expect(message.status).toBe(MessageStatus.PENDING)
 
-            let producer = actorManager.get(producerName); 
+           
             mock.onPost(producer.api).reply(200,{
                 status:ActorMessageStatus.CANCELED
             })

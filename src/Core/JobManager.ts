@@ -29,7 +29,6 @@ export class JobManager{
             attempts: this.actor.options.job_attempts_total,
             backoff:{
                 type:'exponential',
-                // type:'fixed',
                 delay: this.actor.options.job_attempts_delay  // delay*1  delay*3 delay*7 delay*15     delay*(times*2+1) times开始于0
             }
         };
@@ -41,8 +40,8 @@ export class JobManager{
                     message_id: message.id,
                     type: type,
                 };
-                let defaultDelay = 1000*5;
-                jobOptions.delay = jobOptions.delay >= 1000 ? jobOptions.delay : Number(process.env.TRANSACATION_MESSAGE_JOB_DELAY) || defaultDelay;
+
+                jobOptions.delay = jobOptions.delay >= this.actor.options.message_check_min_delay ? jobOptions.delay : this.actor.options.message_check_min_delay;
                 jobContext = await this.actor.coordinator.add(message.topic,data,jobOptions);
                 job = new MessageJob(message,jobContext);
                 break;

@@ -12,6 +12,7 @@ export interface ActorOptions{
     coordinator_limiter:RateLimiter;
     job_attempts_total:number;
     job_attempts_delay:number;
+    message_check_min_delay:number;
 }
 
 export const actorDefaultOptions:ActorOptions = {
@@ -24,7 +25,8 @@ export const actorDefaultOptions:ActorOptions = {
         delay: 1000*5
     },
     job_attempts_total: 5,
-    job_attempts_delay: 8000,
+    job_attempts_delay: 1000 * 8,
+    message_check_min_delay: 1000 * 10,
     coordinator_limiter:{
         max: 500,
         duration: 1000*5
