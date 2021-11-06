@@ -117,17 +117,15 @@ export abstract class Coordinator{
         let jobs = [];
         let abnormal_jobs = []
         for (const jobContext of jobContexts) {
+            if(!jobContext){
+                AppLogger.log(`Coordinator (${this.actor.name}) has faild index in bull:${this.actor.id}:failed `)
+                continue;
+            }
             try {
                 let job = await this.actor.jobManager.restoreByContext(jobContext);
                 jobs.push(job);   
             } catch (error) {
-                let jobJson = {}
-                try{
-                    jobJson = jobContext.toJSON();  
-                }catch(err){
-                    jobJson['id'] = jobContext.id
-                }
-                
+                let jobJson = jobContext.toJSON(); 
                 jobJson['error_message'] = error.message;
                 
                 abnormal_jobs.push(jobJson);
