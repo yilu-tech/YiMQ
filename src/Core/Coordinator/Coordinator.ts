@@ -118,7 +118,7 @@ export abstract class Coordinator{
         let abnormal_jobs = []
         for (const jobContext of jobContexts) {
             if(!jobContext){
-                AppLogger.log(`Coordinator (${this.actor.name}) has faild index in bull:${this.actor.id}:failed `)
+                AppLogger.warn(`Coordinator (${this.actor.name}) has faild index in bull:${this.actor.id}:failed.`)
                 continue;
             }
             try {
