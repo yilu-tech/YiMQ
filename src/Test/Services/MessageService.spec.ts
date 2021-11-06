@@ -19,6 +19,7 @@ import { ActorConfigManager } from '../../Core/ActorConfigManager';
 import { ContextLogger } from '../../Handlers/ContextLogger';
 import { SubtaskStatus, SubtaskType } from '../../Constants/SubtaskConstants';
 import { XaSubtask } from '../../Core/Subtask/XaSubtask';
+import { MessageJob } from '../../Core/Job/MessageJob';
 const mock = new MockAdapter(axios);
 const timeout = ms => new Promise(res => setTimeout(res, ms))
 describe('MessageService', () => {
@@ -431,6 +432,26 @@ describe('MessageService', () => {
             })
             await producer.process();
         });
+
+        it('.timeout check message not exist to cancel',async()=>{
+            let producer = actorManager.get(producerName); 
+
+            
+            let message = <TransactionMessage>await messageService.create(producerName,messageType,topic,{},{
+                delay:100
+            });
+            await message.loadJob();
+            mock.onPost(producer.api).reply(500,{
+                message:'Message not exists.'
+            })
+
+            producer.options.message_check_not_exist_ignore = true
+
+            let messageJob = new MessageJob(message,message.job.context)
+            await messageJob.process()
+            await message.refresh()
+            expect(message.status).toBe(MessageStatus.CANCELED)
+        })
 
 
         it('.timeout check cancel after manual cancel', async (done) => {

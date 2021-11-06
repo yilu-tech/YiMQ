@@ -59,7 +59,16 @@ export class MessageJob extends Job{
             job_key: `bull:${this.message.producer.id}:${this.message.job_id}`
         }
         let result:CoordinatorProcessResult = {process:null};
-        let actor_result = await this.message.producer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.MESSAGE_CHECK,context);
+        try {
+            var actor_result = await this.message.producer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.MESSAGE_CHECK,context);   
+        } catch (error) {
+            //TODO 临时，应该直接throw
+            if(this.message.producer.options.message_check_not_exist_ignore && error.response && error.response.message == 'Message not exists.'){
+                actor_result={status:ActorMessageStatus.CANCELED}
+            }else{
+                throw error;
+            }
+        }
         switch (actor_result.status) {
             case ActorMessageStatus.CANCELED:
                 result = await this.message.toCancelling();
