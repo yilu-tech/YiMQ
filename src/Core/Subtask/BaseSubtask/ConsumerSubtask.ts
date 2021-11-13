@@ -12,6 +12,7 @@ import { CoordinatorProcessResult } from "../../Coordinator/Coordinator";
 import { MessageStatus } from "../../../Constants/MessageConstants";
 import { Logger } from "@nestjs/common";
 import { Message } from "../../Messages/Message";
+import {AppLogger} from '../../../Handlers/AppLogger';
 
 export abstract class ConsumerSubtask extends Subtask{
     @Expose({groups:[ExposeGroups.RELATION_ACTOR]})
@@ -50,9 +51,14 @@ export abstract class ConsumerSubtask extends Subtask{
     public async loadJob(){
         if(this.job_id > -1){
             let jobContext = await this.consumer.coordinator.getJob(this.job_id);
-            this.job = new SubtaskJob(this,jobContext);
-            await this.job.restore();
-            //this.job = await this.consumer.jobManager.get(this.job_id); //不用这句的原因是这句又要重新去查this
+            if(jobContext){
+                this.job = new SubtaskJob(this,jobContext);
+                await this.job.restore();
+                //this.job = await this.consumer.jobManager.get(this.job_id); //不用这句的原因是这句又要重新去查this
+            }else{
+                AppLogger.error(`subtask:${this.id} job not found job:${this.job_id}`)
+            }
+          
         }
     }
 

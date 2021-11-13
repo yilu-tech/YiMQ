@@ -10,6 +10,7 @@ import { OnDemandFastToJson } from "../../Decorators/OnDemand";
 import { Exclude } from "class-transformer";
 import { CoordinatorProcessResult } from "../Coordinator/Coordinator";
 import { MessageOptions } from "../../Structures/MessageOptionsStructure";
+import {AppLogger} from '../../Handlers/AppLogger';
 @Exclude()
 export class TransactionMessage extends Message{
     type = MessageType.TRANSACTION;
@@ -122,8 +123,12 @@ export class TransactionMessage extends Message{
     public async loadJob(){
         //this.job = await this.producer.jobManager.get(this.job_id,true); 不用这句的原因是，get会再去查一次this
         let jobContext = await this.producer.coordinator.getJob(this.job_id);
-        this.job = new MessageJob(this,jobContext);
-        await this.job.restore();
+        if(jobContext){
+            this.job = new MessageJob(this,jobContext);
+            await this.job.restore();
+        }else{
+            AppLogger.error(`message:${this.id} job not found job:${this.job_id}`)
+        }
         return this;
     }
 
