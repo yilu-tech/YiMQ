@@ -24,15 +24,19 @@ export class MessageJob extends Job{
         switch (this.message.status) {
             case MessageStatus.DOING:
                 result = await this.message.toDoing();
+                result.action = 'do';
                 break;
             case MessageStatus.CANCELLING:
                 result = await this.message.toCancelling()
+                result.action = 'cancel';
                 break;
             case MessageStatus.PENDING://超时后远程检查任务状态
                 result = await this.remoteCheck();
+                result.action = 'check';
                 break;
             case MessageStatus.PREPARED://超时后远程检查任务状态
                 result = await this.remoteCheck();
+                result.action = 'check';
                 break;
             case MessageStatus.DONE:
                 throw new SystemException('MessageStatus is DONE.');

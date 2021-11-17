@@ -84,6 +84,7 @@ export class TccSubtask extends ConsumerSubtask{
 
         await this.completeAndSetMeesageStatus(SubtaskStatus.DONE,MessageStatus.DONE);
         return {
+            message_id: this.message_id,
             process:'success',
             actor_result
         }
@@ -98,6 +99,7 @@ export class TccSubtask extends ConsumerSubtask{
         let actor_result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CANCEL,callContext);
         await this.completeAndSetMeesageStatus(SubtaskStatus.CANCELED,MessageStatus.CANCELED);
         return {
+            message_id: this.message_id,
             process:'success',
             actor_result
         }

@@ -23,9 +23,11 @@ export class SubtaskJob extends Job{
             //重复做到成功为止
             case SubtaskStatus.DOING:
                 result = await this.subtask.toDo();
+                result.action = 'do';
                 break;
             case SubtaskStatus.CANCELLING://todo:: cancled情况可以考虑允许重复取消，因为job里面调整了subtask状态，但job失败了
                 result = await this.subtask.toCancel();
+                result.action = 'cancel';
                 break;
             case SubtaskStatus.PREPARING:
                 throw new SystemException('SubtaskStatus is PENDING');
