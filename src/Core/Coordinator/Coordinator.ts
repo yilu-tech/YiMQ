@@ -9,6 +9,7 @@ import { clamp } from 'lodash';
 export interface CoordinatorProcessResult{
     message_id?:string;
     process: 'success' | 'compensate success'
+    call_actor_body?:any;
     actor_result?:any;
     action?: 'do' | 'cancel' | 'check'
     subtask_total?:number
@@ -80,7 +81,7 @@ export abstract class Coordinator{
     }
 
     public abstract  processBootstrap();
-    public abstract  callActor(producer,action,context?,options?);
+    public abstract  callActor(producer,action,context?,options?):Promise<{callResult:any,callBody:any}>;
 
     public getQueue():bull.Queue{
         return this.queue;

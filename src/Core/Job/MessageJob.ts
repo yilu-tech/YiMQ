@@ -32,11 +32,9 @@ export class MessageJob extends Job{
                 break;
             case MessageStatus.PENDING://超时后远程检查任务状态
                 result = await this.remoteCheck();
-                result.action = 'check';
                 break;
             case MessageStatus.PREPARED://超时后远程检查任务状态
                 result = await this.remoteCheck();
-                result.action = 'check';
                 break;
             case MessageStatus.DONE:
                 throw new SystemException('MessageStatus is DONE.');
@@ -66,32 +64,34 @@ export class MessageJob extends Job{
         }
         let result:CoordinatorProcessResult = {process:null};
         try {
-            var actor_result = await this.message.producer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.MESSAGE_CHECK,context);   
+            var {callResult,callBody} = await this.message.producer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.MESSAGE_CHECK,context);   
         } catch (error) {
             //TODO 临时，应该直接throw
             if(this.message.producer.options.message_check_not_exist_ignore && error.response && error.response.message == 'Message not exists.'){
-                actor_result={status:ActorMessageStatus.CANCELED}
+                callResult={status:ActorMessageStatus.CANCELED}
             }else{
                 throw error;
             }
         }
-        switch (actor_result.status) {
+        switch (callResult.status) {
             case ActorMessageStatus.CANCELED:
                 result = await this.message.toCancelling();
+                result.action = 'cancel';
                 break;
             case ActorMessageStatus.DONE:
                 result = await this.message.toDoing();
+                result.action = 'do';
                 break;
             case ActorMessageStatus.PENDING:
-                throw new SystemException(`ActorMessageStatus is ${actor_result.status}`);
+                throw new SystemException(`ActorMessageStatus is ${callResult.status}`);
             case ActorMessageStatus.PREPARED:
-                throw new SystemException(`ActorMessageStatus is ${actor_result.status}`);
+                throw new SystemException(`ActorMessageStatus is ${callResult.status}`);
             default:
-                throw new SystemException(`ActorMessageStatus ${actor_result.status} is not exists.`);
+                throw new SystemException(`ActorMessageStatus ${callResult.status} is not exists.`);
         }
         return {
             ...result,
-            actor_result: actor_result
+            actor_result: callResult,
         };
     }
 }

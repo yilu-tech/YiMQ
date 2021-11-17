@@ -8,7 +8,8 @@ export class GrpcCoordinator extends Coordinator{
     public async onCompletedBootstrap() {
         throw new Error("Method not implemented.");
     }
-    public callActor() {
+    public async callActor() {
         throw new Error("Method not implemented.");
+        return null
     }
 }

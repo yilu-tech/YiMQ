@@ -27,14 +27,15 @@ export class EcSubtask extends ConsumerSubtask{
             processor: this.processor,
             data:this.data
         }
-        let actor_result = await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CONFIRM,callContext);
+        let {callResult,callBody}= await this.consumer.coordinator.callActor(this.message.producer,CoordinatorCallActorAction.CONFIRM,callContext);
 
         await this.completeAndSetMeesageStatus(SubtaskStatus.DONE,MessageStatus.DONE);
 
         return {
             message_id: this.message_id,
             process:'success',
-            actor_result
+            call_actor_body: callBody,
+            actor_result:  callResult
         }
     }
 

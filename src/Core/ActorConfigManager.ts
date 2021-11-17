@@ -82,13 +82,13 @@ export class ActorConfigManager{
 
     public async loadRemoteConfigToDB(actor:Actor){
         try {
-            let result = await actor.coordinator.callActor(actor,CoordinatorCallActorAction.GET_CONFIG,null,{
+            let {callResult,callBody} = await actor.coordinator.callActor(actor,CoordinatorCallActorAction.GET_CONFIG,null,{
                 timeout: 1000*3
             });
-            if(result.actor_name != actor.name){
-                throw new SystemException(`Remote config actor_name is <${result.actor_name}>`);
+            if(callResult.actor_name != actor.name){
+                throw new SystemException(`Remote config actor_name is <${callResult.actor_name}>`);
             }
-            await this.saveListener(actor,result['broadcast_listeners']);   
+            await this.saveListener(actor,callResult['broadcast_listeners']);   
         } catch (error) {
             let errorMessage = `${error.message}`;
             if(error instanceof HttpCoordinatorRequestException){

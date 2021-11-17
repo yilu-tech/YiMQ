@@ -256,12 +256,12 @@ export class ActorCleaner{
             process_ids: waitingClearProcessorIds
         }
         // console.log('remoteClear-->body:',body)
-        let result = await this.actor.coordinator.callActor(this,CoordinatorCallActorAction.ACTOR_CLEAR,body);
+        let {callResult,callBody} = await this.actor.coordinator.callActor(this,CoordinatorCallActorAction.ACTOR_CLEAR,body);
         // console.log('remoteClear-->:result',result)
-        if(!result || result.message != 'success'){
+        if(!callResult || callResult.message != 'success'){
             throw new SystemException(`Actor remote clear is failed, response message is not success.`);
         }
-        return [result['failed_done_message_ids'],result['failed_canceled_message_ids'],result['failed_process_ids']];
+        return [callResult['failed_done_message_ids'],callResult['failed_canceled_message_ids'],callResult['failed_process_ids']];
     }
 
     public async clearDbMeesage(messageIds){

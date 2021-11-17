@@ -110,7 +110,7 @@ export class Actor{
                 this.coordinator = new HttpCoordinator(this);
                 break;
             case 'grpc':
-                this.coordinator = new GrpcCoordinator(this);
+                // this.coordinator = new GrpcCoordinator(this);
                 break;
         }
         await this.coordinator.initQueue();
