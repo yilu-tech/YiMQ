@@ -11,6 +11,8 @@ export interface CoordinatorProcessResult{
     process: 'success' | 'compensate success'
     actor_result?:any;
     action?: 'do' | 'cancel' | 'check'
+    subtask_total?:number
+    message_topic?:string
 }
 
 export abstract class Coordinator{

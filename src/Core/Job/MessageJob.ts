@@ -49,6 +49,8 @@ export class MessageJob extends Job{
             default:
                 throw new SystemException(`MessageStatus <${this.message.status}> is not exists.`);
         }
+        result.subtask_total = this.message.subtask_total
+        result.message_topic = this.message.topic
         return result;
 
     
